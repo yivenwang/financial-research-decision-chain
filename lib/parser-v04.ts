@@ -471,17 +471,23 @@ function validate(
       continue;
     }
 
-    const recalculated = calculateChange(metric.current, metric.comparison);
+    const recalculated =
+      metric.unit === "ratio"
+        ? metric.current - metric.comparison
+        : calculateChange(metric.current, metric.comparison);
     if (Math.abs(recalculated - metric.disclosedChange) > 0.005) {
       issues.push({
         code: "YOY_RECONCILIATION_FAIL",
         severity: "FAIL",
         field: key,
         page: metric.page,
-        message: `${key}: recalculated change ${(recalculated * 100).toFixed(2)}% != disclosed ${(metric.disclosedChange * 100).toFixed(2)}%.`,
+        message:
+          metric.unit === "ratio"
+            ? `${key}: recalculated delta ${(recalculated * 100).toFixed(2)}pp != disclosed ${(metric.disclosedChange * 100).toFixed(2)}pp.`
+            : `${key}: recalculated change ${(recalculated * 100).toFixed(2)}% != disclosed ${(metric.disclosedChange * 100).toFixed(2)}%.`,
       });
     }
-    if (Math.abs(metric.disclosedChange) > 5) {
+    if (metric.unit !== "ratio" && Math.abs(metric.disclosedChange) > 5) {
       issues.push({
         code: "EXTREME_DISCLOSED_CHANGE",
         severity: "WARN",
