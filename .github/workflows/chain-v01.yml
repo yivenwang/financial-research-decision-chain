@@ -1,0 +1,37 @@
+name: Chain V0.1 C-04 Regression
+
+on:
+  push:
+    branches:
+      - dev/chain-v01-c04
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  chain-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Parser V0.5 regression stays green
+        run: |
+          node --experimental-strip-types --test tests/pdf-v05-regression.test.mjs
+          node --experimental-strip-types --test tests/pdf-v05-strict-schema.test.mjs
+
+      - name: Deterministic C-04 chain unit regression
+        run: node --experimental-strip-types --test tests/chain-v01.test.mjs
+
+      - name: Real official PDF chain regression
+        run: node --experimental-strip-types --test tests/chain-v01-real-pdf.test.mjs
