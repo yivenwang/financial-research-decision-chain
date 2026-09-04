@@ -1,0 +1,17 @@
+{
+  "name": "financial-research-decision-chain",
+  "version": "0.4.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "test:parser": "node --experimental-strip-types --test tests/parser-v04-regression.test.mjs",
+    "test:e2e": "node --experimental-strip-types --test tests/pdf-v04-e2e.test.mjs",
+    "test": "npm run test:parser && npm run test:e2e"
+  },
+  "dependencies": {
+    "pdfjs-dist": "6.3.289"
+  }
+}
