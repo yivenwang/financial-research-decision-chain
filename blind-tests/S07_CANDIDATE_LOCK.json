@@ -1,0 +1,15 @@
+{
+  "candidate_id": "S-07",
+  "document": "安克创新2025年半年度报告",
+  "period": "2025H1",
+  "disclosure_date": "2025-08-29",
+  "role": "Blind Test 02 candidate",
+  "status": "existence verified only / DO NOT inspect financial pages before V0.4 freeze",
+  "url": "https://static.cninfo.com.cn/finalpage/2025-08-29/1224614835.PDF",
+  "discipline": [
+    "Do not add fields, thresholds, mappings, or parser exceptions from S-07 content.",
+    "Do not inspect its primary financial table before V0.4 end-to-end regression is PASS and code hash is frozen.",
+    "At test time, save PDF hash and first-run raw output before human truth comparison.",
+    "After use, S-07 permanently becomes regression data."
+  ]
+}
