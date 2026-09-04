@@ -28,8 +28,11 @@ jobs:
       - name: Preserve V0.4 fixture regression
         run: npm run test:parser
 
-      - name: Run V0.5 real S-05/S-06/S-07 regression
+      - name: Run V0.5 real S-05/S-06/S-07 value regression
         run: node --experimental-strip-types --test tests/pdf-v05-regression.test.mjs
+
+      - name: Run V0.5 strict primary-schema gate
+        run: node --experimental-strip-types --test tests/pdf-v05-strict-schema.test.mjs
 
       - name: Upload V0.5 audit artifacts
         if: always()
