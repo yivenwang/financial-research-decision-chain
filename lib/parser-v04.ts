@@ -148,8 +148,6 @@ function parseCellNumber(value: string): number | undefined {
   const exact = parseNumber(normalized);
   if (exact !== undefined) return exact;
 
-  // This is deliberately scoped to one geometry-bounded cell. It is not a
-  // search window over flattened document text.
   const token = normalized.match(/[-+]?\d[\d,]*(?:\.\d+)?%?/g)?.[0];
   return token ? parseNumber(token) : undefined;
 }
@@ -190,7 +188,6 @@ function median(values: number[]): number {
   return sorted.length ? sorted[Math.floor(sorted.length / 2)] : Number.NaN;
 }
 
-/** Detect the primary four-column financial table from visible header geometry. */
 export function detectPrimaryTableColumns(
   rows: Row[],
 ): TableDetection | undefined {
@@ -256,9 +253,6 @@ export function detectPrimaryTableColumns(
 
     const current = median(currentXs);
     const comparison = median(comparisonXs);
-    // Long change headers may be split into several text items. The first
-    // fragment is the column's left boundary and is more stable than the
-    // median of the fragments.
     const change = Math.min(...changeXs);
     if (!(current < comparison && comparison < change)) continue;
 
@@ -266,7 +260,7 @@ export function detectPrimaryTableColumns(
       page: row.page,
       y: row.y,
       bounds: {
-        labelMax: current,
+        labelMax: current - (comparison - current) / 2,
         currentMax: (current + comparison) / 2,
         comparisonMax: (comparison + change) / 2,
         changeMax: Number.POSITIVE_INFINITY,
@@ -305,37 +299,48 @@ function hasNumericCell(value: string): boolean {
   return parseCellNumber(value) !== undefined;
 }
 
-/** Parse metric rows while keeping every value inside its x-bounded column. */
 export function parsePrimaryMetrics(
   rows: Row[],
   source: SourceMeta,
   bounds: ColBounds,
 ): Partial<Record<MetricKey, MetricValue>> {
   const metrics: Partial<Record<MetricKey, MetricValue>> = {};
-  let labelCarry = "";
-  let previousPage: number | undefined;
-
-  for (const row of rows) {
-    if (previousPage !== undefined && row.page !== previousPage) {
-      labelCarry = "";
-    }
-    previousPage = row.page;
-
+  const numericRows = rows.filter((row) => {
     const cells = extractCells(row, bounds);
-    const numericPresent = [
-      cells.currentRaw,
-      cells.comparisonRaw,
-      cells.changeRaw,
-    ].some(hasNumericCell);
+    return [cells.currentRaw, cells.comparisonRaw, cells.changeRaw].some(
+      hasNumericCell,
+    );
+  });
 
-    if (!numericPresent) {
-      if (cells.label) labelCarry += cells.label;
-      continue;
-    }
+  for (const row of numericRows) {
+    const cells = extractCells(row, bounds);
+    const nearbyLabel = rows
+      .filter((candidate) => {
+        if (candidate.page !== row.page) return false;
+        const left = clean(
+          cellText(candidate, Number.NEGATIVE_INFINITY, bounds.labelMax),
+        );
+        if (!left) return false;
+        const distance = Math.abs(candidate.y - row.y);
+        if (distance > 22) return false;
+        const nearest = numericRows
+          .filter((numeric) => numeric.page === candidate.page)
+          .reduce((best, numeric) => {
+            const d = Math.abs(candidate.y - numeric.y);
+            return !best || d < best.distance
+              ? { row: numeric, distance: d }
+              : best;
+          }, undefined as { row: Row; distance: number } | undefined);
+        return nearest?.row === row;
+      })
+      .sort((a, b) => b.y - a.y)
+      .map((candidate) =>
+        clean(cellText(candidate, Number.NEGATIVE_INFINITY, bounds.labelMax)),
+      )
+      .filter(Boolean)
+      .join("");
 
-    const combinedLabel = clean(labelCarry + cells.label);
-    labelCarry = "";
-    const field = matchField(combinedLabel);
+    const field = matchField(nearbyLabel);
     if (!field) continue;
 
     const current = parseCellNumber(cells.currentRaw);
@@ -351,7 +356,7 @@ export function parsePrimaryMetrics(
 
     metrics[field.key] = {
       key: field.key,
-      label: combinedLabel,
+      label: nearbyLabel,
       current: currentNormalized,
       comparison: comparisonNormalized,
       disclosedChange,
@@ -365,7 +370,6 @@ export function parsePrimaryMetrics(
   return metrics;
 }
 
-/** Find the non-recurring P&L total, continuing through page boundaries. */
 export function parseNonRecurringTotal(
   rows: Row[],
   source: SourceMeta,
@@ -467,18 +471,23 @@ function validate(
       continue;
     }
 
-    const recalculated = calculateChange(metric.current, metric.comparison);
-    // 0.5 percentage point tolerance, represented as a decimal here.
+    const recalculated =
+      metric.unit === "ratio"
+        ? metric.current - metric.comparison
+        : calculateChange(metric.current, metric.comparison);
     if (Math.abs(recalculated - metric.disclosedChange) > 0.005) {
       issues.push({
         code: "YOY_RECONCILIATION_FAIL",
         severity: "FAIL",
         field: key,
         page: metric.page,
-        message: `${key}: recalculated change ${(recalculated * 100).toFixed(2)}% != disclosed ${(metric.disclosedChange * 100).toFixed(2)}%.`,
+        message:
+          metric.unit === "ratio"
+            ? `${key}: recalculated delta ${(recalculated * 100).toFixed(2)}pp != disclosed ${(metric.disclosedChange * 100).toFixed(2)}pp.`
+            : `${key}: recalculated change ${(recalculated * 100).toFixed(2)}% != disclosed ${(metric.disclosedChange * 100).toFixed(2)}%.`,
       });
     }
-    if (Math.abs(metric.disclosedChange) > 5) {
+    if (metric.unit !== "ratio" && Math.abs(metric.disclosedChange) > 5) {
       issues.push({
         code: "EXTREME_DISCLOSED_CHANGE",
         severity: "WARN",
@@ -536,7 +545,14 @@ export function parseFinancialReport(
       message: "Primary financial table header was not found with usable geometry.",
     });
   } else {
-    Object.assign(metrics, parsePrimaryMetrics(rows, source, detection.bounds));
+    Object.assign(
+      metrics,
+      parsePrimaryMetrics(
+        rows.filter((row) => row.page === detection.page),
+        source,
+        detection.bounds,
+      ),
+    );
   }
 
   const nonRecurring = parseNonRecurringTotal(rows, source);
