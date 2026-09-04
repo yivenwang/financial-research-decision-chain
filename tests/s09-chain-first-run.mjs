@@ -12,22 +12,60 @@ const TARGET = {
   searchKey: '2022年半年度报告',
 };
 
+function findOrgRecord(value) {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findOrgRecord(item);
+      if (found) return found;
+    }
+    return null;
+  }
+  if (typeof value !== 'object') return null;
+  const code = String(value.code ?? value.secCode ?? value.stockCode ?? '');
+  const orgId = value.orgId ?? value.orgID ?? value.orgid;
+  if (code === TARGET.securityCode && typeof orgId === 'string' && orgId) {
+    return { code, orgId };
+  }
+  for (const child of Object.values(value)) {
+    const found = findOrgRecord(child);
+    if (found) return found;
+  }
+  return null;
+}
+
+async function resolveCninfoStockKey() {
+  const url = `https://www.cninfo.com.cn/new/information/topSearch/query?keyWord=${encodeURIComponent(TARGET.securityCode)}&maxNum=10`;
+  const response = await fetch(url, {
+    headers: {
+      'user-agent': 'Mozilla/5.0 ChainBlindTest/1.0',
+      referer: 'https://www.cninfo.com.cn/',
+    },
+  });
+  assert.equal(response.ok, true, `CNINFO stock lookup failed: ${response.status}`);
+  const payload = await response.json();
+  const record = findOrgRecord(payload);
+  assert.ok(record, 'CNINFO stock lookup returned no orgId for 300866');
+  return `${record.code},${record.orgId}`;
+}
+
 async function discoverOfficialPdf() {
   const endpoint = 'https://www.cninfo.com.cn/new/hisAnnouncement/query';
+  const stockKey = await resolveCninfoStockKey();
   const form = new URLSearchParams({
     pageNum: '1',
     pageSize: '30',
     column: 'szse',
     tabName: 'fulltext',
-    plate: '',
-    stock: TARGET.securityCode,
+    plate: 'sz',
+    stock: stockKey,
     searchkey: TARGET.searchKey,
     secid: '',
     category: '',
     trade: '',
     seDate: '2022-01-01~2022-12-31',
-    sortName: '',
-    sortType: '',
+    sortName: 'time',
+    sortType: 'desc',
     isHLtitle: 'true',
   });
 
