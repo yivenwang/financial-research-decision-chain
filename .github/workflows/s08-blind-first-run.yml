@@ -1,0 +1,33 @@
+name: S-08 Blind Test First Run
+
+on:
+  push:
+    branches:
+      - blind-test/s08-first-run
+
+jobs:
+  s08-first-run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout frozen blind-test branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Install frozen parser dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Execute S-08 first run
+        run: node --experimental-strip-types tests/s08-blind-first-run.mjs
+
+      - name: Upload immutable first-run artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: s08-first-run-frozen
+          path: artifacts/S08_FIRST_RUN_FROZEN.json
+          if-no-files-found: error
