@@ -9,3 +9,5 @@ Rules:
 3. The machine output must be saved as an Actions artifact before any human truth comparison.
 4. No Evidence, Graph Diff, Valuation, Decision or research version may be written by this harness.
 5. After the first-run artifact is preserved, S-07 is no longer considered unseen data and may only be used for evaluation/regression.
+
+Trigger note: this documentation-only commit intentionally causes a PR synchronize event; it does not modify parser or test logic.
