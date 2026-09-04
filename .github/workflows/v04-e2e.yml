@@ -25,16 +25,24 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
 
+      - name: Confirm frozen parser unchanged from main
+        run: |
+          git fetch origin main --depth=1
+          git diff --exit-code origin/main -- lib/parser-v04.ts
+
       - name: Fixture regression
         run: npm run test:parser
 
       - name: Real official PDF.js E2E
         run: npm run test:e2e
 
+      - name: Blind Test 02 S-07 first run
+        run: node --experimental-strip-types --test tests/s07-first-run.mjs
+
       - name: Upload E2E audit artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v04-e2e-audit
+          name: blind-test-02-audit
           path: artifacts/*.json
-          if-no-files-found: warn
+          if-no-files-found: error
