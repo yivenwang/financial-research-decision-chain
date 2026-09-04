@@ -1,0 +1,18 @@
+{
+  "snapshot": "ChatGPT Site V5 export",
+  "file_count": 105,
+  "zip_sha256": "ed26da236bac068e0c08341f686c2fca416bcb1777849fa62285f08018137ec0",
+  "core_files": {
+    "app/page.tsx": "d742a6e9cb0c9e4bad0cc58dad29046bb784afc7e80feb5676a7a69295c623ce",
+    "components/research/blind-test-report.tsx": "616f7f572bdbfda09ee4bd438f6882190d4972672228661f08b34ff40571f531",
+    "components/research/update-workflow.tsx": "446c1b798f8efcedbb5858f88df4b388604a74382f88c4a2f2fcfd14f74b1dd1",
+    "components/research/version-history.tsx": "0db23164f0708bc9c72de3cc5b3c5ecd93553c8b462ae229a6ec398df03d1e6f",
+    "lib/parser-v04.ts": "5cda943d9d6ad9bf0e5902ccf2d4166f6a23007e9072ab99c7fa2605b4577f06",
+    "lib/research-versions.ts": "76cf47c91f909714f7218390b0e661af8e2917e3011811c378691c9b969417f9",
+    "lib/source-records.ts": "d75e0cdcaa43d3929bd1b05bdc66c6c29450ee1f49bd3ae1f02cfa1131bc9cfe",
+    "tests/parser-v04-regression.test.mjs": "37cb4c8da718a08a619878b058abc9de7a26404fef6f376d87299b2a4f3c53eb",
+    "package.json": "f1c0570bcb1c83d55f933ea1692b0034585684a5bdcdb7abe4ac6ce72d2ee7f0",
+    "package-lock.json": "d1602bbcfd38d870c7bc20bb2f2f0829ac640eca66858defcd97e396d726e8eb"
+  },
+  "note": "The original uploaded V5 ZIP was verified locally before migration. This manifest anchors its immutable content identity while project-specific source is migrated into GitHub."
+}
