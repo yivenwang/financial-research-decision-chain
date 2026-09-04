@@ -1,0 +1,41 @@
+name: V0.4 PDF E2E
+
+on:
+  push:
+    branches:
+      - dev/v0.4-e2e
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  parser-e2e:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Fixture regression
+        run: npm run test:parser
+
+      - name: Real official PDF.js E2E
+        run: npm run test:e2e
+
+      - name: Upload E2E audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v04-e2e-audit
+          path: artifacts/*.json
+          if-no-files-found: warn
