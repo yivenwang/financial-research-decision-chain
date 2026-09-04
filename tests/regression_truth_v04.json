@@ -1,0 +1,33 @@
+{
+  "version": "V0.4-repair-spec",
+  "status": "fixture regression target",
+  "sources": {
+    "S-05": {
+      "period": "2026Q1",
+      "page_truth": "P2-P3",
+      "attributable_np_mn": 471.59418971,
+      "attributable_np_yoy": -0.0487,
+      "adjusted_np_mn": 546.7588969,
+      "adjusted_np_yoy": 0.2439,
+      "non_recurring_total_mn": -75.16470719,
+      "f02_bridge_mn": 546.7588969
+    },
+    "S-06": {
+      "period": "2026H1",
+      "page_truth": "P7-P8",
+      "attributable_np_mn": 1702.03721539,
+      "attributable_np_yoy": 0.4586,
+      "adjusted_np_mn": 1438.77516582,
+      "adjusted_np_yoy": 0.4965,
+      "non_recurring_total_mn": 263.26204957,
+      "f02_bridge_mn": 1438.77516582
+    }
+  },
+  "blocker_rules": [
+    "sourceId must equal import context sourceId",
+    "attributable_np, adjusted_np, non_recurring_total are all required for F-02",
+    "reported YoY must reconcile with current/comparison values within 0.5 percentage point",
+    "F-02 attributable_np - non_recurring_total must reconcile to adjusted_np",
+    "no formal Evidence/Graph Diff promotion while any FAIL exists"
+  ]
+}
