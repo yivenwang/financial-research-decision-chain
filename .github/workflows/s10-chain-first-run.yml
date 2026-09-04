@@ -1,0 +1,36 @@
+name: Chain Blind Test 02 S-10 First Run
+
+on:
+  push:
+    branches:
+      - blind-test/chain-s10-first-run
+
+jobs:
+  s10-first-run:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout frozen blind-test branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Install frozen dependencies
+        run: npm install --no-audit --no-fund
+      - name: Confirm Parser V0.6 and Chain V0.1 unchanged from main
+        run: |
+          git fetch origin main --depth=1
+          git diff --exit-code origin/main -- lib/parser-v06.ts lib/parser-v06-strict.ts lib/chain-v01.ts docs/CHAIN_V0.1_SPEC.md
+      - name: Execute S-10 first run
+        run: node --experimental-strip-types tests/s10-chain-first-run.mjs
+      - name: Upload immutable S-10 first-run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s10-chain-first-run-frozen
+          path: artifacts/S10_CHAIN_FIRST_RUN_FROZEN.json
+          if-no-files-found: error
