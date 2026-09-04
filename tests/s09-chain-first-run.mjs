@@ -9,56 +9,18 @@ const TARGET = {
   sourceId: 'S-09',
   period: '2022H1',
   securityCode: '300866',
-  searchKey: '2022年半年度报告',
+  searchKey: '安克创新2022年半年度报告',
 };
-
-function findOrgRecord(value) {
-  if (!value) return null;
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const found = findOrgRecord(item);
-      if (found) return found;
-    }
-    return null;
-  }
-  if (typeof value !== 'object') return null;
-  const code = String(value.code ?? value.secCode ?? value.stockCode ?? '');
-  const orgId = value.orgId ?? value.orgID ?? value.orgid;
-  if (code === TARGET.securityCode && typeof orgId === 'string' && orgId) {
-    return { code, orgId };
-  }
-  for (const child of Object.values(value)) {
-    const found = findOrgRecord(child);
-    if (found) return found;
-  }
-  return null;
-}
-
-async function resolveCninfoStockKey() {
-  const url = `https://www.cninfo.com.cn/new/information/topSearch/query?keyWord=${encodeURIComponent(TARGET.securityCode)}&maxNum=10`;
-  const response = await fetch(url, {
-    headers: {
-      'user-agent': 'Mozilla/5.0 ChainBlindTest/1.0',
-      referer: 'https://www.cninfo.com.cn/',
-    },
-  });
-  assert.equal(response.ok, true, `CNINFO stock lookup failed: ${response.status}`);
-  const payload = await response.json();
-  const record = findOrgRecord(payload);
-  assert.ok(record, 'CNINFO stock lookup returned no orgId for 300866');
-  return `${record.code},${record.orgId}`;
-}
 
 async function discoverOfficialPdf() {
   const endpoint = 'https://www.cninfo.com.cn/new/hisAnnouncement/query';
-  const stockKey = await resolveCninfoStockKey();
   const form = new URLSearchParams({
     pageNum: '1',
     pageSize: '30',
     column: 'szse',
     tabName: 'fulltext',
     plate: 'sz',
-    stock: stockKey,
+    stock: '',
     searchkey: TARGET.searchKey,
     secid: '',
     category: '',
@@ -90,7 +52,7 @@ async function discoverOfficialPdf() {
       title.includes('2022年半年度报告') &&
       !title.includes('摘要');
   });
-  assert.equal(candidates.length >= 1, true, `No full 2022H1 report discovered. Returned titles: ${rows.map(r=>normalize(r.announcementTitle)).join(' | ')}`);
+  assert.equal(candidates.length >= 1, true, `No full 2022H1 report discovered. Candidate count=${rows.length}`);
   const selected = candidates[0];
   assert.equal(typeof selected.adjunctUrl, 'string');
   return {
@@ -138,14 +100,6 @@ const chain = runC04Chain(parser, {
   },
 });
 
-// Governance-only assertions. No S-09 financial truth is embedded here.
-assert.equal(chain.decision.action, '继续研究');
-assert.equal(chain.decision.formalRecommendation, null);
-assert.ok(chain.decision.blockedGates.includes('EG-01'));
-assert.ok(chain.decision.blockedGates.includes('EG-02'));
-assert.deepEqual(chain.graphDiff.unchangedNodeIds, ['C-01','C-02','C-03','C-05','C-06']);
-assert.equal(chain.valuation.publishable, false);
-
 const artifact = {
   protocol: 'Chain Blind Test 01 / S-09 first run before human truth comparison',
   frozenBaseline: {
@@ -174,6 +128,15 @@ const artifact = {
   },
 };
 
+// Preserve machine output before any governance assertion can fail.
 await mkdir('artifacts', { recursive: true });
 await writeFile('artifacts/S09_CHAIN_FIRST_RUN_FROZEN.json', JSON.stringify(artifact, null, 2));
-console.log(JSON.stringify(artifact, null, 2));
+console.log(`S-09 first-run artifact preserved. PDF sha256=${artifact.pdfSha256}`);
+
+// Governance-only assertions. No S-09 financial truth is embedded here.
+assert.equal(chain.decision.action, '继续研究');
+assert.equal(chain.decision.formalRecommendation, null);
+assert.ok(chain.decision.blockedGates.includes('EG-01'));
+assert.ok(chain.decision.blockedGates.includes('EG-02'));
+assert.deepEqual(chain.graphDiff.unchangedNodeIds, ['C-01','C-02','C-03','C-05','C-06']);
+assert.equal(chain.valuation.publishable, false);
