@@ -1,0 +1,40 @@
+name: V0.5 PDF Regression
+
+on:
+  push:
+    branches:
+      - dev/v0.5-short-value-columns
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  v05-regression:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Preserve V0.4 fixture regression
+        run: npm run test:parser
+
+      - name: Run V0.5 real S-05/S-06/S-07 regression
+        run: node --experimental-strip-types --test tests/pdf-v05-regression.test.mjs
+
+      - name: Upload V0.5 audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v05-regression-audit
+          path: artifacts-v05/*.json
+          if-no-files-found: warn
