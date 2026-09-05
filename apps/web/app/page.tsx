@@ -198,34 +198,34 @@ export default function Home() {
                 <h1 className="truncate text-xl font-semibold tracking-tight sm:text-2xl">
                   安克创新研究决策链
                 </h1>
-                <Badge className="bg-rose-300 text-rose-950">MVP · Blind Test 01</Badge>
+                <Badge className="bg-rose-300 text-rose-950">MVP · 研究更新</Badge>
               </div>
               <p className="mt-1 text-sm text-slate-400">
-                300866.SZ · S-06 盲测结果已锁定 · As of 2026-09-04
+                验证案例 · 安克创新（300866.SZ） · GitHub 集成版
               </p>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline" className="border-rose-300/30 bg-rose-300/10 text-rose-200">
-              <CircleDot /> QA · FAIL
+              <CircleDot /> C-04 · 待人工复核
             </Badge>
             <Badge variant="outline" className="border-rose-300/30 bg-rose-300/10 text-rose-200">
-              <ShieldCheck /> 6 个阻塞 FAIL
+              <ShieldCheck /> EG-01 / EG-02 · 待复核
             </Badge>
             <Badge variant="outline" className="border-slate-600 bg-slate-900/60 text-slate-300">
-              <LockKeyhole /> S-06 · 已用 / 0 次正式引用
+              <LockKeyhole /> S-06 · 独立回归演示
             </Badge>
           </div>
         </header>
 
-        <Tabs defaultValue="blind-test" className="gap-4">
+        <Tabs defaultValue="update" className="gap-4">
           <TabsList className="h-auto w-full flex-wrap justify-start rounded-xl border border-white/10 bg-slate-950/70 p-1">
             <TabsTrigger
               value="blind-test"
               className="h-9 px-4 text-slate-400 data-[state=active]:bg-rose-300 data-[state=active]:text-rose-950"
             >
-              <FlaskConical /> 盲测报告
+              <FlaskConical /> 历史盲测报告
             </TabsTrigger>
             <TabsTrigger
               value="update"
@@ -266,6 +266,7 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="chain" className="space-y-4">
+            <p className="rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4 text-sm text-slate-300">以下是 S-05 研究链基线示例；本次导入与回滚的结果请在“材料更新”和“版本历史”查看。</p>
             <section className="grid gap-4 xl:grid-cols-[0.92fr_1.18fr_0.9fr]">
               <article className="research-panel min-w-0">
                 <div className="flex items-start justify-between gap-3">
@@ -559,7 +560,7 @@ export default function Home() {
 
         <footer className="mt-4 flex flex-col gap-2 px-1 pb-2 text-[13px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>公开披露基线 · A股 / 中国企业会计准则 · 行业顾问不阻塞 MVP</p>
-          <p className="flex items-center gap-1.5"><ArrowRight className="size-3.5" /> 下一关：功能冻结后解封 S-06 盲测</p>
+          <p className="flex items-center gap-1.5"><ArrowRight className="size-3.5" /> 下一步：真实模型推理与参赛整链验收</p>
         </footer>
       </div>
     </main>

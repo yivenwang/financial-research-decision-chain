@@ -34,45 +34,31 @@ import { cn } from "@/lib/utils";
 import {
   nextVersionId,
   readStoredVersions,
-  setActiveVersionId,
-  writeStoredVersions,
-  type ResearchVersion,
+  readActiveVersionId,
+  appendVersion,
 } from "@/lib/research-versions";
 import {
   getSourceRecord,
+  sourceRecords,
   resolveSourceRecord,
   type SourceRecord,
 } from "@/lib/source-records";
 import {
-  parseFinancialReport,
-  type MetricKey,
-  type MetricValue,
+  parseResearchReport,
+  extractCandidates,
+  reviewAndRun,
+  createResearchSnapshot,
+  type CandidateEvidence,
   type ParseIssue,
   type ParseResult,
   type PdfTextItem,
   type SourceMeta,
-} from "@/lib/parser-v04";
+} from "@/lib/research-engine";
+import { verifiedSampleItems } from "@/lib/sample-s05";
+import { ChainResultPanel } from "@/components/research/chain-result-panel";
 
-type ReviewStatus = "pending" | "accepted" | "rejected";
-type Direction = "支持" | "反证";
+type Direction = CandidateEvidence["direction"];
 type WorkflowStep = "upload" | "review" | "diff" | "saved";
-
-type CandidateEvidence = {
-  id: string;
-  metricKey: MetricKey;
-  label: string;
-  valueMn: number;
-  comparisonMn: number | null;
-  changePct: number | null;
-  disclosedChange: number | null;
-  direction: Direction;
-  claimId: string;
-  sourceId: string;
-  period: string;
-  location: string;
-  snippet: string;
-  reviewStatus: ReviewStatus;
-};
 
 type SourceFile = SourceMeta & {
   name: string;
@@ -80,60 +66,8 @@ type SourceFile = SourceMeta & {
   pageCount: number;
   mode: "pdf" | "sample";
   useStatus: SourceRecord["useStatus"];
+  sha256?: string;
 };
-
-const METRIC_CONFIG: Record<
-  "attributable_np" | "adjusted_np" | "non_recurring_total",
-  { id: string; label: string; fallbackDirection: Direction }
-> = {
-  attributable_np: {
-    id: "E-105",
-    label: "归母净利润",
-    fallbackDirection: "反证",
-  },
-  adjusted_np: {
-    id: "E-106",
-    label: "扣非归母净利润",
-    fallbackDirection: "支持",
-  },
-  non_recurring_total: {
-    id: "E-107",
-    label: "非经常性损益",
-    fallbackDirection: "支持",
-  },
-};
-
-type RequiredMetricKey =
-  | "attributable_np"
-  | "adjusted_np"
-  | "non_recurring_total";
-
-const REQUIRED_METRICS: RequiredMetricKey[] = [
-  "attributable_np",
-  "adjusted_np",
-  "non_recurring_total",
-];
-
-const verifiedSampleItems: PdfTextItem[] = [
-  { str: "项目", x: 80, y: 700, page: 2 },
-  { str: "本报告期", x: 390, y: 700, page: 2 },
-  { str: "上年同期", x: 550, y: 700, page: 2 },
-  { str: "本报告期比上年同期增减（%）", x: 710, y: 700, page: 2 },
-  { str: "归属于上市公司股东的净利", x: 80, y: 660, page: 2 },
-  { str: "润（元）", x: 80, y: 650, page: 2 },
-  { str: "471,594,189.71", x: 390, y: 650, page: 2 },
-  { str: "495,761,205.29", x: 550, y: 650, page: 2 },
-  { str: "-4.87%", x: 710, y: 650, page: 2 },
-  { str: "归属于上市公司股东的扣除", x: 80, y: 620, page: 2 },
-  { str: "非经常性损益的净利润", x: 80, y: 610, page: 2 },
-  { str: "（元）", x: 80, y: 600, page: 2 },
-  { str: "546,758,896.90", x: 390, y: 600, page: 2 },
-  { str: "439,558,407.22", x: 550, y: 600, page: 2 },
-  { str: "24.39%", x: 710, y: 600, page: 2 },
-  { str: "（二）非经常性损益项目和金额", x: 80, y: 500, page: 2 },
-  { str: "合计", x: 80, y: 700, page: 3 },
-  { str: "-75,164,707.19", x: 420, y: 700, page: 3 },
-];
 
 const stepOrder: WorkflowStep[] = ["upload", "review", "diff", "saved"];
 const stepLabels: Record<WorkflowStep, string> = {
@@ -143,55 +77,9 @@ const stepLabels: Record<WorkflowStep, string> = {
   saved: "保存版本",
 };
 
-function candidateFromMetric(
-  key: RequiredMetricKey,
-  metric: MetricValue,
-  source: SourceMeta,
-): CandidateEvidence | null {
-  if (metric.current === undefined) return null;
-  const config = METRIC_CONFIG[key];
-  const disclosedChange = metric.disclosedChange ?? null;
-  const changePct =
-    disclosedChange === null
-      ? null
-      : Number((disclosedChange * 100).toFixed(2));
-  const direction =
-    changePct === null
-      ? config.fallbackDirection
-      : changePct >= 0
-        ? "支持"
-        : "反证";
-
-  return {
-    id: config.id,
-    metricKey: key,
-    label: config.label,
-    valueMn: metric.current,
-    comparisonMn: metric.comparison ?? null,
-    changePct,
-    disclosedChange,
-    direction,
-    claimId: "C-04",
-    sourceId: metric.sourceId,
-    period: source.period,
-    location: `${metric.sourceId} · P${metric.page}`,
-    snippet:
-      `${metric.label} · ${metric.current.toFixed(8)} CNY mn` +
-      (changePct === null ? "" : ` · 同比 ${changePct.toFixed(2)}%`),
-    reviewStatus: "pending",
-  };
-}
-
-function extractCandidates(result: ParseResult): CandidateEvidence[] {
-  return REQUIRED_METRICS.map((key) => {
-    const metric = result.metrics[key];
-    return metric ? candidateFromMetric(key, metric, result.source) : null;
-  }).filter((item): item is CandidateEvidence => item !== null);
-}
-
 function sourceFileFromRecord(
   record: SourceRecord,
-  details: Pick<SourceFile, "name" | "size" | "pageCount" | "mode">,
+  details: Pick<SourceFile, "name" | "size" | "pageCount" | "mode" | "sha256">,
 ): SourceFile {
   return {
     sourceId: record.sourceId,
@@ -206,14 +94,18 @@ type PdfExtraction = {
   items: PdfTextItem[];
   pageCount: number;
   documentTitle: string;
+  sha256: string;
 };
 
 async function extractPdfItems(file: File): Promise<PdfExtraction> {
   const pdfjs = await import("pdfjs-dist/build/pdf.mjs");
   // Served from the same locked pdfjs-dist package by prepare-pdf-worker.mjs.
   pdfjs.GlobalWorkerOptions.workerSrc = "/vendor/pdfjs/pdf.worker.min.mjs";
-  const data = new Uint8Array(await file.arrayBuffer());
+  const buffer = await file.arrayBuffer();
+  const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const data = new Uint8Array(buffer);
   const document = await pdfjs.getDocument({ data }).promise;
+  try {
   const items: PdfTextItem[] = [];
   const titleParts: string[] = [];
 
@@ -246,7 +138,11 @@ async function extractPdfItems(file: File): Promise<PdfExtraction> {
     items,
     pageCount: document.numPages,
     documentTitle: titleParts.join(" "),
+    sha256,
   };
+  } finally {
+    await document.destroy();
+  }
 }
 
 function summarizeBlockers(blockers: ParseIssue[]) {
@@ -313,108 +209,24 @@ export function UpdateWorkflow() {
   const [message, setMessage] = useState<string | null>(null);
   const [savedVersion, setSavedVersion] = useState<string | null>(null);
   const [parserResult, setParserResult] = useState<ParseResult | null>(null);
+  const [selectedSourceId, setSelectedSourceId] = useState("S-05");
+  const [reviewer, setReviewer] = useState("");
+  const selectedRecord = getSourceRecord(selectedSourceId)!;
+  const workspace = selectedRecord.useStatus === "regression-only" ? "regression" : "research";
 
   const reviewedCount = candidates.filter((item) => item.reviewStatus !== "pending").length;
   const accepted = candidates.filter((item) => item.reviewStatus === "accepted");
   const allReviewed = candidates.length > 0 && reviewedCount === candidates.length;
 
-  const formula = useMemo(() => {
-    const attributable = accepted.find((item) => item.id === "E-105")?.valueMn;
-    const adjusted = accepted.find((item) => item.id === "E-106")?.valueMn;
-    const nonRecurring = accepted.find((item) => item.id === "E-107")?.valueMn;
-    if (attributable === undefined || adjusted === undefined || nonRecurring === undefined) {
-      return null;
-    }
-    const calculated = attributable - nonRecurring;
-    return {
-      attributable,
-      nonRecurring,
-      reportedAdjusted: adjusted,
-      calculated,
-      difference: Math.abs(calculated - adjusted),
-      consistent: Math.abs(calculated - adjusted) <= 0.001,
-    };
-  }, [accepted]);
-
-  const requiredAccepted = REQUIRED_METRICS.every((key) =>
-    candidates.some(
-      (item) =>
-        item.metricKey === key && item.reviewStatus === "accepted",
-    ),
+  const reviewedRun = useMemo(
+    () => parserResult ? reviewAndRun(parserResult, candidates, "current-preview") : null,
+    [parserResult, candidates],
   );
-
-  const reviewBlockers = useMemo<ParseIssue[]>(() => {
-    if (!parserResult) return [];
-
-    const blockers = [...parserResult.blockers];
-    if (allReviewed) {
-      for (const key of REQUIRED_METRICS) {
-        const config = METRIC_CONFIG[key];
-        const candidate = candidates.find(
-          (item) => item.metricKey === key && item.reviewStatus === "accepted",
-        );
-        if (!candidate) {
-          blockers.push({
-            code: "REQUIRED_FIELD_MISSING",
-            severity: "FAIL",
-            field: key,
-            message: `${config.label} 未被接受，F-02 与 Graph Diff 必须阻断。`,
-          });
-        }
-      }
-    }
-
-    for (const candidate of accepted) {
-      if (
-        candidate.comparisonMn === null ||
-        candidate.disclosedChange === null
-      ) {
-        continue;
-      }
-      const recalculated =
-        (candidate.valueMn - candidate.comparisonMn) /
-        Math.abs(candidate.comparisonMn);
-      if (
-        !Number.isFinite(recalculated) ||
-        Math.abs(recalculated - candidate.disclosedChange) > 0.005
-      ) {
-        blockers.push({
-          code: "YOY_RECONCILIATION_FAIL",
-          severity: "FAIL",
-          field: candidate.metricKey,
-          message: `${candidate.label} 的同比复算与披露值不一致，禁止进入正式 Evidence。`,
-        });
-      }
-    }
-
-    if (formula && !formula.consistent) {
-      blockers.push({
-        code: "BRIDGE_RECONCILIATION_FAIL",
-        severity: "FAIL",
-        field: "adjusted_np",
-        message: "F-02 归母净利润 − 非经常性损益 ≠ 扣非归母净利润，禁止进入 Graph Diff。",
-      });
-    }
-
-    return blockers;
-  }, [accepted, allReviewed, candidates, formula, parserResult]);
-
-  const canPromoteToEvidence = Boolean(
-    parserResult?.canPromoteToEvidence &&
-      reviewBlockers.length === 0 &&
-      allReviewed &&
-      requiredAccepted &&
-      formula?.consistent,
-  );
-
-  const claimSignal = useMemo(() => {
-    const support = accepted.filter((item) => item.direction === "支持").length;
-    const counter = accepted.filter((item) => item.direction === "反证").length;
-    if (support >= 2 && counter >= 1) return "增强";
-    if (support > 0 && counter > 0) return "混合";
-    if (support > 0) return "待人工确认";
-    return "不更新";
-  }, [accepted]);
+  const formula = reviewedRun?.formula ?? null;
+  const reviewBlockers = reviewedRun?.blockers ?? [];
+  const canPromoteToEvidence = reviewedRun?.canPromoteToEvidence ?? false;
+  const claimSignal = reviewedRun?.chain?.claim.systemSignal ?? "不更新";
+  const visibleBlockers = allReviewed ? reviewBlockers : (parserResult?.blockers ?? []);
 
   function loadSample() {
     const record = getSourceRecord("S-05");
@@ -422,13 +234,15 @@ export function UpdateWorkflow() {
       setMessage("当前 Source 记录缺失，无法载入已验证样例。");
       return;
     }
-    const result = parseFinancialReport(verifiedSampleItems, record);
+    const result = parseResearchReport(verifiedSampleItems, record);
+    setSelectedSourceId(record.sourceId);
+    setReviewer("");
     setParserResult(result);
     setSource(
       sourceFileFromRecord(record, {
         name: record.name + " · S-05 已验证样例",
         size: 0,
-        pageCount: 8,
+        pageCount: 14,
         mode: "sample",
       }),
     );
@@ -436,7 +250,7 @@ export function UpdateWorkflow() {
     setMessage(
       result.blockers.length
         ? "已载入样例，但解析 Gate 阻断：" + summarizeBlockers(result.blockers)
-        : "已载入 S-05 的三条已核验证据；仍需逐条做人工审核。",
+        : "已载入 S-05 教学样例（合成坐标，非本次 PDF 上传）；请逐条审核三条候选证据。",
     );
     setStep("review");
     setSavedVersion(null);
@@ -447,8 +261,8 @@ export function UpdateWorkflow() {
     event.target.value = "";
     if (!file) return;
 
-    if (/半年|半年度|2026[-_ ]?h1/i.test(file.name)) {
-      setMessage("检测到疑似 S-06 留出材料，已阻断导入。它只能在功能冻结后用于盲测。");
+    if (/s[-_ ]?0?7(?:\b|[_.-])/i.test(file.name)) {
+      setMessage("该文件不在当前允许的 S-05/S-06 导入范围内。");
       return;
     }
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -461,6 +275,8 @@ export function UpdateWorkflow() {
     }
 
     setIsParsing(true);
+    setStep("upload");
+    setReviewer("");
     setMessage(null);
     setSavedVersion(null);
     setParserResult(null);
@@ -469,26 +285,13 @@ export function UpdateWorkflow() {
     try {
       const extraction = await extractPdfItems(file);
       const record = resolveSourceRecord(file.name, extraction.documentTitle);
-      if (!record) {
-        const missingSource = parseFinancialReport(extraction.items, {
-          sourceId: "",
-          period: "",
-          url: "",
-        });
-        setParserResult(missingSource);
-        setMessage(
-          "当前导入材料没有匹配到 Source 记录，已阻断：" +
-            summarizeBlockers(missingSource.blockers),
-        );
-        return;
-      }
-      if (record.useStatus === "regression-only") {
-        setMessage("检测到 S-06 回归材料，已阻断导入。它只能用于回归，不能进入开发工作流。");
+      if (!record || record.sourceId !== selectedRecord.sourceId) {
         setParserResult(null);
+        setMessage("PDF 内的公司或报告期间与所选材料记录不一致，已阻断导入。请核对原文及材料选择。");
         return;
       }
 
-      const result = parseFinancialReport(extraction.items, record);
+      const result = parseResearchReport(extraction.items, record);
       const extracted = extractCandidates(result);
       setParserResult(result);
       setSource(
@@ -496,6 +299,7 @@ export function UpdateWorkflow() {
           name: file.name,
           size: file.size,
           pageCount: extraction.pageCount,
+          sha256: extraction.sha256,
           mode: "pdf",
         }),
       );
@@ -548,35 +352,28 @@ export function UpdateWorkflow() {
       );
       return;
     }
-    const current = readStoredVersions();
-    const versionId = nextVersionId(current);
-    const snapshot: ResearchVersion = {
-      versionId,
-      createdAt: new Date().toISOString(),
-      kind: "update",
-      source: {
-        name: source.name,
-        size: source.size,
-        pageCount: source.pageCount,
-        mode: source.mode,
-        sourceId: source.sourceId,
-        period: source.period,
-        url: source.url,
-      },
-      evidence: candidates,
-      claim: { id: "C-04", before: "成立", after: claimSignal },
-      formula,
-      decision: "继续研究",
-      blockedGates: ["EG-01", "EG-02"],
-      parser: {
-        canPromoteToEvidence,
-        blockers: parserResult.blockers,
-      },
-    };
-    writeStoredVersions([...current, snapshot]);
-    setActiveVersionId(versionId);
-    setSavedVersion(versionId);
-    setStep("saved");
+    try {
+      const current = readStoredVersions(workspace);
+      const versionId = nextVersionId(current);
+      const snapshot = createResearchSnapshot({
+        versionId,
+        parentVersionId: readActiveVersionId(current, workspace),
+        createdAt: new Date().toISOString(),
+        reviewer,
+        source: {
+          name: source.name, size: source.size, pageCount: source.pageCount,
+          mode: source.mode, sourceId: source.sourceId, period: source.period, url: source.url, sha256: source.sha256,
+        },
+        result: parserResult,
+        candidates,
+        scope: workspace,
+      });
+      appendVersion(snapshot, workspace);
+      setSavedVersion(versionId);
+      setStep("saved");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "版本保存失败，请检查浏览器存储空间。");
+    }
   }
 
   function resetWorkflow() {
@@ -586,6 +383,7 @@ export function UpdateWorkflow() {
     setMessage(null);
     setSavedVersion(null);
     setParserResult(null);
+    setReviewer("");
   }
 
   return (
@@ -604,8 +402,18 @@ export function UpdateWorkflow() {
             </p>
           </div>
           <Badge variant="outline" className="w-fit border-emerald-300/30 bg-emerald-300/10 text-emerald-200">
-            <ShieldCheck /> S-06 留出保护已启用
+            <ShieldCheck /> {workspace === "regression" ? "S-06 · 独立回归演示" : "S-05 · 研究更新"}
           </Badge>
+        </div>
+        <div className="mt-4 max-w-lg space-y-2">
+          <p className="text-sm text-slate-300">选择已登记材料</p>
+          <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { resetWorkflow(); setSelectedSourceId(value); }}>
+            <SelectTrigger aria-label="选择已登记材料" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
+            <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
+              {sourceRecords.map((record) => <SelectItem key={record.sourceId} value={record.sourceId}>{record.sourceId} · {record.period} · {record.useStatus === "regression-only" ? "回归演示" : "研究更新"}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-slate-400">{workspace === "regression" ? "回归演示使用独立版本库，不写入研究版本库。" : "上传 PDF 内的公司和期间须与材料记录一致。"}</p>
         </div>
         <div className="mt-5">
           <StepRail active={step} />
@@ -620,6 +428,7 @@ export function UpdateWorkflow() {
               type="file"
               accept="application/pdf,.pdf"
               className="sr-only"
+              disabled={isParsing}
               onChange={handleFile}
               aria-label="选择财报 PDF"
             />
@@ -635,7 +444,7 @@ export function UpdateWorkflow() {
                 <UploadCloud className="size-10 text-cyan-300" />
               )}
               <p className="mt-4 text-lg font-semibold text-white">
-                {isParsing ? "正在读取 PDF 文本" : "选择开发材料 PDF"}
+                {isParsing ? "正在读取 PDF 文本" : "选择所选材料的 PDF"}
               </p>
               <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
                 当前支持可复制文字的 PDF，最大 25 MB；扫描件 OCR 将在后续版本加入。
@@ -647,6 +456,7 @@ export function UpdateWorkflow() {
                 type="button"
                 variant="outline"
                 onClick={loadSample}
+                disabled={isParsing}
                 className="border-cyan-300/25 bg-cyan-300/[0.06] text-cyan-100 hover:bg-cyan-300/10 hover:text-white"
               >
                 <FileCheck2 /> 载入 S-05 已验证样例
@@ -656,18 +466,18 @@ export function UpdateWorkflow() {
 
           <aside className="research-panel">
             <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-rose-300/80">
-              Hold-out Guard
+              Source Boundary
             </p>
-            <h3 className="mt-2 text-lg font-semibold text-white">S-06 不能用于开发</h3>
+            <h3 className="mt-2 text-lg font-semibold text-white">已登记材料的使用边界</h3>
             <div className="mt-4 rounded-xl border border-rose-300/20 bg-rose-300/[0.055] p-4">
               <LockKeyhole className="size-5 text-rose-200" />
               <p className="mt-3 text-sm leading-6 text-slate-300">
-                系统会根据文件名与文档标题阻断 2026 半年度材料，避免把留出答案带入规则设计。
+                系统核对 PDF 内的公司与期间。S-06 已转为回归材料，本次演示保存在独立版本库，首次失败报告保持原样。
               </p>
             </div>
             <div className="mt-4 space-y-3 text-sm text-slate-400">
               <div className="flex items-center gap-2"><Check className="size-4 text-emerald-300" /> S-05：允许开发</div>
-              <div className="flex items-center gap-2"><X className="size-4 text-rose-300" /> S-06：只用于盲测</div>
+              <div className="flex items-center gap-2"><X className="size-4 text-rose-300" /> S-06：独立回归演示</div>
               <div className="flex items-center gap-2"><Circle className="size-4 text-slate-500" /> 扫描件：暂不支持</div>
             </div>
           </aside>
@@ -722,14 +532,14 @@ export function UpdateWorkflow() {
               </Badge>
             </div>
 
-            {parserResult && parserResult.blockers.length > 0 && (
+            {visibleBlockers.length > 0 && (
               <div className="mt-5 rounded-xl border border-rose-300/25 bg-rose-300/[0.055] p-4">
                 <div className="flex items-start gap-3">
                   <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-200" />
                   <div>
                     <p className="font-medium text-rose-100">解析 Gate · blocker FAIL</p>
                     <div className="mt-2 space-y-1 text-sm leading-6 text-slate-300">
-                      {parserResult.blockers.map((issue, index) => (
+                      {visibleBlockers.map((issue, index) => (
                         <p key={`${issue.code}-${issue.field ?? "general"}-${index}`}>
                           {issue.field ? `${issue.field} · ` : ""}{issue.message}
                         </p>
@@ -747,6 +557,7 @@ export function UpdateWorkflow() {
               {candidates.map((item) => (
                 <article
                   key={item.id}
+                  data-testid={`candidate-${item.metricKey}`}
                   className={cn(
                     "rounded-2xl border p-4 transition-colors",
                     item.reviewStatus === "accepted" && "border-emerald-300/30 bg-emerald-300/[0.055]",
@@ -785,13 +596,13 @@ export function UpdateWorkflow() {
                       <Input
                         type="number"
                         step="0.001"
-                        value={item.valueMn}
-                        onChange={(event) => updateCandidate(item.id, { valueMn: Number(event.target.value), reviewStatus: "pending" })}
+                        value={Number.isFinite(item.valueMn) ? item.valueMn : ""}
+                        onChange={(event) => updateCandidate(item.id, { valueMn: event.target.value === "" ? Number.NaN : Number(event.target.value), reviewStatus: "pending" })}
                         className="border-white/10 bg-slate-950/40 font-mono text-slate-100"
                       />
                     </label>
                     <div className="space-y-2">
-                      <span className="text-[13px] text-slate-400">证据方向</span>
+                      <span className="text-[13px] text-slate-400">人工方向标注</span>
                       <Select
                         value={item.direction}
                         onValueChange={(value) => updateCandidate(item.id, { direction: value as Direction, reviewStatus: "pending" })}
@@ -802,6 +613,7 @@ export function UpdateWorkflow() {
                         <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
                           <SelectItem value="支持">支持</SelectItem>
                           <SelectItem value="反证">反证</SelectItem>
+                          <SelectItem value="中性">中性</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -809,7 +621,7 @@ export function UpdateWorkflow() {
 
                   <div className="mt-3 rounded-xl border border-white/8 bg-slate-950/35 px-3 py-2.5">
                     <p className="text-[13px] leading-6 text-slate-400">
-                      {item.location} · {item.snippet}
+                      <a href={`${source.url}#page=${parserResult?.metrics[item.metricKey]?.page ?? 1}`} target="_blank" rel="noreferrer" className="text-cyan-200 underline underline-offset-4">{item.location}</a> · {item.snippet} · 系统方向：{item.systemDirection}
                     </p>
                   </div>
 
@@ -837,7 +649,7 @@ export function UpdateWorkflow() {
 
             <div className="mt-5 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-400">
-                {parserResult?.blockers.length
+                {visibleBlockers.length
                   ? "存在 blocker，已隔离候选证据，不能生成变化。"
                   : allReviewed && canPromoteToEvidence
                     ? "全部证据已处理，F-02 已闭合，可以生成变化。"
@@ -862,7 +674,7 @@ export function UpdateWorkflow() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
-                  Graph Diff · V-01 → Next
+                  Graph Diff · C-04
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-white">新信息改变了什么</h3>
               </div>
@@ -883,11 +695,11 @@ export function UpdateWorkflow() {
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
                 <p className="text-sm text-slate-400">Claim · C-04</p>
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-slate-300">成立</span>
+                  <span className="text-slate-300">系统信号</span>
                   <ArrowRight className="size-4 text-cyan-300" />
                   <span className="text-lg font-semibold text-emerald-300">{claimSignal}</span>
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-400">状态由已接受证据结构生成，但仍需人工签署。</p>
+                <p className="mt-3 text-sm leading-6 text-slate-400">信号由已冻结的 C-04 规则计算。人工最终状态仍为“成立”，本次只确认事实证据。</p>
               </div>
 
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
@@ -917,6 +729,8 @@ export function UpdateWorkflow() {
               </div>
             </div>
 
+            {reviewedRun?.chain && <ChainResultPanel result={reviewedRun.chain} />}
+
             <div className="mt-5 rounded-xl border border-amber-300/20 bg-amber-300/[0.055] p-4">
               <div className="flex items-start gap-3">
                 <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-200" />
@@ -939,7 +753,7 @@ export function UpdateWorkflow() {
                 <div className="grid size-12 place-items-center rounded-full border border-emerald-300/35 bg-emerald-300/10 text-emerald-200">
                   <CheckCircle2 className="size-6" />
                 </div>
-                <h3 className="mt-4 text-lg font-semibold text-white">{savedVersion} 已保存</h3>
+                <h3 className="mt-4 text-lg font-semibold text-white">{savedVersion} 已保存{workspace === "regression" ? "（回归演示）" : ""}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
                   当前版本保存在本机浏览器，包含来源、审核记录、Graph Diff、公式结果与阻塞关卡。
                 </p>
@@ -957,12 +771,16 @@ export function UpdateWorkflow() {
                 <Save className="size-6 text-cyan-300" />
                 <h3 className="mt-3 text-lg font-semibold text-white">保存研究快照</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  保存后可证明“什么变了、谁确认了、公式是否通过、哪些专业关卡仍未关闭”。
+                  保存来源、原始与修改数值、系统信号、审核人自填记录及专业待复核项。本次确认不会批准投资决策。
                 </p>
+                <label className="mt-4 block space-y-2 text-sm text-slate-300">
+                  <span>证据审核人（自行填写）</span>
+                  <Input aria-label="证据审核人（自行填写）" value={reviewer} onChange={(event) => setReviewer(event.target.value)} className="border-white/10 bg-slate-950/40 text-white" />
+                </label>
                 <Button
                   type="button"
                   onClick={saveVersion}
-                  disabled={!canPromoteToEvidence}
+                  disabled={!canPromoteToEvidence || !reviewer.trim()}
                   className="mt-5 w-full bg-cyan-300 text-slate-950 hover:bg-cyan-200"
                 >
                   <Save /> 保存为新版本

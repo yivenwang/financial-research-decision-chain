@@ -1,9 +1,10 @@
-import type { SourceMeta } from "@/lib/parser-v04";
+import type { SourceMeta } from "../../../lib/parser-v04.ts";
 
 export type SourceRecord = SourceMeta & {
   name: string;
   useStatus: "development" | "regression-only";
   titlePattern: RegExp;
+  issuerPattern: RegExp;
 };
 
 /**
@@ -17,6 +18,7 @@ export const sourceRecords: SourceRecord[] = [
     url: "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF",
     name: "安克创新 2026 年第一季度报告",
     useStatus: "development",
+    issuerPattern: /安克创新/,
     titlePattern: /2026\s*年\s*第一季度报告|2026\s*第一季度报告|2026\s*q1/i,
   },
   {
@@ -25,6 +27,7 @@ export const sourceRecords: SourceRecord[] = [
     url: "https://static.cninfo.com.cn/finalpage/2026-08-31/1225533054.PDF",
     name: "安克创新 2026 年半年度报告",
     useStatus: "regression-only",
+    issuerPattern: /安克创新/,
     titlePattern: /2026\s*年\s*半年度报告|2026\s*半年度报告|2026\s*h1/i,
   },
 ];
@@ -37,6 +40,9 @@ export function resolveSourceRecord(
   fileName: string,
   documentTitle: string,
 ): SourceRecord | undefined {
-  const searchable = `${fileName} ${documentTitle}`.replace(/\s+/g, "");
-  return sourceRecords.find((record) => record.titlePattern.test(searchable));
+  // A renamed file is not evidence of company or period identity.
+  // Match both against PDF text, never against filename alone.
+  const searchable = documentTitle.replace(/\s+/g, "");
+  void fileName;
+  return sourceRecords.find((record) => record.issuerPattern.test(searchable) && record.titlePattern.test(searchable));
 }
