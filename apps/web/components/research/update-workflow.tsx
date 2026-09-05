@@ -104,44 +104,45 @@ async function extractPdfItems(file: File): Promise<PdfExtraction> {
   const buffer = await file.arrayBuffer();
   const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)), (byte) => byte.toString(16).padStart(2, "0")).join("");
   const data = new Uint8Array(buffer);
-  const document = await pdfjs.getDocument({ data }).promise;
+  const loadingTask = pdfjs.getDocument({ data });
   try {
-  const items: PdfTextItem[] = [];
-  const titleParts: string[] = [];
+    const document = await loadingTask.promise;
+    const items: PdfTextItem[] = [];
+    const titleParts: string[] = [];
 
-  for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
-    const page = await document.getPage(pageNumber);
-    const content = await page.getTextContent();
-    for (const raw of content.items) {
-      const item = raw as unknown as {
-        str?: unknown;
-        transform?: unknown;
-        width?: unknown;
-      };
-      if (typeof item.str !== "string" || !Array.isArray(item.transform)) {
-        continue;
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      for (const raw of content.items) {
+        const item = raw as unknown as {
+          str?: unknown;
+          transform?: unknown;
+          width?: unknown;
+        };
+        if (typeof item.str !== "string" || !Array.isArray(item.transform)) {
+          continue;
+        }
+        const x = Number(item.transform[4]);
+        const y = Number(item.transform[5]);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        items.push({
+          str: item.str,
+          x,
+          y,
+          page: pageNumber,
+          width: typeof item.width === "number" ? item.width : undefined,
+        });
+        if (pageNumber <= 3) titleParts.push(item.str);
       }
-      const x = Number(item.transform[4]);
-      const y = Number(item.transform[5]);
-      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-      items.push({
-        str: item.str,
-        x,
-        y,
-        page: pageNumber,
-        width: typeof item.width === "number" ? item.width : undefined,
-      });
-      if (pageNumber <= 3) titleParts.push(item.str);
     }
-  }
-  return {
-    items,
-    pageCount: document.numPages,
-    documentTitle: titleParts.join(" "),
-    sha256,
-  };
+    return {
+      items,
+      pageCount: document.numPages,
+      documentTitle: titleParts.join(" "),
+      sha256,
+    };
   } finally {
-    await document.destroy();
+    await loadingTask.destroy();
   }
 }
 
