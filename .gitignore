@@ -1,0 +1,9 @@
+node_modules/
+.next/
+dist/
+.env*
+!.env.example
+*.tsbuildinfo
+apps/web/public/vendor/pdfjs/
+artifacts*/
+.DS_Store
