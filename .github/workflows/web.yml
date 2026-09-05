@@ -24,7 +24,6 @@ jobs:
         working-directory: apps/web
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      PLAYWRIGHT_PACKAGE_PATH: ${{ runner.temp }}/research-browser/node_modules/playwright
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,7 +42,9 @@ jobs:
       - name: Check production HTML, CSS and PDF worker
         run: npm run test:runtime
       - name: Install isolated browser test tool
-        run: npm install --prefix "$RUNNER_TEMP/research-browser" --no-package-lock --no-save --no-audit --no-fund playwright@1.62.1
+        run: |
+          npm install --prefix "$RUNNER_TEMP/research-browser" --no-package-lock --no-save --no-audit --no-fund playwright@1.62.1
+          echo "PLAYWRIGHT_PACKAGE_PATH=$RUNNER_TEMP/research-browser/node_modules/playwright" >> "$GITHUB_ENV"
       - name: Prepare Chromium
         run: node "$PLAYWRIGHT_PACKAGE_PATH/cli.js" install --with-deps chromium
       - name: Real S-05 and isolated S-06 browser upload, review, save and rollback
