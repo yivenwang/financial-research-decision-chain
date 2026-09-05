@@ -92,6 +92,9 @@ function requireValue(condition: unknown, message: string): asserts condition {
 }
 function finite(value: unknown): value is number { return typeof value === "number" && Number.isFinite(value); }
 function same(a: unknown, b: unknown) { return canonicalJson(a) === canonicalJson(b); }
+const money = (value: number | null | undefined) => value == null ? "未提供" : `${value.toFixed(8)} CNY mn`;
+const percent = (value: number | null | undefined) => value == null ? "未提供" : `${(value * 100).toFixed(2)}%`;
+const gateName: Record<string, string> = { "EG-01": "会计复核", "EG-02": "估值复核", VALUATION_SHARE_COUNT_MISSING: "本期股数", VALUATION_MULTIPLES_MISSING: "估值倍数", VALUATION_PERIOD_BASIS_MISSING: "年化口径", "F-02": "利润桥闭合" };
 
 // This checks the browser snapshot and replays the frozen chain. It does not
 // authenticate the PDF or the self-entered reviewer identity on the server.
@@ -135,15 +138,15 @@ export async function buildMemoContext(input: unknown): Promise<MemoContext> {
     const key = item.metricKey as (typeof REQUIRED_METRICS)[number] | undefined;
     const fact = key ? run.reviewedMetrics[key] : undefined;
     const original = key ? metrics[key] : undefined;
-    const excerpt = fact ? `${METRIC_CONFIG[key!].label}：审核值 ${fact.current} CNY mn；原始值 ${original?.current} CNY mn；比较值 ${fact.comparison ?? "未提供"}；披露同比 ${fact.disclosedChange ?? "未提供"}（比例）；系统方向 ${item.direction}。`
-      : `${item.description}：${item.value}（比例差）；系统方向 ${item.direction}。由本版本已审核指标计算。`;
+    const excerpt = fact ? `${METRIC_CONFIG[key!].label}：审核值 ${money(fact.current)}；原始值 ${money(original?.current)}；比较值 ${money(fact.comparison)}；披露同比 ${percent(fact.disclosedChange)}；系统方向 ${item.direction}。`
+      : `${item.description}：${item.value == null ? "未提供" : `${(item.value * 100).toFixed(2)} 个百分点`}；系统方向 ${item.direction}。由本版本已审核指标计算。`;
     return { id: item.id, kind: item.kind, label: item.description, excerpt, direction: item.direction, page: item.page ?? null, url: item.page ? `${record.url}#page=${item.page}` : null };
   });
   for (const [id, label, excerpt] of [
     ["A-03", "会计假设", `${chain.assumption.text} 状态：待专业复核。`],
     ["K-07", "失效条件", `${chain.killCriterion.text} 当前状态：${chain.killCriterion.currentState}；未提供连续可比期间序列；会计定性未知。`],
-    ["F-02", "利润桥", JSON.stringify(chain.formula)],
-    ["Valuation-B5", "估值输入", `${JSON.stringify(chain.valuation)} 年化只是展示占位，不是盈利预测。`],
+    ["F-02", "利润桥", `归母净利润 ${money(chain.formula?.attributable)} − 非经常性损益 ${money(chain.formula?.nonRecurring)} = 扣非净利润复算值 ${money(chain.formula?.calculatedAdjusted)}；披露值 ${money(chain.formula?.reportedAdjusted)}；差额 ${money(chain.formula?.difference)}；利润桥已闭合。`],
+    ["Valuation-B5", "估值输入", `盈利口径：${chain.valuation.earningsBasis === "adjusted_np" ? "扣非归母净利润" : "归母净利润"}；本期 ${money(chain.valuation.periodEarnings)}；年化占位系数 ${chain.valuation.annualizationFactor ?? "未提供"}；年化占位输入 ${money(chain.valuation.annualizedEarnings)}。待补：${chain.valuation.blockedGates.map((gate) => gateName[gate] ?? gate).join("、")}。年化只是展示占位，不是盈利预测；尚无可发布估值。`],
   ]) references.push({ id, kind: "rule", label, excerpt, direction: null, page: null, url: null });
   return {
     schemaVersion: "research-memo-input.v1", versionId: version.versionId, workspace,
