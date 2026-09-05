@@ -17,7 +17,7 @@ GitHub 是代码、修改记录和评测记录的主入口。开发使用分支�
 | `docs/` | 冻结说明、参赛计划与 UI 验收安排 |
 | `snapshots/` | 原始源码与迁移校验记录 |
 
-**网页迁移与引擎集成是两个里程碑。** 当前网页保留 V5 界面和其 Parser V0.4 基线；尚未接入根目录 Parser V0.6、Chain V0.1 或真实模型调用。网页中的旧盲测失败记录保留为历史，不能用来判断整个仓库的最新进度。
+网页现已直接接入根目录 Parser V0.6 Strict 与 Chain V0.1；界面、历史报告和业务定义从 V5 延续。真实模型调用仍待接入。完整路径与边界见 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史，不能用来判断整个仓库的最新进度。
 
 ## 运行网页
 
@@ -50,9 +50,11 @@ npm start
 | Parser V0.6 | 已合并；见 [冻结记录](docs/V0.6_FREEZE.md) |
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
-| 网页 | 本次迁入 V5 源码基线；最新引擎、模型与完整任务演示待集成 |
+| 网页 | 已迁入 V5 并接入稳定解析器/C-04 链；S-06 使用隔离回归版本库；真实模型待接入 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | 见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
+
+产品命名正在共同讨论，首选建议及备选见 [命名候选](docs/NAMING_CANDIDATES.md)。
 
 ## 变更边界
 

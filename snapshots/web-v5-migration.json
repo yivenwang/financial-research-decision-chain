@@ -5,10 +5,8 @@
     ".gitignore": "35d940f5e608b2a4ef2a41ecf7263d2d4e3e18aa8aab9a98a57fa57e5607dfa5",
     "app/globals.css": "b2da860887eb6534cde524f59f84f1eefd7b3ea9e740ee704360c121c0e2af2f",
     "app/layout.tsx": "1e548bbed43458e3bba323e7b4a92dfa17e31cc21b95365503c12143e81444fe",
-    "app/page.tsx": "d742a6e9cb0c9e4bad0cc58dad29046bb784afc7e80feb5676a7a69295c623ce",
     "components.json": "31f4ca67a4a62572571003d3d5aac85ee6fbfca67a192924bac6b168d95e98fd",
     "components/research/blind-test-report.tsx": "616f7f572bdbfda09ee4bd438f6882190d4972672228661f08b34ff40571f531",
-    "components/research/version-history.tsx": "0db23164f0708bc9c72de3cc5b3c5ecd93553c8b462ae229a6ec398df03d1e6f",
     "components/ui/accordion.tsx": "a4f153089ba886dfcf73fac26b5c01ca933fa12fbe88df6fb723912bfffdfbb0",
     "components/ui/alert-dialog.tsx": "9a8d950f2b9b4352d5ebb762fb44d5c28c2d353aa29712071973656a8736e311",
     "components/ui/alert.tsx": "2cc59b5f7bda91c1670884b1bf46bfc8a2a6f226cef184f5762acc037188885b",
@@ -73,8 +71,6 @@
     "eslint.config.mjs": "f22a254df7d934bbf9be499d3c969a13abb7f7f64c03f5967d0095cad81dfe06",
     "hooks/use-mobile.ts": "ad0936f84f1df79d3697bfbff9c18f8ad58431c1cbaf2359c6a853b0fcc9f28b",
     "lib/parser-v04.ts": "5cda943d9d6ad9bf0e5902ccf2d4166f6a23007e9072ab99c7fa2605b4577f06",
-    "lib/research-versions.ts": "76cf47c91f909714f7218390b0e661af8e2917e3011811c378691c9b969417f9",
-    "lib/source-records.ts": "d75e0cdcaa43d3929bd1b05bdc66c6c29450ee1f49bd3ae1f02cfa1131bc9cfe",
     "lib/utils.ts": "53f3d3d070f0a9082934da25b875f9499855c2b0693868dd28be8c23d8730f68",
     "next.config.ts": "614bce25b089c3f19b1e17a6346c74b858034040154c6621e7d35303004767cc",
     "postcss.config.mjs": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde",
@@ -83,7 +79,6 @@
     "public/globe.svg": "d051a8c47936990a9085693d307bb7cea1bc1b6d7ed956bcbaacf674f4ec96b9",
     "public/window.svg": "decf1cf7bb22b5c99c4857cfcd5718ce5465c4454166317589c83fc73df74b66",
     "tests/parser-v04-regression.test.mjs": "37cb4c8da718a08a619878b058abc9de7a26404fef6f376d87299b2a4f3c53eb",
-    "tsconfig.json": "be18523b23b78b6e1a876ddd107d330f0168bddf09d751b57e0b5edce69c66f3",
     "vendor/shadcn-tailwind-4.13.0.LICENSE.md": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f",
     "vendor/shadcn-tailwind-4.13.0.css": "bc7d83425702955b4cb67cb14ede9d603f9d912376d57a2d81d661094d2a782a"
   },
@@ -110,7 +105,7 @@
   "adapted_files": {
     "package.json": {
       "original_sha256": "f1c0570bcb1c83d55f933ea1692b0034585684a5bdcdb7abe4ac6ce72d2ee7f0",
-      "reason": "Replace Sites commands with standard Next.js commands; preserve dependency declarations."
+      "reason": "Add integration and browser test commands; dependency declarations unchanged."
     },
     "package-lock.json": {
       "original_sha256": "d1602bbcfd38d870c7bc20bb2f2f0829ac640eca66858defcd97e396d726e8eb",
@@ -118,7 +113,27 @@
     },
     "components/research/update-workflow.tsx": {
       "original_sha256": "446c1b798f8efcedbb5858f88df4b388604a74382f88c4a2f2fcfd14f74b1dd1",
-      "reason": "Load PDF worker from same-origin public asset instead of Vite ?url import."
+      "reason": "Integrate canonical strict parser/chain, reviewed values, source identity and isolated S-06 workflow."
+    },
+    "app/page.tsx": {
+      "original_sha256": "d742a6e9cb0c9e4bad0cc58dad29046bb784afc7e80feb5676a7a69295c623ce",
+      "reason": "Show current integration entry and label historical baseline; retain main layout."
+    },
+    "components/research/version-history.tsx": {
+      "original_sha256": "0db23164f0708bc9c72de3cc5b3c5ecd93553c8b462ae229a6ec398df03d1e6f",
+      "reason": "Preserve chain/audit fields through rollback and isolate regression ledger."
+    },
+    "lib/research-versions.ts": {
+      "original_sha256": "76cf47c91f909714f7218390b0e661af8e2917e3011811c378691c9b969417f9",
+      "reason": "Add optional chain/provenance fields and guarded append/rollback; preserve legacy storage keys."
+    },
+    "lib/source-records.ts": {
+      "original_sha256": "d75e0cdcaa43d3929bd1b05bdc66c6c29450ee1f49bd3ae1f02cfa1131bc9cfe",
+      "reason": "Resolve both company and period from PDF text; retain regression-only source metadata."
+    },
+    "tsconfig.json": {
+      "original_sha256": "be18523b23b78b6e1a876ddd107d330f0168bddf09d751b57e0b5edce69c66f3",
+      "reason": "Allow canonical TypeScript module imports from repository root."
     }
   }
 }

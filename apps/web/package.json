@@ -12,8 +12,10 @@
     "build": "next build --webpack",
     "start": "next start",
     "test:parser": "node --experimental-strip-types --test tests/parser-v04-regression.test.mjs",
-    "test": "npm run test:parser",
+    "test:integration": "node --experimental-strip-types --test tests/engine-integration.test.mjs",
+    "test": "npm run test:parser && npm run test:integration",
     "test:runtime": "node --test tests/runtime-smoke.test.mjs",
+    "test:browser": "node --experimental-strip-types --test tests/browser-e2e.test.mjs",
     "lint": "eslint . --ignore-pattern .next"
   },
   "dependencies": {

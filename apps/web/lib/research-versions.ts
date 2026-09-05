@@ -1,18 +1,30 @@
-import type { MetricKey, ParseIssue } from "@/lib/parser-v04";
+import type { MetricKey } from "../../../lib/parser-v04.ts";
+import type { ParseIssueV06 as ParseIssue, ParseResultV06 } from "../../../lib/parser-v06.ts";
+import type { C04ChainResult } from "../../../lib/chain-v01.ts";
+import { getSourceRecord } from "./source-records.ts";
 
 export const VERSION_STORAGE_KEY = "anker-research-mvp-versions";
 export const ACTIVE_VERSION_KEY = "anker-research-mvp-active-version";
 export const VERSION_UPDATED_EVENT = "anker-research-version-updated";
+export type WorkspaceScope = "research" | "regression";
+
+export function storageKeys(scope: WorkspaceScope = "research") {
+  return scope === "research"
+    ? { versions: VERSION_STORAGE_KEY, active: ACTIVE_VERSION_KEY }
+    : { versions: `${VERSION_STORAGE_KEY}-regression`, active: `${ACTIVE_VERSION_KEY}-regression` };
+}
 
 export type StoredEvidence = {
   id: string;
   metricKey?: MetricKey;
   label: string;
   valueMn: number;
+  originalValueMn?: number;
   comparisonMn?: number | null;
   changePct: number | null;
   disclosedChange?: number | null;
-  direction: "支持" | "反证";
+  direction: "支持" | "反证" | "中性";
+  systemDirection?: "支持" | "反证" | "中性";
   claimId: string;
   sourceId?: string;
   period?: string;
@@ -35,6 +47,11 @@ export type ResearchVersion = {
   createdAt: string;
   kind?: "update" | "rollback" | "baseline";
   restoredFrom?: string;
+  parentVersionId?: string;
+  workspace?: WorkspaceScope;
+  chain?: C04ChainResult;
+  chainVersion?: string;
+  humanReview?: { reviewer: string; confirmedAt: string; scope: "evidence-only"; identityVerified: false };
   source: {
     name: string;
     size: number;
@@ -43,17 +60,22 @@ export type ResearchVersion = {
     sourceId?: string;
     period?: string;
     url?: string;
+    sha256?: string;
   } | null;
   evidence: StoredEvidence[];
   claim: {
     id: string;
     before: string;
     after: string;
+    systemSignal?: string;
   };
   formula: StoredFormula;
   decision: string;
   blockedGates: string[];
   parser?: {
+    version?: string;
+    originalMetrics?: ParseResultV06["metrics"];
+    reviewedMetrics?: ParseResultV06["metrics"];
     canPromoteToEvidence: boolean;
     blockers: ParseIssue[];
   };
@@ -91,10 +113,10 @@ function isResearchVersion(value: unknown): value is ResearchVersion {
   );
 }
 
-export function readStoredVersions() {
+export function readStoredVersions(scope: WorkspaceScope = "research") {
   if (typeof window === "undefined") return [] as ResearchVersion[];
   try {
-    const parsed = JSON.parse(window.localStorage.getItem(VERSION_STORAGE_KEY) ?? "[]") as unknown;
+    const parsed = JSON.parse(window.localStorage.getItem(storageKeys(scope).versions) ?? "[]") as unknown;
     if (!Array.isArray(parsed)) return [];
     return parsed.filter(isResearchVersion);
   } catch {
@@ -102,8 +124,8 @@ export function readStoredVersions() {
   }
 }
 
-export function writeStoredVersions(versions: ResearchVersion[]) {
-  window.localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify(versions));
+export function writeStoredVersions(versions: ResearchVersion[], scope: WorkspaceScope = "research") {
+  window.localStorage.setItem(storageKeys(scope).versions, JSON.stringify(versions));
   window.dispatchEvent(new Event(VERSION_UPDATED_EVENT));
 }
 
@@ -115,16 +137,40 @@ export function nextVersionId(versions: ResearchVersion[]) {
   return "V-" + String(highest + 1).padStart(2, "0");
 }
 
-export function readActiveVersionId(versions: ResearchVersion[]) {
+export function readActiveVersionId(versions: ResearchVersion[], scope: WorkspaceScope = "research") {
   if (typeof window === "undefined") return "V-01";
-  const saved = window.localStorage.getItem(ACTIVE_VERSION_KEY);
+  const saved = window.localStorage.getItem(storageKeys(scope).active);
   if (saved && (saved === "V-01" || versions.some((version) => version.versionId === saved))) {
     return saved;
   }
   return versions.at(-1)?.versionId ?? "V-01";
 }
 
-export function setActiveVersionId(versionId: string) {
-  window.localStorage.setItem(ACTIVE_VERSION_KEY, versionId);
+export function setActiveVersionId(versionId: string, scope: WorkspaceScope = "research") {
+  window.localStorage.setItem(storageKeys(scope).active, versionId);
   window.dispatchEvent(new Event(VERSION_UPDATED_EVENT));
+}
+
+export function appendVersion(version: ResearchVersion, scope: WorkspaceScope = "research") {
+  const raw = JSON.parse(window.localStorage.getItem(storageKeys(scope).versions) ?? "[]") as unknown;
+  if (!Array.isArray(raw) || !raw.every(isResearchVersion)) throw new Error("版本库存在无法读取的记录，已停止写入以保留原数据。");
+  if (raw.some((item) => item.versionId === version.versionId)) throw new Error("版本编号已被使用，请刷新后重试。");
+  const record = version.source?.sourceId ? getSourceRecord(version.source.sourceId) : undefined;
+  if (scope === "research" && (version.workspace === "regression" || record?.useStatus === "regression-only")) {
+    throw new Error("回归材料只能保存到独立回归版本库。");
+  }
+  writeStoredVersions([...raw, version], scope);
+  setActiveVersionId(version.versionId, scope);
+}
+
+export function createRollbackSnapshot(selected: ResearchVersion, current: ResearchVersion[], activeId: string, scope: WorkspaceScope): ResearchVersion {
+  return {
+    ...structuredClone(selected),
+    versionId: nextVersionId(current),
+    createdAt: new Date().toISOString(),
+    kind: "rollback",
+    restoredFrom: selected.versionId,
+    parentVersionId: activeId,
+    workspace: scope,
+  };
 }

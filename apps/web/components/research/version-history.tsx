@@ -32,14 +32,16 @@ import { Button } from "@/components/ui/button";
 import {
   VERSION_UPDATED_EVENT,
   baselineVersion,
-  nextVersionId,
+  createRollbackSnapshot,
+  appendVersion,
+  type WorkspaceScope,
   readActiveVersionId,
   readStoredVersions,
-  setActiveVersionId,
-  writeStoredVersions,
   type ResearchVersion,
 } from "@/lib/research-versions";
 import { cn } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ChainResultPanel } from "@/components/research/chain-result-panel";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -73,6 +75,7 @@ function VersionBadge({ version }: { version: ResearchVersion }) {
 }
 
 export function VersionHistory() {
+  const [workspace, setWorkspace] = useState<WorkspaceScope>("research");
   const [storedVersions, setStoredVersions] = useState<ResearchVersion[]>([]);
   const [activeVersionId, setActive] = useState("V-01");
   const [selectedVersionId, setSelected] = useState("V-01");
@@ -80,8 +83,8 @@ export function VersionHistory() {
 
   useEffect(() => {
     function syncVersions() {
-      const stored = readStoredVersions();
-      const active = readActiveVersionId(stored);
+      const stored = readStoredVersions(workspace);
+      const active = readActiveVersionId(stored, workspace);
       setStoredVersions(stored);
       setActive(active);
       setSelected(active);
@@ -94,7 +97,7 @@ export function VersionHistory() {
       window.removeEventListener(VERSION_UPDATED_EVENT, syncVersions);
       window.removeEventListener("storage", syncVersions);
     };
-  }, []);
+  }, [workspace]);
 
   const allVersions = useMemo(
     () => [baselineVersion, ...storedVersions],
@@ -113,34 +116,26 @@ export function VersionHistory() {
   const canRollback = storedVersions.length > 0 && selectedVersion.versionId !== activeVersionId;
 
   function performRollback() {
-    const current = readStoredVersions();
-    const versionId = nextVersionId(current);
-    const rollbackVersion: ResearchVersion = {
-      ...selectedVersion,
-      versionId,
-      createdAt: new Date().toISOString(),
-      kind: "rollback",
-      restoredFrom: selectedVersion.versionId,
-      source: selectedVersion.source ? { ...selectedVersion.source } : null,
-      evidence: selectedVersion.evidence.map((item) => ({ ...item })),
-      claim: { ...selectedVersion.claim },
-      formula: selectedVersion.formula ? { ...selectedVersion.formula } : null,
-      blockedGates: [...selectedVersion.blockedGates],
-    };
-    writeStoredVersions([...current, rollbackVersion]);
-    setActiveVersionId(versionId);
-    setStoredVersions([...current, rollbackVersion]);
-    setActive(versionId);
-    setSelected(versionId);
-    setNotice(versionId + " 已创建，内容恢复自 " + selectedVersion.versionId + "；原历史未被覆盖。");
+    const current = readStoredVersions(workspace);
+    try {
+      const rollbackVersion = createRollbackSnapshot(selectedVersion, current, readActiveVersionId(current, workspace), workspace);
+      appendVersion(rollbackVersion, workspace);
+      const versionId = rollbackVersion.versionId;
+      setStoredVersions([...current, rollbackVersion]);
+      setActive(versionId);
+      setSelected(versionId);
+      setNotice(versionId + " 已创建，内容恢复自 " + selectedVersion.versionId + "；原历史未被覆盖。");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "回滚保存失败，原记录已保留。");
+    }
   }
 
   const readiness = [
-    { label: "Slice 01 决策链", pass: true },
-    { label: "Slice 02 材料更新", pass: true },
-    { label: "S-06 零引用保护", pass: true },
-    { label: "版本历史可读取", pass: true },
-    { label: "回滚已人工验收", pass: rollbackTested },
+    { label: "已保存决策链结果", pass: storedVersions.some((version) => Boolean(version.chain)) },
+    { label: "真实 PDF 更新记录", pass: storedVersions.some((version) => version.source?.mode === "pdf") },
+    { label: "本库有证据审核记录", pass: storedVersions.some((version) => Boolean(version.humanReview)) },
+    { label: "版本历史可读取", pass: storedVersions.length > 0 },
+    { label: "已保存回滚记录", pass: rollbackTested },
   ];
   const readinessCount = readiness.filter((item) => item.pass).length;
 
@@ -161,15 +156,24 @@ export function VersionHistory() {
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge variant="outline" className="border-emerald-300/30 bg-emerald-300/10 text-emerald-200">
-              <ShieldCheck /> Slice 02 · PASS
+              <ShieldCheck /> {workspace === "research" ? "研究版本库" : "回归版本库"}
             </Badge>
             <Badge variant="outline" className="border-slate-600 bg-slate-900/60 text-slate-300">
-              <LockKeyhole /> S-06 · 0 次引用
+              <LockKeyhole /> {workspace === "research" ? "与回归记录隔离" : "仅用于回归演示"}
             </Badge>
           </div>
         </div>
       </div>
 
+      <div className="max-w-lg">
+        <Select value={workspace} onValueChange={(value) => { setWorkspace(value as WorkspaceScope); setNotice(null); }}>
+          <SelectTrigger aria-label="选择版本库" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
+          <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
+            <SelectItem value="research">研究版本库</SelectItem>
+            <SelectItem value="regression">回归演示版本库</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="grid gap-4 xl:grid-cols-[0.42fr_1fr]">
         <aside className="research-panel h-fit">
           <div className="flex items-center justify-between gap-3">
@@ -327,6 +331,9 @@ export function VersionHistory() {
               </div>
             </div>
 
+            {selectedVersion.claim.systemSignal && <p className="mt-4 text-sm text-cyan-200">系统信号：{selectedVersion.claim.systemSignal}；人工最终论点状态未自动改写。</p>}
+            {selectedVersion.humanReview && <p className="mt-3 text-sm text-slate-300">证据审核人：{selectedVersion.humanReview.reviewer}（自行填写，身份未核验）；{formatDate(selectedVersion.humanReview.confirmedAt)}。本次签署仅确认事实证据。</p>}
+            {selectedVersion.chain && <ChainResultPanel result={selectedVersion.chain} />}
             {selectedVersion.formula && (
               <div className="mt-4 rounded-xl border border-cyan-300/18 bg-cyan-300/[0.045] p-4">
                 <p className="text-sm text-slate-400">F-02 确定性复算</p>
@@ -350,7 +357,7 @@ export function VersionHistory() {
                 <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
                   Freeze Gate
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-white">功能冻结准备度 · {readinessCount} / {readiness.length}</h3>
+                <h3 className="mt-2 text-lg font-semibold text-white">当前版本库操作记录 · {readinessCount} / {readiness.length}</h3>
               </div>
               <Badge
                 variant="outline"
@@ -361,7 +368,7 @@ export function VersionHistory() {
                 )}
               >
                 {rollbackTested ? <CheckCircle2 /> : <Clock3 />}
-                {rollbackTested ? "可以申请冻结" : "等待回滚验收"}
+                {rollbackTested ? "存在回滚记录" : "尚无回滚记录"}
               </Badge>
             </div>
 
@@ -391,7 +398,7 @@ export function VersionHistory() {
             <div className="mt-4 flex items-start gap-3 rounded-xl border border-rose-300/18 bg-rose-300/[0.04] p-4">
               <LockKeyhole className="mt-0.5 size-5 shrink-0 text-rose-200" />
               <p className="text-sm leading-6 text-slate-300">
-                在你完成一次回滚并确认结果以前，S-06 继续封存。功能冻结只冻结规则与字段，不代表 EG-01、EG-02 已通过。
+                这里统计本机操作记录，不能替代完整业务或 UI 验收。S-06 只在独立回归版本库演示；EG-01、EG-02 仍待专业复核。
               </p>
             </div>
           </article>
