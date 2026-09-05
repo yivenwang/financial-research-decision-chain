@@ -1,0 +1,133 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "../vendor/shadcn-tailwind-4.13.0.css";
+
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+}
+
+@utility scrollbar-none {
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}
+
+:root {
+  --background: #07111f;
+  --foreground: #eef7ff;
+  --card: #0c1828;
+  --card-foreground: #eef7ff;
+  --popover: #0c1828;
+  --popover-foreground: #eef7ff;
+  --primary: #67e8f9;
+  --primary-foreground: #06202a;
+  --secondary: #152337;
+  --secondary-foreground: #dbeafe;
+  --muted: #111f32;
+  --muted-foreground: #8da2bd;
+  --accent: #17324a;
+  --accent-foreground: #e0f2fe;
+  --destructive: #fb7185;
+  --border: #203248;
+  --input: #203248;
+  --ring: #67e8f9;
+  --chart-1: #67e8f9;
+  --chart-2: #6ee7b7;
+  --chart-3: #fbbf24;
+  --chart-4: #fb7185;
+  --chart-5: #a78bfa;
+  --radius: 0.75rem;
+  --sidebar: #0a1625;
+  --sidebar-foreground: #eef7ff;
+  --sidebar-primary: #67e8f9;
+  --sidebar-primary-foreground: #06202a;
+  --sidebar-accent: #17324a;
+  --sidebar-accent-foreground: #e0f2fe;
+  --sidebar-border: #203248;
+  --sidebar-ring: #67e8f9;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  min-width: 320px;
+  background-image:
+    radial-gradient(circle at 12% 6%, rgba(34, 211, 238, 0.12), transparent 28rem),
+    radial-gradient(circle at 86% 22%, rgba(59, 130, 246, 0.1), transparent 32rem),
+    linear-gradient(180deg, #07111f 0%, #081321 48%, #06101c 100%);
+  background-attachment: fixed;
+}
+
+::selection {
+  background: rgba(103, 232, 249, 0.28);
+  color: #ffffff;
+}
+
+button,
+[role="tab"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.research-panel {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  background:
+    linear-gradient(145deg, rgba(15, 29, 47, 0.9), rgba(8, 19, 34, 0.82));
+  padding: 1.25rem;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(18px);
+}
+
+@media (min-width: 640px) {
+  .research-panel {
+    padding: 1.5rem;
+  }
+}

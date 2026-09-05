@@ -1,0 +1,42 @@
+name: Web app migration
+
+on:
+  push:
+    branches: [dev/github-web-v5]
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/web/**'
+      - '.github/workflows/web.yml'
+      - 'snapshots/web-v5-migration.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install exact exported dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Preserve V5 S-05 and S-06 fixture behavior
+        run: npm test
+      - name: Verify unchanged V5 source files
+        run: node scripts/verify-migration.mjs
+      - name: Build standalone Next.js app
+        run: npm run build
+      - name: Check production HTML, CSS and PDF worker
+        run: npm run test:runtime
