@@ -42,6 +42,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChainResultPanel } from "@/components/research/chain-result-panel";
+import { MemoPanel } from "@/components/research/memo-panel";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
@@ -350,6 +351,8 @@ export function VersionHistory() {
               </div>
             )}
           </article>
+
+          {selectedVersion.chain && <MemoPanel key={`${workspace}:${selectedVersion.versionId}`} version={selectedVersion} workspace={workspace} />}
 
           <article className="research-panel">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
