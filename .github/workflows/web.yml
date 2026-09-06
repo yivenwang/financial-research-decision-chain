@@ -2,13 +2,14 @@ name: Web research integration
 
 on:
   push:
-    branches: [main, dev/github-web-v5, dev/web-engine-v01]
+    branches: [main, dev/github-web-v5, dev/web-engine-v01, dev/research-memo-v01]
   pull_request:
     branches: [main]
     paths:
       - 'apps/web/**'
       - 'lib/**'
       - '.github/workflows/web.yml'
+      - '.github/workflows/llm-live.yml'
       - 'snapshots/web-v5-migration.json'
   workflow_dispatch:
 
@@ -33,7 +34,7 @@ jobs:
           cache-dependency-path: apps/web/package-lock.json
       - name: Install exact exported dependencies
         run: npm ci --no-audit --no-fund
-      - name: Preserve V5 S-05 and S-06 fixture behavior
+      - name: Verify parser, reviewed chain and model boundary tests
         run: npm test
       - name: Verify unchanged V5 source files
         run: node scripts/verify-migration.mjs

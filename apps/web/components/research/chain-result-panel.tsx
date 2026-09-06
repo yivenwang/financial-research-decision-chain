@@ -38,7 +38,7 @@ export function ChainResultPanel({ result }: { result: C04ChainResult }) {
           {Object.entries(result.graphDiff.reasons).map(([node, reason]) => <li key={node}><span className="font-mono text-cyan-200">{node}</span> · {reason}</li>)}
         </ul>
         <p className="mt-3 text-sm text-slate-400">保持原状态：{result.graphDiff.unchangedNodeIds.join("、")}。</p>
-        <p className="mt-3 text-sm text-slate-400">以上解释由确定性规则生成。本版本尚未调用大语言模型。</p>
+        <p className="mt-3 text-sm text-slate-400">以上是冻结规则的计算说明。模型备忘录可在版本历史中另行生成与审核。</p>
       </div>
       <div className="rounded-xl border border-white/10 bg-slate-950/35 p-4">
         <h4 className="font-medium text-white">系统证据方向（含派生证据）</h4>

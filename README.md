@@ -17,7 +17,7 @@ GitHub 是代码、修改记录和评测记录的主入口。开发使用分支�
 | `docs/` | 冻结说明、参赛计划与 UI 验收安排 |
 | `snapshots/` | 原始源码与迁移校验记录 |
 
-网页现已直接接入根目录 Parser V0.6 Strict 与 Chain V0.1；界面、历史报告和业务定义从 V5 延续。真实模型调用仍待接入。完整路径与边界见 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史，不能用来判断整个仓库的最新进度。
+网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；**真实模型调用验收仍待 API Key 配置后执行**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
 
 ## 运行网页
 
@@ -50,7 +50,8 @@ npm start
 | Parser V0.6 | 已合并；见 [冻结记录](docs/V0.6_FREEZE.md) |
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
-| 网页 | 已迁入 V5 并接入稳定解析器/C-04 链；S-06 使用隔离回归版本库；真实模型待接入 |
+| 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
+| 模型备忘录 | 代码、引用校验、审核、导出和手动真实调用工作流已加入；真实提供方验收待配置 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | 见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 

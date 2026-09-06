@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
@@ -9,6 +9,8 @@ import { resolve } from "node:path";
 import test, { before, after } from "node:test";
 import { getSourceRecord } from "../lib/source-records.ts";
 import { storageKeys } from "../lib/research-versions.ts";
+import { memoStorageKey } from "../lib/research-memo-storage.ts";
+import { createMemoRun } from "../lib/research-memo.server.ts";
 
 const require = createRequire(import.meta.url);
 const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
@@ -16,10 +18,13 @@ assert.ok(browserPackage, "Set PLAYWRIGHT_PACKAGE_PATH to the installed playwrig
 const { chromium } = await import(pathToFileURL(resolve(browserPackage, "index.mjs")).href);
 const origin = "http://127.0.0.1:4322";
 const artifacts = new URL("../artifacts-web/", import.meta.url);
+const liveMemo = process.env.LIVE_MODEL_E2E === "1";
+const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
+if (liveMemo) assert.ok(process.env.OPENAI_API_KEY, "Live model acceptance requires an API key supplied by the runner.");
 const cases = [
   { id: "S-05", scope: "research", attr: 471.59418971, adj: 546.7588969, nr: -75.16470719, ay: -0.0487, jy: 0.2439, factor: 4 },
   { id: "S-06", scope: "regression", attr: 1702.03721539, adj: 1438.77516582, nr: 263.26204957, ay: 0.4586, jy: 0.4965, factor: 2 },
-];
+].filter((fixture) => !liveMemo || fixture.id === "S-05");
 const pdfs = new Map();
 let browser;
 let server;
@@ -36,7 +41,7 @@ before(async () => {
     assert.ok(buffer.subarray(0, 5).toString().startsWith("%PDF-"));
     pdfs.set(fixture.id, { buffer, sha256: createHash("sha256").update(buffer).digest("hex") });
   }
-  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"] });
+  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, ...(!liveMemo ? { OPENAI_API_KEY: "" } : {}) } });
   let spawnError;
   server.on("error", (error) => { spawnError = error; });
   server.stdout.on("data", (data) => { logs += data; });
@@ -74,6 +79,22 @@ async function upload(page, id, selected = id) {
 
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 1e-8, `${actual} != ${expected}`);
 const readLedger = (page, scope) => page.evaluate((key) => JSON.parse(localStorage.getItem(key) ?? "[]"), storageKeys(scope).versions);
+
+async function stubMemoTransport(page) {
+  const output = {
+    summary: { text: "扣非表现提供支持，归母利润反向变化仍须共同解释。", citations: ["EV-S-05-C04-ADJ", "EV-S-05-C04-ATTR"] },
+    supporting: [{ text: "扣非表现支持进一步核查核心经营改善。", citations: ["EV-S-05-C04-ADJ"] }],
+    counter: [{ text: "归母利润下滑构成反证，不能忽略。", citations: ["EV-S-05-C04-ATTR"] }],
+    alternatives: [{ text: "可能存在调整项性质影响利润比较的解释，仍待验证。", citations: ["EV-S-05-C04-NR", "A-03"] }],
+    questions: [{ text: "需要核对调整项经常性并补充连续可比报告。", citations: ["A-03", "K-07"] }],
+    gates: { eg01: "pending", eg02: "pending" },
+  };
+  await page.route("**/api/research-memo", async (route) => {
+    if (route.request().method() === "GET") { await route.fulfill({ json: { configured: true } }); return; }
+    const run = await createMemoRun(route.request().postDataJSON(), { apiKey: "ci-stub-not-real", accessToken: accessCode, model: "test-transport-not-live" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
+    await route.fulfill({ json: { run } });
+  });
+}
 
 for (const fixture of cases) {
   test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: 180000 }, async () => {
@@ -129,6 +150,50 @@ for (const fixture of cases) {
         await page.getByRole("option", { name: "回归演示版本库", exact: true }).click();
       }
       await page.getByTestId("chain-result").waitFor();
+      if (!liveMemo) {
+        await page.getByTestId("memo-unconfigured").waitFor();
+        assert.equal(await page.getByRole("button", { name: "生成 AI 备忘录", exact: true }).isDisabled(), true);
+        assert.equal(await page.evaluate((key) => localStorage.getItem(key), memoStorageKey(fixture.scope)), null);
+        if (fixture.id === "S-05") {
+          await stubMemoTransport(page);
+          await page.reload({ waitUntil: "load" });
+          await page.getByRole("tab", { name: "版本历史" }).click();
+        }
+      }
+      if (liveMemo || fixture.id === "S-05") {
+        const prefix = liveMemo ? "S-05-model" : "S-05-stub-model-NOT-LIVE";
+        const panel = page.getByTestId("memo-panel");
+        await panel.getByLabel("演示访问码").fill(accessCode);
+        await panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click();
+        await panel.getByTestId("memo-run").waitFor({ timeout: 110000 });
+        const savedMemos = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), memoStorageKey(fixture.scope));
+        assert.equal(savedMemos.runs.length, 1);
+        const modelRun = savedMemos.runs[0];
+        await writeFile(new URL(`${prefix}-call.json`, artifacts), JSON.stringify({ evaluation: liveMemo ? "live-provider-call" : "browser-UI-with-stubbed-provider-NOT-live-model-acceptance", run: modelRun }, null, 2));
+        assert.equal(modelRun.status, "completed", modelRun.audit.failureCode);
+        assert.match(modelRun.audit.responseId, /^resp_/);
+        if (liveMemo) assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live");
+        else assert.equal(modelRun.audit.returnedModel, "test-transport-not-live");
+        assert.ok(modelRun.audit.usage.inputTokens > 0);
+        assert.ok(modelRun.audit.usage.outputTokens > 0);
+        assert.equal(modelRun.context.source.mode, "pdf");
+        assert.equal(modelRun.context.source.sha256, pdfs.get(fixture.id).sha256);
+        assert.deepEqual(modelRun.memo.gates, { eg01: "pending", eg02: "pending" });
+        assert.ok((await panel.innerText()).includes(modelRun.memo.summary.text));
+        await panel.getByLabel("备忘录审核人（自行填写）").fill("CI memo reviewer");
+        await panel.getByLabel("复核意见").fill("自动化仅核对交互、引用覆盖和版本绑定；模型推论仍须专业人员复核。");
+        await panel.getByRole("button", { name: "接受备忘录", exact: true }).click();
+        await panel.getByTestId("memo-status").filter({ hasText: "人工已接受" }).waitFor();
+        const [memoDownload] = await Promise.all([page.waitForEvent("download"), panel.getByRole("button", { name: "导出备忘录", exact: true }).click()]);
+        await memoDownload.saveAs(new URL(`${prefix}-memo.md`, artifacts).pathname);
+        const [auditDownload] = await Promise.all([page.waitForEvent("download"), panel.getByRole("button", { name: "导出调用与审核记录", exact: true }).click()]);
+        await auditDownload.saveAs(new URL(`${prefix}-audit.json`, artifacts).pathname);
+        assert.deepEqual((await readLedger(page, fixture.scope))[0], snapshot);
+        await page.reload({ waitUntil: "load" });
+        await page.getByRole("tab", { name: "版本历史" }).click();
+        await page.getByTestId("memo-status").filter({ hasText: "人工已接受" }).waitFor();
+        await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
+      }
       await page.getByRole("button").filter({ hasText: "V-01" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
       await page.getByRole("button", { name: "确认并创建回滚版本" }).click();
@@ -153,7 +218,7 @@ for (const fixture of cases) {
   });
 }
 
-test("real upload rejects source mismatch and missing/rejected/invalid reviewed values", { timeout: 180000 }, async () => {
+test("real upload rejects source mismatch and missing/rejected/invalid reviewed values", { timeout: 180000, skip: liveMemo }, async () => {
   const context = await browser.newContext();
   const page = await context.newPage();
   try {
