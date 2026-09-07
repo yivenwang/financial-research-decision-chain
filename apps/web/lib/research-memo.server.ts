@@ -6,7 +6,7 @@ type Config = { apiKey: string; model: string; accessToken: string; provider?: P
 type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number };
 export const MAX_MEMO_REQUEST_BYTES = 128 * 1024;
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
-const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/v1/responses";
+const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/responses";
 
 export function memoConfig(): Config {
   const provider: Provider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deepseek";
@@ -56,13 +56,20 @@ export async function createMemoRun(version: unknown, config: Config, dependenci
   const started = Date.now();
   const provider: Provider = config.provider ?? "openai";
   const endpoint = config.endpoint ?? (provider === "deepseek" ? DEEPSEEK_ENDPOINT : OPENAI_ENDPOINT);
+  const format = provider === "openai"
+    ? { type: "json_schema", name: "research_update_memo", strict: true, schema: memoSchema(context) }
+    : { type: "json_schema", name: "research_update_memo", schema: memoSchema(context) };
   const body = { model: config.model, store: false, reasoning: { effort: "low" }, max_output_tokens: 4000,
     input: [{ role: "system", content: MEMO_INSTRUCTIONS }, { role: "user", content: canonicalJson(context) }],
-    text: { format: { type: "json_schema", name: "research_update_memo", strict: true, schema: memoSchema(context) } },
+    text: { format },
   };
   const requestBody = JSON.stringify(body);
   const run: MemoRun = { schemaVersion: "research-memo-run.v1", runId: crypto.randomUUID(), status: "failed", context, memo: null,
-    audit: { provider, api: "responses", promptVersion: MEMO_PROMPT_VERSION, promptSha256: await sha256Text(MEMO_INSTRUCTIONS), requestSha256: await sha256Text(requestBody), responseSha256: null, requestedModel: config.model, returnedModel: null, responseId: null, requestId: null, startedAt, finishedAt: startedAt, durationMs: 0, usage: null, rawOutput: null, failureCode: null, validation: [] },
+    audit: {
+      // MemoRun v1 was originally typed as OpenAI-only. The cast preserves the
+      // historical schema while the serialized audit still records DeepSeek.
+      provider: provider as "openai",
+      api: "responses", promptVersion: MEMO_PROMPT_VERSION, promptSha256: await sha256Text(MEMO_INSTRUCTIONS), requestSha256: await sha256Text(requestBody), responseSha256: null, requestedModel: config.model, returnedModel: null, responseId: null, requestId: null, startedAt, finishedAt: startedAt, durationMs: 0, usage: null, rawOutput: null, failureCode: null, validation: [] },
   };
   try {
     const response = await (dependencies.fetcher ?? fetch)(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: AbortSignal.timeout(dependencies.timeoutMs ?? 90000), redirect: "error" });
