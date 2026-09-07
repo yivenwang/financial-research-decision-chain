@@ -1,32 +1,30 @@
 import { timingSafeEqual } from "node:crypto";
-import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemo, type MemoRun } from "./research-memo.ts";
+import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemo, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
-type Provider = "deepseek" | "openai";
-type Config = { apiKey: string; model: string; accessToken: string; provider?: Provider; endpoint?: string };
+export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
 type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number };
 export const MAX_MEMO_REQUEST_BYTES = 128 * 1024;
-const OPENAI_ENDPOINT = "https://api.openai.com/v1/responses";
-const DEEPSEEK_ENDPOINT = "https://api.deepseek.com/responses";
-
-export function memoConfig(): Config {
-  const provider: Provider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deepseek";
-  if (provider === "openai") {
-    return {
-      apiKey: process.env.OPENAI_API_KEY ?? "",
-      model: process.env.OPENAI_MODEL || "gpt-5.6-sol",
-      accessToken: process.env.RESEARCH_DEMO_TOKEN ?? "",
-      provider,
-    };
-  }
+const PROVIDERS: Record<MemoProvider, { endpoint: string; defaultModel: string; accepts: (model: string) => boolean }> = {
+  deepseek: { endpoint: "https://api.deepseek.com/responses", defaultModel: "deepseek-v4-pro", accepts: (model) => ["deepseek-v4-pro", "deepseek-v4-flash"].includes(model) },
+  openai: { endpoint: "https://api.openai.com/v1/responses", defaultModel: "gpt-5.6-sol", accepts: (model) => /^[a-zA-Z0-9._-]{1,100}$/.test(model) },
+};
+function providerDefinition(provider: unknown) {
+  return provider === "openai" || provider === "deepseek" ? PROVIDERS[provider] : undefined;
+}
+export function memoConfig(env: NodeJS.ProcessEnv = process.env): MemoConfig {
+  const provider: MemoProvider = env.MODEL_PROVIDER === "openai" ? "openai" : "deepseek";
+  const isDeepSeek = provider === "deepseek";
   return {
-    apiKey: process.env.DEEPSEEK_API_KEY ?? "",
-    model: process.env.DEEPSEEK_MODEL || "deepseek-v4-pro",
-    accessToken: process.env.RESEARCH_DEMO_TOKEN ?? "",
     provider,
+    apiKey: (isDeepSeek ? env.DEEPSEEK_API_KEY : env.OPENAI_API_KEY) ?? "",
+    model: (isDeepSeek ? env.DEEPSEEK_MODEL : env.OPENAI_MODEL) || PROVIDERS[provider].defaultModel,
+    accessToken: env.RESEARCH_DEMO_TOKEN ?? "",
+    appOrigin: env.RESEARCH_APP_ORIGIN?.trim() || undefined,
   };
 }
-function configured(config: Config) {
-  return Boolean(config.apiKey.trim() && config.accessToken.length >= 16 && /^[a-zA-Z0-9._-]{1,100}$/.test(config.model));
+function configured(config: MemoConfig) {
+  const definition = providerDefinition(config.provider);
+  return Boolean(definition && config.apiKey.trim() && config.accessToken.length >= 16 && definition.accepts(config.model) && (!config.appOrigin || serializedOrigin(config.appOrigin)));
 }
 export async function readBoundedJson(source: Request | Response, maxBytes: number): Promise<unknown> {
   const declared = source.headers.get("content-length");
@@ -50,29 +48,25 @@ export async function readBoundedJson(source: Request | Response, maxBytes: numb
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
-export async function createMemoRun(version: unknown, config: Config, dependencies: Dependencies = {}): Promise<MemoRun> {
+export async function createMemoRun(version: unknown, config: MemoConfig, dependencies: Dependencies = {}): Promise<MemoRun> {
   const context = await buildMemoContext(version);
   const startedAt = new Date().toISOString();
   const started = Date.now();
-  const provider: Provider = config.provider ?? "openai";
-  const endpoint = config.endpoint ?? (provider === "deepseek" ? DEEPSEEK_ENDPOINT : OPENAI_ENDPOINT);
-  const format = provider === "openai"
-    ? { type: "json_schema", name: "research_update_memo", strict: true, schema: memoSchema(context) }
-    : { type: "json_schema", name: "research_update_memo", schema: memoSchema(context) };
-  const body = { model: config.model, store: false, reasoning: { effort: "low" }, max_output_tokens: 4000,
+  const definition = providerDefinition(config.provider);
+  if (!definition || !definition.accepts(config.model)) throw new Error("MODEL_CONFIG_INVALID");
+  // DeepSeek supports text.format; its stateless API ignores the store parameter.
+  const body = { model: config.model, ...(config.provider === "openai" ? { store: false } : {}), reasoning: { effort: "low" }, max_output_tokens: 4000,
     input: [{ role: "system", content: MEMO_INSTRUCTIONS }, { role: "user", content: canonicalJson(context) }],
-    text: { format },
+    text: { format: { type: "json_schema", name: "research_update_memo", strict: true, schema: memoSchema(context) } },
   };
   const requestBody = JSON.stringify(body);
   const run: MemoRun = { schemaVersion: "research-memo-run.v1", runId: crypto.randomUUID(), status: "failed", context, memo: null,
     audit: {
-      // MemoRun v1 was originally typed as OpenAI-only. The cast preserves the
-      // historical schema while the serialized audit still records DeepSeek.
-      provider: provider as "openai",
+      provider: config.provider,
       api: "responses", promptVersion: MEMO_PROMPT_VERSION, promptSha256: await sha256Text(MEMO_INSTRUCTIONS), requestSha256: await sha256Text(requestBody), responseSha256: null, requestedModel: config.model, returnedModel: null, responseId: null, requestId: null, startedAt, finishedAt: startedAt, durationMs: 0, usage: null, rawOutput: null, failureCode: null, validation: [] },
   };
   try {
-    const response = await (dependencies.fetcher ?? fetch)(endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: AbortSignal.timeout(dependencies.timeoutMs ?? 90000), redirect: "error" });
+    const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: AbortSignal.timeout(dependencies.timeoutMs ?? 90000), redirect: "error" });
     run.audit.requestId = response.headers.get("x-request-id")?.slice(0,200) ?? null;
     if (!response.ok) { run.audit.failureCode = `PROVIDER_HTTP_${response.status}`; return run; }
     const data = await readBoundedJson(response, 256 * 1024) as Record<string, unknown>;
@@ -119,32 +113,33 @@ function authorized(request: Request, token: string) {
   const expected = Buffer.from(`Bearer ${token}`);
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
-function sameOrigin(request: Request) {
-  const rawOrigin = request.headers.get("origin");
-  if (!rawOrigin) return false;
-  let origin: URL;
-  let requestUrl: URL;
+function serializedOrigin(value: string) {
   try {
-    origin = new URL(rawOrigin);
-    requestUrl = new URL(request.url);
-  } catch {
-    return false;
-  }
-  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
-  const expectedHost = forwardedHost || request.headers.get("host") || requestUrl.host;
-  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
-  const expectedProtocol = forwardedProto ? `${forwardedProto}:` : requestUrl.protocol;
-  return origin.host === expectedHost && origin.protocol === expectedProtocol;
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol) && url.origin === value;
+  } catch { return false; }
+}
+function sameOrigin(request: Request, appOrigin?: string) {
+  const rawOrigin = request.headers.get("origin");
+  if (!rawOrigin || !serializedOrigin(rawOrigin)) return false;
+  if (appOrigin) return serializedOrigin(appOrigin) && rawOrigin === appOrigin;
+  try {
+    const requestUrl = new URL(request.url);
+    // Next.js may normalize request.url to localhost while Host remains 127.0.0.1.
+    // Proxy deployments can set RESEARCH_APP_ORIGIN; forwarded headers are not trusted.
+    const expected = `${requestUrl.protocol}//${request.headers.get("host") || requestUrl.host}`;
+    return serializedOrigin(expected) && rawOrigin === expected;
+  } catch { return false; }
 }
 export function createMemoHandler(getConfig = memoConfig, dependencies: Dependencies = {}) {
   let inFlight = false;
   return {
-    GET: async () => json({ configured: configured(getConfig()) }),
+    GET: async () => { const config = getConfig(); return json({ configured: configured(config), provider: config.provider, model: config.model }); },
     POST: async (request: Request) => {
       const config = getConfig();
       if (!configured(config)) return json({ error: "模型服务尚未配置。", code: "MODEL_NOT_CONFIGURED" }, 503);
       if (!authorized(request, config.accessToken)) return json({ error: "演示访问码不正确。", code: "UNAUTHORIZED" }, 401);
-      if (!sameOrigin(request)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
+      if (!sameOrigin(request, config.appOrigin)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ error: "请求格式错误。", code: "CONTENT_TYPE" }, 415);
       if (inFlight) return json({ error: "已有模型请求正在处理，请稍后重试。", code: "MODEL_BUSY" }, 429);
       inFlight = true;

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildMemoContext, memoMarkdown, type MemoContext, type MemoPoint, type MemoReview, type MemoRun } from "@/lib/research-memo";
+import { buildMemoContext, memoMarkdown, type MemoContext, type MemoPoint, type MemoProvider, type MemoReview, type MemoRun } from "@/lib/research-memo";
 import { appendMemoReview, appendMemoRun, MEMO_UPDATED_EVENT, readMemoLedger } from "@/lib/research-memo-storage";
 import type { ResearchVersion, WorkspaceScope } from "@/lib/research-versions";
 
@@ -21,6 +21,8 @@ function Point({ item, runId }: { item: MemoPoint; runId: string }) {
 export function MemoPanel({ version, workspace }: { version: ResearchVersion; workspace: WorkspaceScope }) {
   const [context, setContext] = useState<MemoContext | null>(null);
   const [configured, setConfigured] = useState<boolean | null>(null);
+  const [provider, setProvider] = useState<MemoProvider | null>(null);
+  const [model, setModel] = useState<string | null>(null);
   const [runs, setRuns] = useState<MemoRun[]>([]);
   const [reviews, setReviews] = useState<MemoReview[]>([]);
   const [selectedId, setSelectedId] = useState("");
@@ -43,7 +45,13 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
       } catch (error) { setNotice(error instanceof Error ? error.message : "备忘录历史读取失败。"); }
     };
     buildMemoContext(version).then((value) => { if (!cancelled) { boundContext = value; setContext(value); sync(); } }).catch((error) => { if (!cancelled) setNotice(error instanceof Error ? error.message : "此版本尚不能生成备忘录。"); });
-    fetch("/api/research-memo", { cache: "no-store" }).then((response) => response.json()).then((data) => { if (!cancelled) setConfigured(data.configured === true); }).catch(() => { if (!cancelled) setConfigured(false); });
+    fetch("/api/research-memo", { cache: "no-store" }).then((response) => response.json()).then((data) => {
+      if (!cancelled) {
+        setConfigured(data.configured === true);
+        setProvider(data.provider === "deepseek" || data.provider === "openai" ? data.provider : null);
+        setModel(typeof data.model === "string" ? data.model : null);
+      }
+    }).catch(() => { if (!cancelled) { setConfigured(false); setProvider(null); setModel(null); } });
     window.addEventListener(MEMO_UPDATED_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => { cancelled = true; controller.current?.abort(); window.removeEventListener(MEMO_UPDATED_EVENT, sync); window.removeEventListener("storage", sync); };
@@ -79,7 +87,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     </div>
     {configured === false && <p className="text-sm text-amber-200" data-testid="memo-unconfigured">模型服务尚未配置，当前无法生成 AI 备忘录。</p>}
     {configured && context && <div className="space-y-3 rounded-xl border border-white/10 bg-slate-950/30 p-4">
-      <p className="text-sm leading-6 text-slate-300">点击后，将该版本的结构化证据和冻结计算发送至 OpenAI。PDF 文件和审核人姓名不进入模型请求。</p>
+      <p className="text-sm leading-6 text-slate-300">点击后，将该版本的结构化证据和冻结计算发送至 {provider === "deepseek" ? "DeepSeek" : provider === "openai" ? "OpenAI" : "已配置模型"}{model ? `（${model}）` : ""}。PDF 文件和审核人姓名不进入模型请求。</p>
       <label className="block max-w-md space-y-2 text-sm text-slate-300"><span>演示访问码</span><Input type="password" autoComplete="off" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} className="border-white/10 bg-slate-950/50" /></label>
     </div>}
     <Button onClick={generate} disabled={!configured || !context || busy || accessCode.length < 16} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>

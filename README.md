@@ -17,7 +17,7 @@ GitHub 是代码、修改记录和评测记录的主入口。开发使用分支�
 | `docs/` | 冻结说明、参赛计划与 UI 验收安排 |
 | `snapshots/` | 原始源码与迁移校验记录 |
 
-网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；**真实模型调用验收仍待 API Key 配置后执行**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
+网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；[PR #14](https://github.com/yivenwang/financial-research-decision-chain/pull/14) 接入默认 DeepSeek V4 Pro，保留 OpenAI 对照选项；**DeepSeek Secret 已配置，最新补丁的真实调用验收仍待运行**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
 
 ## 运行网页
 
@@ -43,7 +43,7 @@ npm start
 
 更多范围说明见 [网页迁移说明](docs/WEB_MIGRATION.md)。
 
-## 已核实进度（2026-09-05）
+## 已核实进度（2026-09-07）
 
 | 项目 | 状态 |
 | --- | --- |
@@ -51,13 +51,15 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | 代码、引用校验、审核、导出和手动真实调用工作流已加入；真实提供方验收待配置 |
+| 模型备忘录 | PR #13 已合并；PR #14 接入 DeepSeek，Secret 已配置，真实提供方验收待最新补丁验证 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | 见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 
 产品命名正在共同讨论，首选建议及备选见 [命名候选](docs/NAMING_CANDIDATES.md)。
 
 ## 变更边界
+
+项目所有者于 2026-09-07 要求：每个新阶段先提案并获批；核心逻辑变更须说明改前/改后及影响并获得确认。PR #14 的接入收尾、测试、文档同步和验收通过后合并已获批，见 [协作约定](AGENTS.md)。
 
 - Claims、Assumptions、Kill Criteria、Formula、Valuation、Decision 的业务定义不能为了测试通过而修改。
 - 保留已有版本、首次盲测失败与回滚记录；回归通过不能改写首次盲测结果。
