@@ -48,6 +48,31 @@ export async function readBoundedJson(source: Request | Response, maxBytes: numb
   return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
+class DuplicateJsonKeyError extends SyntaxError {}
+function parseMemoJson(raw: string): unknown {
+  // Validate JSON syntax first, then inspect keys before using JSON.parse's result.
+  // Otherwise duplicate keys silently discard earlier model content.
+  const parsed: unknown = JSON.parse(raw);
+  const stack: ({ keys: Set<string>; expectsKey: boolean } | null)[] = [];
+  for (const match of raw.matchAll(/"(?:\\.|[^"\\])*"|[{}\[\],]/g)) {
+    const token = match[0];
+    if (token === "{") stack.push({ keys: new Set(), expectsKey: true });
+    else if (token === "[") stack.push(null);
+    else if (token === "}" || token === "]") stack.pop();
+    else {
+      const frame = stack.at(-1);
+      if (token === ",") { if (frame) frame.expectsKey = true; }
+      else if (frame?.expectsKey) {
+        const key: string = JSON.parse(token);
+        if (frame.keys.has(key)) throw new DuplicateJsonKeyError("Duplicate JSON field");
+        frame.keys.add(key);
+        frame.expectsKey = false;
+      }
+    }
+  }
+  return parsed;
+}
+
 export async function createMemoRun(version: unknown, config: MemoConfig, dependencies: Dependencies = {}): Promise<MemoRun> {
   const context = await buildMemoContext(version);
   const startedAt = new Date().toISOString();
@@ -90,7 +115,11 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     if (parts.length !== 1 || parts[0].length > 24000) { run.audit.failureCode = "MODEL_OUTPUT_INVALID"; return run; }
     run.audit.rawOutput = parts[0];
     let parsed: unknown;
-    try { parsed = JSON.parse(parts[0]); } catch { run.status = "blocked"; run.audit.failureCode = "MODEL_JSON_INVALID"; return run; }
+    try { parsed = parseMemoJson(parts[0]); } catch (error) {
+      run.status = "blocked";
+      run.audit.failureCode = error instanceof DuplicateJsonKeyError ? "MODEL_JSON_DUPLICATE_KEY" : "MODEL_JSON_INVALID";
+      return run;
+    }
     const validation = validateMemo(parsed, context);
     run.audit.validation = validation.errors;
     if (!validation.memo) { run.status = "blocked"; run.audit.failureCode = "MEMO_VALIDATION_FAILED"; return run; }
@@ -149,7 +178,7 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
         let run: MemoRun;
         try { run = await createMemoRun(input, config, dependencies); } catch { return json({ error: "该版本的来源、证据或冻结计算不一致，请重新导入并审核。", code: "SNAPSHOT_INVALID" }, 422); }
         // Do not log request bodies, names, access codes, keys, or raw model text.
-        console.info(JSON.stringify({ event: "research-memo", runId: run.runId, provider: run.audit.provider, responseId: run.audit.responseId, status: run.status, failureCode: run.audit.failureCode }));
+        console.info(JSON.stringify({ event: "research-memo", runId: run.runId, provider: run.audit.provider, responseId: run.audit.responseId, status: run.status, failureCode: run.audit.failureCode, validation: run.audit.validation }));
         return json({ run, ...(run.status === "completed" ? {} : { error: failureMessage(run) }) }, run.status === "completed" ? 200 : run.status === "blocked" ? 422 : 502);
       } finally { inFlight = false; }
     },

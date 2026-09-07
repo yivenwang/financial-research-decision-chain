@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { buildMemoContext, canonicalJson, memoMarkdown, memoSchema, validateMemo, MEMO_INSTRUCTIONS } from "../lib/research-memo.ts";
+import { buildMemoContext, canonicalJson, memoMarkdown, memoSchema, sha256Text, validateMemo, MEMO_INSTRUCTIONS, MEMO_RESEARCH_INSTRUCTIONS, MEMO_PROMPT_VERSION } from "../lib/research-memo.ts";
 import { createMemoHandler, createMemoRun, memoConfig, MAX_MEMO_REQUEST_BYTES } from "../lib/research-memo.server.ts";
 import { appendMemoRun, appendMemoReview, readMemoLedger, memoStorageKey } from "../lib/research-memo-storage.ts";
 import { parseResearchReport, extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
@@ -122,6 +122,56 @@ test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and trut
   } });
   assert.equal(openaiRun.status, "completed"); assert.equal(openaiRun.audit.provider, "openai");
   assert.deepEqual(calls, ["https://api.deepseek.com/responses", "https://api.openai.com/v1/responses"]);
+});
+
+test("synthetic repeated section objects are blocked before duplicate fields can discard content", async () => {
+  // Reproduce the failure's structure using existing test prose, without copying a live response.
+  const output = memo();
+  output.summary.citations.push("EV-S-05-C04-NR");
+  const sections = ["supporting", "counter", "alternatives", "questions"].flatMap((section) =>
+    [output[section][0], output[section][0]].map((point) => `${JSON.stringify(section)}:${JSON.stringify(point)}`));
+  const raw = `{${[`"summary":${JSON.stringify(output.summary)}`, ...sections, `"gates":${JSON.stringify(output.gates)}`].join(",")}}`;
+  // Hash of the original research instructions in commit c96be3d, before the format-only addition.
+  assert.equal(await sha256Text(MEMO_RESEARCH_INSTRUCTIONS), "083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109");
+  assert.notEqual(MEMO_PROMPT_VERSION, "research-update-v1");
+  assert.deepEqual(validateMemo(JSON.parse(raw), await buildMemoContext(snapshot())).errors, ["MEMO_SECTION_SCHEMA"]);
+  let calls = 0;
+  const handler = createMemoHandler(() => config, { fetcher: async () => {
+    calls++;
+    return provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text: raw }] }] });
+  } });
+  const response = await handler.POST(request(snapshot()));
+  assert.equal(response.status, 422);
+  const { run } = await response.json();
+  assert.equal(calls, 1);
+  assert.equal(run.status, "blocked");
+  assert.equal(run.audit.failureCode, "MODEL_JSON_DUPLICATE_KEY");
+  assert.equal(run.audit.rawOutput, raw);
+  assert.equal(run.memo, null);
+  assert.throws(() => memoMarkdown(run));
+});
+
+test("duplicate JSON keys include escaped and nested names while independent objects and quoted punctuation remain valid", async () => {
+  const output = memo();
+  output.summary.text += ' 字段示意 {"text":"保留"} 与逗号、方括号 []、反斜线 \\ 只是正文。';
+  output.supporting.push({ text: "负向调整项提供进一步核查的依据。", citations: ["EV-S-05-C04-NR"] });
+  const raw = JSON.stringify(output);
+  const replay = (text) => createMemoRun(snapshot(), config, { fetcher: async () => provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text }] }] }) });
+  const valid = await replay(raw);
+  assert.equal(valid.status, "completed");
+  assert.deepEqual(valid.memo, output);
+  for (const ambiguous of [
+    raw.replace('"supporting":', '"supporting":[],"supporting":'),
+    raw.replace('"supporting":', String.raw`"\u0073upporting":[],"supporting":`),
+    raw.replace('"summary":{', '"summary":{"text":"被覆盖的前一段",'),
+  ]) {
+    assert.deepEqual(JSON.parse(ambiguous), output);
+    const run = await replay(ambiguous);
+    assert.equal(run.status, "blocked");
+    assert.equal(run.audit.failureCode, "MODEL_JSON_DUPLICATE_KEY");
+    assert.equal(run.audit.rawOutput, ambiguous);
+    assert.equal(run.memo, null);
+  }
 });
 
 test("provider errors, refusal, truncation and invalid output leave failed or blocked records, never fallback prose", async () => {

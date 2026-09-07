@@ -17,7 +17,7 @@ GitHub 是代码、修改记录和评测记录的主入口。开发使用分支�
 | `docs/` | 冻结说明、参赛计划与 UI 验收安排 |
 | `snapshots/` | 原始源码与迁移校验记录 |
 
-网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；[PR #14](https://github.com/yivenwang/financial-research-decision-chain/pull/14) 接入默认 DeepSeek V4 Pro，保留 OpenAI 对照选项；**DeepSeek Secret 已配置，最新补丁的真实调用验收仍待运行**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
+网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；[PR #14](https://github.com/yivenwang/financial-research-decision-chain/pull/14) 接入默认 DeepSeek V4 Pro，保留 OpenAI 对照选项；**DeepSeek 真实调用已返回，当前因输出结构错误被阻断；格式补丁待新的真实验收**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
 
 ## 运行网页
 

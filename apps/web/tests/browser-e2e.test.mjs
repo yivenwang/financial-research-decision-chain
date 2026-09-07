@@ -180,7 +180,7 @@ for (const fixture of cases) {
           panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click(),
         ]);
         const httpBody = await httpResponse.json().catch(() => ({ code: "NON_JSON_HTTP_RESPONSE" }));
-        const diagnostic = { httpStatus: httpResponse.status(), code: httpBody.code ?? null, failureCode: httpBody.run?.audit?.failureCode ?? null, provider: httpBody.run?.audit?.provider ?? null, runId: httpBody.run?.runId ?? null };
+        const diagnostic = { httpStatus: httpResponse.status(), code: httpBody.code ?? null, failureCode: httpBody.run?.audit?.failureCode ?? null, validation: httpBody.run?.audit?.validation ?? [], provider: httpBody.run?.audit?.provider ?? null, runId: httpBody.run?.runId ?? null };
         await writeFile(new URL(`${prefix}-http.json`, artifacts), JSON.stringify(diagnostic, null, 2));
         if (httpBody.run) {
           await writeFile(new URL(`${prefix}-call.json`, artifacts), JSON.stringify({ evaluation: liveMemo ? "live-provider-call" : "browser-UI-with-stubbed-provider-NOT-live-model-acceptance", run: httpBody.run }, null, 2));
