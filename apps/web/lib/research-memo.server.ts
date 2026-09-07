@@ -119,6 +119,23 @@ function authorized(request: Request, token: string) {
   const expected = Buffer.from(`Bearer ${token}`);
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
+function sameOrigin(request: Request) {
+  const rawOrigin = request.headers.get("origin");
+  if (!rawOrigin) return false;
+  let origin: URL;
+  let requestUrl: URL;
+  try {
+    origin = new URL(rawOrigin);
+    requestUrl = new URL(request.url);
+  } catch {
+    return false;
+  }
+  const forwardedHost = request.headers.get("x-forwarded-host")?.split(",")[0]?.trim();
+  const expectedHost = forwardedHost || request.headers.get("host") || requestUrl.host;
+  const forwardedProto = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  const expectedProtocol = forwardedProto ? `${forwardedProto}:` : requestUrl.protocol;
+  return origin.host === expectedHost && origin.protocol === expectedProtocol;
+}
 export function createMemoHandler(getConfig = memoConfig, dependencies: Dependencies = {}) {
   let inFlight = false;
   return {
@@ -127,7 +144,7 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
       const config = getConfig();
       if (!configured(config)) return json({ error: "模型服务尚未配置。", code: "MODEL_NOT_CONFIGURED" }, 503);
       if (!authorized(request, config.accessToken)) return json({ error: "演示访问码不正确。", code: "UNAUTHORIZED" }, 401);
-      if (request.headers.get("origin") !== new URL(request.url).origin) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
+      if (!sameOrigin(request)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ error: "请求格式错误。", code: "CONTENT_TYPE" }, 415);
       if (inFlight) return json({ error: "已有模型请求正在处理，请稍后重试。", code: "MODEL_BUSY" }, 429);
       inFlight = true;
