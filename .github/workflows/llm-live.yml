@@ -50,6 +50,9 @@ jobs:
       - name: One real S-05 upload and one live DeepSeek request with review and export
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          # Temporary compatibility alias for the pre-provider browser harness guard.
+          # Runtime provider selection remains DeepSeek via MODEL_PROVIDER.
+          OPENAI_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEEPSEEK_MODEL: ${{ inputs.model }}
           LIVE_MODEL_E2E: '1'
         run: npm run test:browser
