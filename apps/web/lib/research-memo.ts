@@ -3,7 +3,7 @@ import { getSourceRecord } from "./source-records.ts";
 import type { ResearchVersion, WorkspaceScope } from "./research-versions.ts";
 import { V05_PRIMARY_SCHEMA } from "../../../lib/parser-v05-strict.ts";
 
-export const MEMO_PROMPT_VERSION = "research-update-v1-format-2";
+export const MEMO_PROMPT_VERSION = "research-update-v2-judgement-1";
 export type MemoProvider = "deepseek" | "openai";
 export const MEMO_RESEARCH_INSTRUCTIONS = `你是金融研究更新助手。根据输入的已审核结构化证据，为 C-04 生成中文研究更新备忘录。
 任务是解释支持与反证如何共同影响判断、提出有待验证的替代解释，并给出有针对性的下一步研究问题。不要仅改写系统信号。
@@ -13,11 +13,20 @@ export const MEMO_RESEARCH_INSTRUCTIONS = `你是金融研究更新助手。根�
 不重算财务指标，不改变系统信号、人工最终状态、公式、估值或动作，不批准专业关卡，不给买卖建议。EG-01 与 EG-02 均保持 pending。年化仅为展示占位，不能称为盈利预测。
 summary 简述本次更新；supporting 与 counter 各一至三项；alternatives 一至两项；questions 一至三项。每段至多三百汉字，内容具体，避免重复。
 只返回符合给定 JSON Schema 的最终备忘录，不输出隐藏推理过程。`;
+// Approved on 2026-09-08 after review of the archived live S-05 memo.
+// This changes research wording requirements, not financial rules or validation.
+export const MEMO_JUDGEMENT_INSTRUCTIONS = `判断与证据边界：先区分已审核事实、冻结规则的系统信号、待验证的解释和待专业复核的假设。摘要也必须遵守这些边界。
+凡从指标表现推至“核心经营更强”“扣非口径更具代表性”或调整项应被排除的段落，必须在该段说明相应会计前提仍待复核，并引用 A-03。引用一条待复核假设不能使它成为已确认事实；只在文末保留 pending 不能替代段内限定。系统信号只表述为冻结规则的输出。
+每项事实比较都应引用比较各侧的证据。一个段落存在引用不代表其中所有判断都得到支持。同比方向、增速差、损益正负和利润桥闭合只能支撑输入记载的比较与计算关系，不能单独证明经营原因、盈利口径代表性或未来持续性。
+原因只有在本次引用中明确披露时，才能作为材料披露的解释转述，并保留其披露属性。输入没有收入确认、成本或基数的具体证据时，这些原因只能放入 alternatives，明确为待验证假设，不能在摘要、支持或反证中写成已知原因。反证应先陈述事实差异和判断限制。
+非经常性损益是本次材料的披露口径，不能直接改称未来不会重复的一次性项目。其正负不证明是否会重复，也不自动批准会计假设；有关持续性的解释必须保留条件并指向会计复核。
+替代解释要说明已有观察、待验证的假设以及还缺什么证据。没有明确比较对象和依据时，不判断影响已被高估或低估，也不推断未来利润必然恢复。下一步问题应指向可补充材料或具体专业复核事项。
+支持与反证都须保留。逐段核对引用能否支持本段表述，并保留尚未解决的分歧；不以统一免责声明替代每段自身的限定。`;
 const MEMO_FORMAT_INSTRUCTIONS = `JSON 格式约定：顶层只能包含 summary、supporting、counter、alternatives、questions、gates，每个字段只出现一次。
 summary 是单个段落对象；supporting、counter、alternatives、questions 必须分别是用方括号包裹的数组，即使只有一项也必须使用数组。每个段落对象只包含 text 字符串和 citations 字符串数组。
 同一栏的多条内容放入该栏的数组，用逗号分隔各段落对象；不得通过重复 supporting、counter 等同名字段表达多条内容。任何层级的对象都不得含重复字段。
 返回前核对数组与对象类型、字段唯一性及上文的逐段引用要求。只输出一个 JSON 对象，不使用 Markdown 代码围栏。`;
-export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
+export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_JUDGEMENT_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
 
 export type MemoPoint = { text: string; citations: string[] };
 export type ResearchMemo = {

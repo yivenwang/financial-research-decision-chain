@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13 和默认接入 DeepSeek V4 Pro 的 PR #14 均已合并。运行代码提交 `047b849` 的普通 CI 与第 5 次真实 S-05 技术验收均通过。第 4 次失败继续保留；[成功原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)已完成，建议修订假设与归因表述，研究内容验收及专业复核尚未通过。本阶段仅同步文档，不改变运行代码。
+更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。第 5 次真实 S-05 技术验收对应 `research-update-v1-format-2`；[原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订假设与归因表述。本分支按所有者批准加入 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)，其新真实输出仍待验收；不能沿用第 5 次成功作为新版通过证明。专业关卡继续待复核。
 
 ## 模型承担的工作
 
@@ -24,7 +24,7 @@
 
 - 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。固定 4,000 最大输出 token、low reasoning、90 秒超时；一次操作只发一次请求，无自动重试或模拟兜底。
 - Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
-- 当前 Prompt 版本为 `research-update-v1-format-2`：在原始研究指令后追加数组/对象类型、字段唯一性及返回前格式核对说明。原始研究指令单独保留为 `MEMO_RESEARCH_INSTRUCTIONS`，其 SHA-256 与提交 `c96be3d` 的研究指令一致。金融判断要求、输出 Schema、引用与专业关卡规则未修改。
+- 当前分支 Prompt 为 `research-update-v2-judgement-1`：在保留的原始研究指令与 JSON 格式指令之间，加入经批准的假设状态、逐项证据支撑和归因边界要求。原始 `MEMO_RESEARCH_INSTRUCTIONS` 哈希仍与 `c96be3d` 一致，但有效 Prompt 的判断表达要求和哈希已改变。财务定义、输入、Schema、结构校验和专业关卡规则保持原实现，详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
 - 哈希用于关联和复查，不是数字签名。本机记录可由设备持有人修改；CI 来源记录和人工专业审阅应一并保留。
@@ -54,7 +54,7 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 ## GitHub 中的一次真实验收
 
 1. 仓库 Actions Secret 名称为 `DEEPSEEK_API_KEY`；项目所有者已经配置，无需重复添加。存在性检查不等于提供方认证或余额验证。
-2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。PR #14 合并前选择 `dev/deepseek-provider-v02`，模型选择 `deepseek-v4-pro`；合并后才选择 `main`。界面在合并前可能仍显示旧名 **Live research memo acceptance**，补丁内名称为 **Live DeepSeek research memo acceptance**。
+2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。本次新版验收选择 `dev/memo-judgement-v02`，模型选择 `deepseek-v4-pro`；核对运行实际 head 与本次 PR 一致。已合并的 `main` 当前仍为旧 Prompt，不能替代本分支验收。
 3. 工作流用正式构建的网页上传官方 S-05 PDF，执行一次真实模型请求、引用校验、备忘录审核交互、导出、重载和回滚。演示访问码由测试程序临时随机生成，无需额外配置。
 4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，检查真实 Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
 
@@ -86,7 +86,7 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 ## 自动测试的证明范围
 
-`npm test` 包括原有三项解析 fixture、六项引擎集成测试及十一项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；本次新增相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。
+`npm test` 包括原有三项解析 fixture、六项引擎集成测试及十一项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；V0.1 格式修复已加入相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。
 
 普通 Web CI 继续真实上传 S-05 / S-06 PDF，并检查未配置时禁用模型。随后 S-05 通过浏览器网络拦截测试备忘录呈现、审核、导出和重载，返回模型名称明确为 `test-transport-not-live`，输出文件带 `stub-model-NOT-LIVE`。这验证 UI 与存储交互，不证明提供方接入成功。
 

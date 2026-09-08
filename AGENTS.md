@@ -18,6 +18,8 @@ The owner approved closing PR #14: DeepSeek integration and origin/test fixes, p
 
 On 2026-09-08, after PR #14 merged, the owner approved reviewing the successful real memo and preparing the competition demo script, and reaffirmed that Anker is a case within the intended research system. This stage may inspect the approved S-05 artifact, verify its evidence, and record review findings, system scope, and the demo script in GitHub. Findings do not authorize changing the Prompt's judgement requirements, financial rules, professional gates, or historical review events. Proposed core changes must be explained and confirmed separately.
 
+The owner subsequently approved revising the model instructions to retain the pending status of assumptions, limit unsupported attribution, and review one new real output. This authorizes a versioned Prompt change and its regression/content checks. It does not authorize changes to the underlying financial definitions, thresholds, calculations, decisions, professional gates, or original model/review records. K-07 display wording, broader evidence inputs and cross-company migration remain separate proposals. Keep the new Prompt's live acceptance pending until its own output is available and reviewed.
+
 ## Repository and evidence
 
 - Work in GitHub branches and PRs. Check the latest PR head before writing. Do not overwrite the newer dev/deepseek-provider-v02 with the old uncommitted v01 draft.
