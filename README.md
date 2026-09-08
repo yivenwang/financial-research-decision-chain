@@ -17,7 +17,7 @@ GitHub 是代码、修改记录和评测记录的主入口。开发使用分支�
 | `docs/` | 冻结说明、参赛计划与 UI 验收安排 |
 | `snapshots/` | 原始源码与迁移校验记录 |
 
-网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；[PR #14](https://github.com/yivenwang/financial-research-decision-chain/pull/14) 接入默认 DeepSeek V4 Pro，保留 OpenAI 对照选项；**DeepSeek 真实调用已返回，当前因输出结构错误被阻断；格式补丁待新的真实验收**。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
+网页已通过 [PR #12](https://github.com/yivenwang/financial-research-decision-chain/pull/12) 接入根目录 Parser V0.6 Strict 与 Chain V0.1，并完成真实 S-05 / S-06 上传至保存、回滚验收。新增模型备忘录接口、引用校验、人工审核和导出；[PR #14](https://github.com/yivenwang/financial-research-decision-chain/pull/14) 接入默认 DeepSeek V4 Pro，保留 OpenAI 对照选项；**真实 DeepSeek S-05 技术闭环已通过**：[24 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34140531680) 与[第 5 次真实验收](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34142444878) 均成功，备忘录的研究质量及 EG-01 / EG-02 仍待人工专业复核。见 [模型备忘录](docs/RESEARCH_MEMO_V0.1.md) 与 [网页引擎接入](docs/WEB_ENGINE_V0.1.md)。旧盲测失败报告保留为历史。
 
 ## 运行网页
 
@@ -43,7 +43,7 @@ npm start
 
 更多范围说明见 [网页迁移说明](docs/WEB_MIGRATION.md)。
 
-## 已核实进度（2026-09-07）
+## 已核实进度（2026-09-08）
 
 | 项目 | 状态 |
 | --- | --- |
@@ -51,7 +51,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | PR #13 已合并；PR #14 接入 DeepSeek，Secret 已配置，真实提供方验收待最新补丁验证 |
+| 模型备忘录 | PR #13 已合并；PR #14 接入 DeepSeek，真实 S-05 调用、复核交互、导出和回滚通过；研究内容待专业复核 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | 见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 

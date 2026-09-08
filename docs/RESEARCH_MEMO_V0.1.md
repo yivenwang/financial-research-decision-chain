@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-07。衔接已合并的网页引擎 PR #12 和模型备忘录 PR #13。PR #14 默认接入 DeepSeek V4 Pro；真实调用已返回内容，但第 4 次手动验收因输出结构错误被阻断。当前格式补丁仍待新的真实 API 整链验收，不能用测试替身结果证明已经满足比赛的大模型要求。
+更新：2026-09-08。衔接已合并的网页引擎 PR #12 和模型备忘录 PR #13。PR #14 默认接入 DeepSeek V4 Pro。运行代码提交 `047b849` 的普通 CI 与第 5 次真实 S-05 技术验收均通过。第 4 次失败继续保留；备忘录研究质量与专业复核尚未完成。当前收尾修改仅同步文档，不改变已验收的运行代码。
 
 ## 模型承担的工作
 
@@ -60,13 +60,27 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
 
+### 第 5 次真实技术验收通过
+
+| 核对项 | 证据与范围 |
+| --- | --- |
+| 运行代码 | `047b849f2b98015168c4a9cb405ac8d271cf67a5`；`dev/deepseek-provider-v02` |
+| 普通 CI | [34140531680](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34140531680)：24 项通过，0 失败、0 跳过，生产构建和 78 个保留文件哈希核验通过 |
+| 真实模型流程 | [34142444878](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34142444878)：DeepSeek V4 Pro，S-05 主流程 1 项通过，负向测试按设计跳过 1 项；跳过项不计通过，已由普通 CI 单独覆盖 |
+| 验收动作 | 真实 PDF 上传与证据审核、冻结链和版本保存、真实模型返回、引用校验、调用保存一致性、备忘录审核交互、Markdown/审计导出、重载和回滚 |
+| 审计归档 | [10026468551](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34142444878/artifacts/10026468551)：8 个文件上传成功；ZIP SHA-256 `79aa1580eb918869f1d295cbad594f06784705636d0505e84adee0db754f377b` |
+
+已核对 GitHub 的运行提交、日志、步骤及该提交的浏览器验收断言。成功附件的直接下载仍返回 HTTP 403，尚未逐条阅读成功备忘录原文；不据此宣布专业内容合格。自动化执行的“接受备忘录”仅验收交互与保存，EG-01 / EG-02 继续待专业复核。技术接入合并条件已满足，研究质量评审和参赛呈现作为后续工作。
+
+### 历史失败保留
+
 2026-09-07 第 4 次真实运行 [34134238598](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34134238598) 使用提交 `c96be3d` 和 `deepseek-v4-pro`。应用返回 HTTP 422 / `MEMO_VALIDATION_FAILED`，具体错误为 `MEMO_SECTION_SCHEMA`。四个应为数组的字段分别重复出现为对象；标准 JSON 解析只保留每个字段的最后一个对象，现有结构校验因此正确阻断。
 
 原始失败保留于 [GitHub 验收附件](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34134238598/artifacts/10023382597) 与项目负责人下载的原件中。仓库回归使用既有测试文案合成相同的重复字段结构，不复制真实模型正文或附件中的财务证据。新补丁会更早以 `MODEL_JSON_DUPLICATE_KEY` 阻断这类结构；回归通过不能改写原始失败或计为新真实调用。
 
 结构和引用校验通过后，研究内容仍须人工核对；不能据此认定因果解释或会计判断已经获得专业认可。EG-01、EG-02 保持待复核。
 
-更早的失败运行 [34105014901](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34105014901) 同样保留。合并条件仍为最新代码的普通 CI 和真实 S-05 运行均通过；当前补丁未完成新的真实验收。
+更早的失败运行 [34105014901](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34105014901) 同样保留。后续成功不覆盖失败记录；新的运行代码改动需要对应验证，不能仅凭这次成功推断未来版本通过。
 
 该工作流只手动触发，不会在普通 push 或 PR 测试时产生模型调用费用。安装依赖及构建步骤不接收 API Key；仅预检及最终运行步骤使用配置的 secret。
 
