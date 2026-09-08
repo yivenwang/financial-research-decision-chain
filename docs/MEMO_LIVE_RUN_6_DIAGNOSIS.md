@@ -1,6 +1,6 @@
 # 第 6 次真实备忘录验收诊断
 
-核对时间：2026-09-08。对应 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16) 的判断表达修订。第 6 次结论保持：提供方未完成响应，应用正确停止，没有完整正文可供本轮内容评审。所有者随后批准下述恢复方案，代码与本地验证现已完成；新真实验收尚待执行。原始失败和诊断证据保留。
+核对时间：2026-09-08。对应 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16) 的判断表达修订。第 6 次结论保持：提供方未完成响应，应用正确停止，没有完整正文可供本轮内容评审。所有者随后批准下述恢复方案，代码、27 项普通 CI 及 [第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)均已完成。第 7 次内容初审仍建议定点修订；第 6 次原始失败和诊断证据保留。
 
 ## 已核实的运行与停止位置
 
@@ -71,6 +71,8 @@ OpenAI 通道仍沿用原上限与超时。Prompt 的版本、内容和哈希保
 - 本地解析 3 项、引擎集成 6 项、模型 14 项，合计 23 项通过。新增三项合成响应测试，覆盖可解析 JSON 仍失败、用满上限也不补猜原因、未知诊断、文本边界及不保存推理正文；既有版本库测试验证旧字段缺失仍兼容、原记录保持一致、未完成调用无法接受。没有新增真实模型调用。
 - Prompt 版本、有效指令及原始研究指令哈希分别核验未变。上下文、Schema、引用校验、Markdown 导出、财务引擎与审核流程继续沿用原实现。
 
-当前提交的 GitHub 构建和浏览器回归结果记录于 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。通过后，在既有 `llm-live.yml` 使用 `dev/memo-judgement-v02` / `deepseek-v4-pro` 手动新建一次运行，并核对实际提交。不要重跑第 6 次旧提交；取得新产物后按 [V0.2 逐段标准](MEMO_PROMPT_V0.2.md) 复核。此次批准无需再次询问，但失败后不能自动重试。
+提交 `cf47037` 的 [普通 CI 34244606292](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 已通过：27 项测试、TypeScript / 生产构建、78 个保留文件及真实 S-05/S-06 浏览器回归均成功。所有者随后按批准方案新建 [第 7 次运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818)，完成一次真实调用及交互，输出 4,583 token，耗时 76.946 秒；未重跑第 6 次旧提交。
+
+第 7 次归档和 12 段内容已按 [V0.2 标准](MEMO_PROMPT_V0.2.md)复核，详见 [内容初审](MEMO_CONTENT_REVIEW_RUN_7.md)。预算调整本次完成任务，但比较引用和材料范围表述仍需修订；当前不再提高预算、不自动重跑。第 6 次缺失的中断原因不会被新运行倒填。
 
 本次阻塞属于通用模型调用环节。项目仍以研究更新系统及参赛完整演示为目标，安克是首个案例；UI、命名、K-07 展示一致性和有限跨公司验证依原计划分别推进。

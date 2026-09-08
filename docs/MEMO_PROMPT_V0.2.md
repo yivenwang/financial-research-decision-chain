@@ -2,7 +2,7 @@
 
 更新：2026-09-08。项目所有者已批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。
 
-当前状态：首版指令修订、离线验证及 [24 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34210500556) 已完成。第 6 次真实运行失败，尚无完整正文可供内容验收；随后获批的 [调用预算与诊断调整](MEMO_LIVE_RUN_6_DIAGNOSIS.md)已实现，本地 23 项测试通过，当前 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。本版 Prompt 继续保留，新真实验收待执行；第 5 次旧 Prompt 的成功不能替代本版本内容验收。
+当前状态：本版指令及获批的 [调用预算与诊断调整](MEMO_LIVE_RUN_6_DIAGNOSIS.md)已通过 27 项普通 CI 和 [第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)。12 段内容初审显示假设状态表达改善，但比较漏引和将输入缺失扩大为报告未披露仍需定点修订。本版 Prompt 保持不变，PR #16 保留草稿，内容及专业验收仍未通过；第 5 次原文与第 6 次失败均保留。
 
 ## 改动与预期行为
 
@@ -59,10 +59,16 @@
 
 如果本次仍有实质问题，记录失败或建议退回及其理由，再提出下一步，不为取得成功而自动重跑。K-07 说明一致性、模型输入扩展、第二家公司、UI 与命名不在本次实现中。
 
-## 新运行结果
+## 第 6 次失败与恢复记录
 
 [第 6 次真实运行 34211479879](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34211479879) 对应 `4cc6a554924055de16dc16774b7d19915ec44e58`，使用本版 Prompt 和 DeepSeek V4 Pro。77.229 秒后应用返回 HTTP 502 / `PROVIDER_INCOMPLETE`，输入 2,650、输出 4,000 token。失败发生在 JSON / 引用校验前，`memo` 和 `rawOutput` 均为空；内容复核尚无法进行。
 
 六文件原始归档的 ZIP 摘要已核验，八项离线一致性核对通过；保存的 context 与第 5 次除快照哈希外完全相同。本次未取得完整研究快照及服务端中断原因，不能据此独立复算快照、断言精确中断原因或评价正文质量。详见 [诊断记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。
 
-保留失败，不自动重跑。所有者已批准提高 DeepSeek 的有限输出预算、配套等待时间、补充诊断，并在普通 CI 通过后手动执行一次新真实验收。实现与本地 23 项验证已完成，见 [恢复记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。Prompt 版本与完整指令 SHA-256 保持本版，现阶段不记内容 PASS，不合并，不以旧运行替代。
+保留失败，不自动重跑。所有者已批准提高 DeepSeek 的有限输出预算、配套等待时间、补充诊断，并在普通 CI 通过后手动执行一次新真实验收。实现与本地 23 项验证已完成，见 [恢复记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。Prompt 版本与完整指令 SHA-256 保持本版。
+
+## 第 7 次技术成功与内容初审
+
+[运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 通过。提供方 completed，输入 2,650、输出 4,583 token，耗时 76.946 秒。八文件归档已下载并核对 ZIP SHA-256，16 项审计一致性检查及 JSON 字段唯一性核对通过。
+
+完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。进一步明确材料范围、逐段引用和同比期间的指令提案待所有者确认，未新增调用。

@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。第 5 次真实 S-05 技术验收对应 `research-update-v1-format-2`；[原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订假设与归因表述。本分支按所有者批准加入 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)，首版普通 CI 通过；[第 6 次真实运行失败](MEMO_LIVE_RUN_6_DIAGNOSIS.md)，提供方未完成响应且输出用满 4,000 token。获批的调用预算与诊断调整现已实现，本地 23 项测试通过；当前 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新真实正文及内容验收尚待完成，专业关卡继续待复核。
+更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。本分支的 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)和调用恢复补丁通过 27 项普通 CI 及 [第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)。新版完整正文 12 段初审完成，假设状态表达改善，但比较漏引和材料范围表述仍需定点修订；PR #16 保持草稿，内容及专业验收尚未通过。第 5 次原文审阅和第 6 次失败记录继续保留。
 
 ## 模型承担的工作
 
@@ -60,6 +60,12 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，检查真实 Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
 
 失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
+
+### 第 7 次真实技术验收通过，内容初审建议定点修订
+
+[运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，使用 `research-update-v2-judgement-1` / DeepSeek V4 Pro。实际输出 4,583 token，其中推理计数 3,311；76.946 秒完成，提供方状态 completed。真实调用、审核交互、导出和回滚主流程 1 项通过，负向项按设计跳过 1 项；跳过项已由同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 覆盖。
+
+原始八文件归档 ZIP 摘要已核验，16 项输入、调用、引用、导出及历史一致性检查通过。但引用存在不等于逐项支撑：反证第一段漏引扣非指标，替代解释第二段把输入缺失扩大为报告未披露。完整逐段结论和修订建议见 [第 7 次内容初审](MEMO_CONTENT_REVIEW_RUN_7.md)。归档中的自动接受事件保留原样，本次初审未写回任何产品审核事件；专业关卡继续 pending。
 
 ### 第 5 次真实技术验收通过
 
