@@ -1,13 +1,16 @@
-name: Live research memo acceptance
+name: Live DeepSeek research memo acceptance
 
 on:
   workflow_dispatch:
     inputs:
       model:
-        description: OpenAI model for this one-call acceptance run
+        description: DeepSeek model for this one-call acceptance run
         required: true
-        default: gpt-5.6-sol
-        type: string
+        default: deepseek-v4-pro
+        type: choice
+        options:
+          - deepseek-v4-pro
+          - deepseek-v4-flash
 
 permissions:
   contents: read
@@ -25,12 +28,13 @@ jobs:
         working-directory: apps/web
     env:
       NEXT_TELEMETRY_DISABLED: '1'
+      MODEL_PROVIDER: deepseek
     steps:
       - uses: actions/checkout@v4
       - name: Check configured API credential without printing it
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: node -e 'if (!process.env.OPENAI_API_KEY) { console.error("Add repository Actions secret OPENAI_API_KEY, then run this workflow again."); process.exit(1); }'
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+        run: node -e 'if (!process.env.DEEPSEEK_API_KEY?.trim()) { console.error("Add repository Actions secret DEEPSEEK_API_KEY, then run this workflow again."); process.exit(1); }'
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
@@ -46,16 +50,16 @@ jobs:
           echo "PLAYWRIGHT_PACKAGE_PATH=$RUNNER_TEMP/research-browser/node_modules/playwright" >> "$GITHUB_ENV"
       - name: Prepare Chromium
         run: node "$PLAYWRIGHT_PACKAGE_PATH/cli.js" install --with-deps chromium
-      - name: One real S-05 upload and one live model request with review and export
+      - name: One real S-05 upload and one live DeepSeek request with review and export
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_MODEL: ${{ inputs.model }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DEEPSEEK_MODEL: ${{ inputs.model }}
           LIVE_MODEL_E2E: '1'
         run: npm run test:browser
       - name: Preserve real call, memo, review and screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: live-research-memo-${{ github.run_id }}
+          name: live-deepseek-research-memo-${{ github.run_id }}
           path: apps/web/artifacts-web/
           if-no-files-found: warn

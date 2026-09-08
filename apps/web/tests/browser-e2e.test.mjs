@@ -19,8 +19,11 @@ const { chromium } = await import(pathToFileURL(resolve(browserPackage, "index.m
 const origin = "http://127.0.0.1:4322";
 const artifacts = new URL("../artifacts-web/", import.meta.url);
 const liveMemo = process.env.LIVE_MODEL_E2E === "1";
+const liveProvider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deepseek";
+const liveApiKey = liveProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.DEEPSEEK_API_KEY;
+const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : process.env.DEEPSEEK_MODEL) || (liveProvider === "openai" ? "gpt-5.6-sol" : "deepseek-v4-pro");
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
-if (liveMemo) assert.ok(process.env.OPENAI_API_KEY, "Live model acceptance requires an API key supplied by the runner.");
+if (liveMemo) assert.ok(liveApiKey?.trim(), `Live ${liveProvider} acceptance requires its API key supplied by the runner.`);
 const cases = [
   { id: "S-05", scope: "research", attr: 471.59418971, adj: 546.7588969, nr: -75.16470719, ay: -0.0487, jy: 0.2439, factor: 4 },
   { id: "S-06", scope: "regression", attr: 1702.03721539, adj: 1438.77516582, nr: 263.26204957, ay: 0.4586, jy: 0.4965, factor: 2 },
@@ -41,7 +44,7 @@ before(async () => {
     assert.ok(buffer.subarray(0, 5).toString().startsWith("%PDF-"));
     pdfs.set(fixture.id, { buffer, sha256: createHash("sha256").update(buffer).digest("hex") });
   }
-  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, ...(!liveMemo ? { OPENAI_API_KEY: "" } : {}) } });
+  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: "", ...(!liveMemo ? { MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", OPENAI_API_KEY: "", DEEPSEEK_API_KEY: "" } : {}) } });
   let spawnError;
   server.on("error", (error) => { spawnError = error; });
   server.stdout.on("data", (data) => { logs += data; });
@@ -56,6 +59,13 @@ before(async () => {
     await delay(250);
   }
   assert.ok(ready, logs);
+  if (liveMemo) {
+    const response = await fetch(`${origin}/api/research-memo`);
+    const status = await response.json();
+    await writeFile(new URL("live-provider-configuration.json", artifacts), JSON.stringify({ httpStatus: response.status, ...status }, null, 2));
+    assert.equal(response.status, 200);
+    assert.deepEqual(status, { configured: true, provider: liveProvider, model: liveModel });
+  }
   browser = await chromium.launch();
 }, { timeout: 240000 });
 
@@ -90,8 +100,8 @@ async function stubMemoTransport(page) {
     gates: { eg01: "pending", eg02: "pending" },
   };
   await page.route("**/api/research-memo", async (route) => {
-    if (route.request().method() === "GET") { await route.fulfill({ json: { configured: true } }); return; }
-    const run = await createMemoRun(route.request().postDataJSON(), { apiKey: "ci-stub-not-real", accessToken: accessCode, model: "test-transport-not-live" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
+    if (route.request().method() === "GET") { await route.fulfill({ json: { configured: true, provider: "deepseek", model: "deepseek-v4-pro" } }); return; }
+    const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
     await route.fulfill({ json: { run } });
   });
 }
@@ -161,18 +171,33 @@ for (const fixture of cases) {
         }
       }
       if (liveMemo || fixture.id === "S-05") {
-        const prefix = liveMemo ? "S-05-model" : "S-05-stub-model-NOT-LIVE";
+        const prefix = liveMemo ? `S-05-live-${liveProvider}-model` : "S-05-stub-model-NOT-LIVE";
         const panel = page.getByTestId("memo-panel");
         await panel.getByLabel("演示访问码").fill(accessCode);
-        await panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click();
-        await panel.getByTestId("memo-run").waitFor({ timeout: 110000 });
+        assert.ok((await panel.innerText()).includes(liveMemo && liveProvider === "openai" ? "OpenAI" : "DeepSeek"));
+        const [httpResponse] = await Promise.all([
+          page.waitForResponse((response) => new URL(response.url()).pathname === "/api/research-memo" && response.request().method() === "POST", { timeout: 110000 }),
+          panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click(),
+        ]);
+        const httpBody = await httpResponse.json().catch(() => ({ code: "NON_JSON_HTTP_RESPONSE" }));
+        const diagnostic = { httpStatus: httpResponse.status(), code: httpBody.code ?? null, failureCode: httpBody.run?.audit?.failureCode ?? null, validation: httpBody.run?.audit?.validation ?? [], provider: httpBody.run?.audit?.provider ?? null, runId: httpBody.run?.runId ?? null };
+        await writeFile(new URL(`${prefix}-http.json`, artifacts), JSON.stringify(diagnostic, null, 2));
+        if (httpBody.run) {
+          await writeFile(new URL(`${prefix}-call.json`, artifacts), JSON.stringify({ evaluation: liveMemo ? "live-provider-call" : "browser-UI-with-stubbed-provider-NOT-live-model-acceptance", run: httpBody.run }, null, 2));
+        }
+        assert.equal(httpResponse.status(), 200, JSON.stringify(diagnostic));
+        await panel.getByTestId("memo-run").waitFor({ timeout: 10000 });
         const savedMemos = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)), memoStorageKey(fixture.scope));
         assert.equal(savedMemos.runs.length, 1);
         const modelRun = savedMemos.runs[0];
+        assert.deepEqual(modelRun, httpBody.run, "Saved memo must match the server response");
         await writeFile(new URL(`${prefix}-call.json`, artifacts), JSON.stringify({ evaluation: liveMemo ? "live-provider-call" : "browser-UI-with-stubbed-provider-NOT-live-model-acceptance", run: modelRun }, null, 2));
         assert.equal(modelRun.status, "completed", modelRun.audit.failureCode);
-        assert.match(modelRun.audit.responseId, /^resp_/);
-        if (liveMemo) assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live");
+        assert.equal(modelRun.audit.provider, liveMemo ? liveProvider : "deepseek");
+        assert.equal(modelRun.audit.requestedModel, liveMemo ? liveModel : "deepseek-v4-pro");
+        assert.equal(typeof modelRun.audit.responseId, "string");
+        assert.ok(modelRun.audit.responseId.trim().length > 0);
+        if (liveMemo) { assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live"); assert.ok(!/test|stub/i.test(modelRun.audit.returnedModel)); }
         else assert.equal(modelRun.audit.returnedModel, "test-transport-not-live");
         assert.ok(modelRun.audit.usage.inputTokens > 0);
         assert.ok(modelRun.audit.usage.outputTokens > 0);

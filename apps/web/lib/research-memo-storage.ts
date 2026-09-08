@@ -4,10 +4,13 @@ import { readStoredVersions, type ResearchVersion, type WorkspaceScope } from ".
 export const MEMO_UPDATED_EVENT = "research-memo-updated";
 export const memoStorageKey = (scope: WorkspaceScope) => `financial-research-memos-v1-${scope}`;
 type MemoLedger = { runs: MemoRun[]; reviews: MemoReview[] };
+function validProviderAudit(run: MemoRun) {
+  return Boolean(run?.audit && ["deepseek", "openai"].includes(run.audit.provider) && run.audit.api === "responses");
+}
 export function readMemoLedger(scope: WorkspaceScope): MemoLedger {
   if (typeof window === "undefined") return { runs: [], reviews: [] };
   const raw = JSON.parse(window.localStorage.getItem(memoStorageKey(scope)) ?? '{"runs":[],"reviews":[]}');
-  if (!raw || !Array.isArray(raw.runs) || !Array.isArray(raw.reviews) || raw.runs.some((run: MemoRun) => !run?.runId || !run?.context?.snapshotSha256 || !run?.audit || !["completed", "blocked", "failed"].includes(run.status)) || raw.reviews.some((review: MemoReview) => !review?.id || !review?.runId || !["accepted", "rejected"].includes(review.status))) throw new Error("备忘录记录无法读取，已停止写入以保护历史。");
+  if (!raw || !Array.isArray(raw.runs) || !Array.isArray(raw.reviews) || raw.runs.some((run: MemoRun) => !run?.runId || !run?.context?.snapshotSha256 || !validProviderAudit(run) || !["completed", "blocked", "failed"].includes(run.status)) || raw.reviews.some((review: MemoReview) => !review?.id || !review?.runId || !["accepted", "rejected"].includes(review.status))) throw new Error("备忘录记录无法读取，已停止写入以保护历史。");
   return raw;
 }
 function writeLedger(ledger: MemoLedger, scope: WorkspaceScope) {
@@ -15,6 +18,7 @@ function writeLedger(ledger: MemoLedger, scope: WorkspaceScope) {
   window.dispatchEvent(new Event(MEMO_UPDATED_EVENT));
 }
 export async function appendMemoRun(run: MemoRun, version: ResearchVersion, scope: WorkspaceScope) {
+  if (!validProviderAudit(run)) throw new Error("备忘录提供方记录无效，已停止写入。");
   const stored = readStoredVersions(scope).find((item) => item.versionId === version.versionId);
   if (!stored) throw new Error("研究版本已不存在，调用记录未写入其他版本。");
   const context = await buildMemoContext(stored);

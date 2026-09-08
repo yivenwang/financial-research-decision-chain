@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { buildMemoContext, canonicalJson, memoMarkdown, validateMemo, MEMO_INSTRUCTIONS } from "../lib/research-memo.ts";
-import { createMemoHandler, createMemoRun, MAX_MEMO_REQUEST_BYTES } from "../lib/research-memo.server.ts";
+import { buildMemoContext, canonicalJson, memoMarkdown, memoSchema, sha256Text, validateMemo, MEMO_INSTRUCTIONS, MEMO_RESEARCH_INSTRUCTIONS, MEMO_PROMPT_VERSION } from "../lib/research-memo.ts";
+import { createMemoHandler, createMemoRun, memoConfig, MAX_MEMO_REQUEST_BYTES } from "../lib/research-memo.server.ts";
 import { appendMemoRun, appendMemoReview, readMemoLedger, memoStorageKey } from "../lib/research-memo-storage.ts";
 import { parseResearchReport, extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
@@ -10,7 +10,7 @@ import { getSourceRecord } from "../lib/source-records.ts";
 import { appendVersion, createRollbackSnapshot, readStoredVersions, storageKeys } from "../lib/research-versions.ts";
 
 // Transport stubs are only test dependencies, never a production fallback.
-const config = { apiKey: "unit-test-key-not-a-real-key", accessToken: "unit-test-access-code-long", model: "test-model" };
+const config = { provider: "deepseek", apiKey: "unit-test-key-not-a-real-key", accessToken: "unit-test-access-code-long", model: "deepseek-v4-pro" };
 function snapshot() {
   const source = getSourceRecord("S-05");
   const result = parseResearchReport(verifiedSampleItems, source);
@@ -28,6 +28,23 @@ function provider(output = memo(), patch = {}) {
   return Response.json({ id: "resp_unit_transport_stub", model: "test-model", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
 }
 const request = (body, headers = {}) => new Request("http://localhost/api/research-memo", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${config.accessToken}`, ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
+
+test("runtime provider configuration selects its own key and exposes only status, provider and model", async () => {
+  const env = { DEEPSEEK_API_KEY: "deepseek-test-key", OPENAI_API_KEY: "openai-test-key", RESEARCH_DEMO_TOKEN: config.accessToken };
+  const deepseek = memoConfig(env);
+  assert.equal(deepseek.provider, "deepseek"); assert.equal(deepseek.model, "deepseek-v4-pro");
+  assert.equal(deepseek.apiKey, env.DEEPSEEK_API_KEY);
+  const openai = memoConfig({ ...env, MODEL_PROVIDER: "openai" });
+  assert.equal(openai.provider, "openai"); assert.equal(openai.model, "gpt-5.6-sol");
+  assert.equal(openai.apiKey, env.OPENAI_API_KEY);
+  assert.equal(memoConfig({ OPENAI_API_KEY: env.OPENAI_API_KEY }).apiKey, "");
+  const status = await (await createMemoHandler(() => deepseek).GET()).json();
+  assert.deepEqual(status, { configured: true, provider: "deepseek", model: "deepseek-v4-pro" });
+  for (const invalid of [{ apiKey: " " }, { model: "gpt-5.6-sol" }, { provider: "unknown" }, { appOrigin: "https://app.example/path" }]) {
+    const handler = createMemoHandler(() => ({ ...deepseek, ...invalid }), { fetcher: async () => { assert.fail("Invalid configuration must not contact a provider"); } });
+    assert.equal((await handler.POST(request(snapshot()))).status, 503);
+  }
+});
 
 test("context replays frozen results, binds the snapshot, and excludes names and editable instructions", async () => {
   const version = snapshot();
@@ -66,21 +83,24 @@ test("memo validation rejects invented citations, omitted counter-evidence, nume
   ]) { const output = memo(); mutate(output); const checked = validateMemo(output, context); assert.equal(checked.memo, null); assert.ok(checked.errors.includes(code), checked.errors); }
 });
 
-test("Responses request uses strict schema, bounded generation, server credentials and auditable output", async () => {
-  const version = snapshot(); const before = canonicalJson(version); let calls = 0;
+test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and truthful provider audit", async () => {
+  const version = snapshot(); const before = canonicalJson(version); const calls = [];
   const run = await createMemoRun(version, config, { fetcher: async (url, options) => {
-    calls++; assert.equal(url, "https://api.openai.com/v1/responses");
+    calls.push(url); assert.equal(url, "https://api.deepseek.com/responses");
     assert.equal(options.headers.Authorization, `Bearer ${config.apiKey}`);
     assert.equal(options.redirect, "error");
     const sent = JSON.parse(options.body);
-    assert.equal(sent.store, false); assert.equal(sent.max_output_tokens, 4000);
+    assert.equal("store" in sent, false); assert.equal(sent.max_output_tokens, 4000);
+    assert.equal(sent.model, "deepseek-v4-pro");
     assert.equal(sent.text.format.strict, true); assert.equal(sent.text.format.type, "json_schema");
+    assert.deepEqual(sent.text.format.schema, memoSchema(await buildMemoContext(version)));
     assert.equal(sent.input[0].content, MEMO_INSTRUCTIONS);
     assert.ok(!options.body.includes("Private Reviewer"));
     assert.ok(!options.body.includes(config.apiKey));
     return provider();
   } });
-  assert.equal(calls, 1); assert.equal(run.status, "completed");
+  assert.deepEqual(calls, ["https://api.deepseek.com/responses"]); assert.equal(run.status, "completed");
+  assert.equal(run.audit.provider, "deepseek");
   assert.equal(run.audit.responseId, "resp_unit_transport_stub");
   assert.equal(run.audit.requestId, "req_unit_transport_stub");
   assert.equal(run.audit.usage.totalTokens, 300);
@@ -90,6 +110,68 @@ test("Responses request uses strict schema, bounded generation, server credentia
   assert.ok(!JSON.stringify(run).includes(config.apiKey));
   assert.match(memoMarkdown(run), /待人工复核草稿/);
   assert.match(memoMarkdown(run), /static.cninfo.com.cn/);
+  assert.match(memoMarkdown(run), /提供方：deepseek/);
+  const openaiRun = await createMemoRun(version, { ...config, provider: "openai", model: "gpt-5.6-sol" }, { fetcher: async (url, options) => {
+    calls.push(url); assert.equal(url, "https://api.openai.com/v1/responses");
+    const sent = JSON.parse(options.body);
+    assert.equal(sent.store, false); assert.equal(sent.model, "gpt-5.6-sol");
+    assert.equal(sent.text.format.strict, true);
+    assert.deepEqual(sent.text.format.schema, memoSchema(await buildMemoContext(version)));
+    assert.equal(sent.input[0].content, MEMO_INSTRUCTIONS);
+    return provider();
+  } });
+  assert.equal(openaiRun.status, "completed"); assert.equal(openaiRun.audit.provider, "openai");
+  assert.deepEqual(calls, ["https://api.deepseek.com/responses", "https://api.openai.com/v1/responses"]);
+});
+
+test("synthetic repeated section objects are blocked before duplicate fields can discard content", async () => {
+  // Reproduce the failure's structure using existing test prose, without copying a live response.
+  const output = memo();
+  output.summary.citations.push("EV-S-05-C04-NR");
+  const sections = ["supporting", "counter", "alternatives", "questions"].flatMap((section) =>
+    [output[section][0], output[section][0]].map((point) => `${JSON.stringify(section)}:${JSON.stringify(point)}`));
+  const raw = `{${[`"summary":${JSON.stringify(output.summary)}`, ...sections, `"gates":${JSON.stringify(output.gates)}`].join(",")}}`;
+  // Hash of the original research instructions in commit c96be3d, before the format-only addition.
+  assert.equal(await sha256Text(MEMO_RESEARCH_INSTRUCTIONS), "083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109");
+  assert.notEqual(MEMO_PROMPT_VERSION, "research-update-v1");
+  assert.deepEqual(validateMemo(JSON.parse(raw), await buildMemoContext(snapshot())).errors, ["MEMO_SECTION_SCHEMA"]);
+  let calls = 0;
+  const handler = createMemoHandler(() => config, { fetcher: async () => {
+    calls++;
+    return provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text: raw }] }] });
+  } });
+  const response = await handler.POST(request(snapshot()));
+  assert.equal(response.status, 422);
+  const { run } = await response.json();
+  assert.equal(calls, 1);
+  assert.equal(run.status, "blocked");
+  assert.equal(run.audit.failureCode, "MODEL_JSON_DUPLICATE_KEY");
+  assert.equal(run.audit.rawOutput, raw);
+  assert.equal(run.memo, null);
+  assert.throws(() => memoMarkdown(run));
+});
+
+test("duplicate JSON keys include escaped and nested names while independent objects and quoted punctuation remain valid", async () => {
+  const output = memo();
+  output.summary.text += ' 字段示意 {"text":"保留"} 与逗号、方括号 []、反斜线 \\ 只是正文。';
+  output.supporting.push({ text: "负向调整项提供进一步核查的依据。", citations: ["EV-S-05-C04-NR"] });
+  const raw = JSON.stringify(output);
+  const replay = (text) => createMemoRun(snapshot(), config, { fetcher: async () => provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text }] }] }) });
+  const valid = await replay(raw);
+  assert.equal(valid.status, "completed");
+  assert.deepEqual(valid.memo, output);
+  for (const ambiguous of [
+    raw.replace('"supporting":', '"supporting":[],"supporting":'),
+    raw.replace('"supporting":', String.raw`"\u0073upporting":[],"supporting":`),
+    raw.replace('"summary":{', '"summary":{"text":"被覆盖的前一段",'),
+  ]) {
+    assert.deepEqual(JSON.parse(ambiguous), output);
+    const run = await replay(ambiguous);
+    assert.equal(run.status, "blocked");
+    assert.equal(run.audit.failureCode, "MODEL_JSON_DUPLICATE_KEY");
+    assert.equal(run.audit.rawOutput, ambiguous);
+    assert.equal(run.memo, null);
+  }
 });
 
 test("provider errors, refusal, truncation and invalid output leave failed or blocked records, never fallback prose", async () => {
@@ -108,7 +190,7 @@ test("provider errors, refusal, truncation and invalid output leave failed or bl
 test("HTTP boundary blocks missing config, invalid access, cross-origin and malformed snapshots before provider calls", async () => {
   let calls = 0; const fetcher = async () => { calls++; return provider(); };
   const noConfig = createMemoHandler(() => ({ ...config, apiKey: "" }), { fetcher });
-  assert.deepEqual(await (await noConfig.GET()).json(), { configured: false });
+  assert.deepEqual(await (await noConfig.GET()).json(), { configured: false, provider: "deepseek", model: "deepseek-v4-pro" });
   assert.equal((await noConfig.POST(request(snapshot()))).status, 503);
   const handler = createMemoHandler(() => config, { fetcher });
   assert.equal((await handler.POST(request(snapshot(), { authorization: "Bearer invalid" }))).status, 401);
@@ -121,6 +203,25 @@ test("HTTP boundary blocks missing config, invalid access, cross-origin and malf
   const response = await handler.POST(request(snapshot()));
   assert.equal(response.status, 200); assert.equal(calls, 1);
   const body = await response.text(); assert.ok(!body.includes(config.apiKey)); assert.ok(!body.includes(config.accessToken));
+});
+
+test("origin validation supports Next host normalization and explicit proxy origins without trusting forwarded headers", async () => {
+  let calls = 0;
+  const fetcher = async () => { calls++; return provider(); };
+  const handler = createMemoHandler(() => config, { fetcher });
+  const normalized = (headers = {}) => new Request("http://localhost:4322/api/research-memo", {
+    method: "POST", headers: { origin: "http://127.0.0.1:4322", host: "127.0.0.1:4322", authorization: `Bearer ${config.accessToken}`, "content-type": "application/json", ...headers }, body: JSON.stringify(snapshot()),
+  });
+  assert.equal((await handler.POST(normalized())).status, 200);
+  for (const origin of ["https://external.invalid", "http://127.0.0.1:9999", "null", "http://127.0.0.1:4322/path"]) {
+    const response = await handler.POST(normalized({ origin, "x-forwarded-host": "external.invalid", "x-forwarded-proto": "https" }));
+    assert.equal(response.status, 403); assert.equal((await response.json()).code, "ORIGIN_MISMATCH");
+  }
+  assert.equal(calls, 1);
+  const proxied = createMemoHandler(() => ({ ...config, appOrigin: "https://research.example.com" }), { fetcher });
+  assert.equal((await proxied.POST(normalized({ origin: "https://research.example.com" }))).status, 200);
+  assert.equal((await proxied.POST(normalized({ origin: "https://external.invalid", "x-forwarded-host": "external.invalid" }))).status, 403);
+  assert.equal(calls, 2);
 });
 
 test("concurrent HTTP requests do not duplicate an in-flight model call", async () => {
@@ -140,7 +241,14 @@ test("memo and review ledgers append independently, preserve version bytes, and 
     const version = snapshot(); appendVersion(version);
     const bytes = data.get(storageKeys().versions);
     const run = await createMemoRun(version, config, { fetcher: async () => provider() });
+    const oldOpenAI = await createMemoRun(version, { ...config, provider: "openai", model: "gpt-5.6-sol" }, { fetcher: async () => provider() });
+    await appendMemoRun(oldOpenAI, version, "research");
     await appendMemoRun(run, version, "research");
+    assert.deepEqual(readMemoLedger("research").runs.map((item) => item.audit.provider), ["openai", "deepseek"]);
+    const savedBeforeInvalid = data.get(memoStorageKey("research"));
+    const invalidProvider = structuredClone(run); invalidProvider.runId = "invalid-provider"; invalidProvider.audit.provider = "unknown";
+    await assert.rejects(appendMemoRun(invalidProvider, version, "research"));
+    assert.equal(data.get(memoStorageKey("research")), savedBeforeInvalid);
     await assert.rejects(appendMemoRun(run, version, "research"));
     await assert.rejects(appendMemoRun(run, version, "regression"));
     await assert.rejects(appendMemoReview(run.runId, "accepted", "", "", "research"));
