@@ -20,6 +20,8 @@ On 2026-09-08, after PR #14 merged, the owner approved reviewing the successful 
 
 The owner subsequently approved revising the model instructions to retain the pending status of assumptions, limit unsupported attribution, and review one new real output. This authorizes a versioned Prompt change and its regression/content checks. It does not authorize changes to the underlying financial definitions, thresholds, calculations, decisions, professional gates, or original model/review records. K-07 display wording, broader evidence inputs and cross-company migration remain separate proposals. Keep the new Prompt's live acceptance pending until its own output is available and reviewed.
 
+After live run #6 failed, the owner approved the bounded recovery proposal: DeepSeek maximum output 6,000 tokens and 150-second timeout, matching live browser waits, compatible diagnostic fields and bounded final text retention for incomplete responses, then one new manual live acceptance after ordinary checks pass. This does not authorize automatic retries, accepting partial output, changing the Prompt or financial rules, or backfilling historical records. OpenAI keeps its prior limits. Preserve run #6 as failed and review the next complete output before claiming content acceptance.
+
 ## Repository and evidence
 
 - Work in GitHub branches and PRs. Check the latest PR head before writing. Do not overwrite the newer dev/deepseek-provider-v02 with the old uncommitted v01 draft.

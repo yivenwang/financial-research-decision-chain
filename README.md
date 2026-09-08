@@ -53,7 +53,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | PR #14 的旧 Prompt 真实 S-05 技术验收通过；[原文初审](docs/MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订。[判断表达 V0.2](docs/MEMO_PROMPT_V0.2.md)普通 CI 通过；[第 6 次真实运行失败](docs/MEMO_LIVE_RUN_6_DIAGNOSIS.md)，提供方未完成、输出用满 4,000 token，尚无完整正文。调用预算与诊断调整待批准；内容及专业复核仍待完成 |
+| 模型备忘录 | PR #14 的旧 Prompt 真实 S-05 技术验收通过；[原文初审](docs/MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订。[判断表达 V0.2](docs/MEMO_PROMPT_V0.2.md)的第 6 次真实运行失败；[获批恢复调整](docs/MEMO_LIVE_RUN_6_DIAGNOSIS.md)已实现，DeepSeek 为 6,000 token / 150 秒，补充中断诊断，本地 23 项测试通过。当前 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)，新真实输出及专业复核待完成 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 

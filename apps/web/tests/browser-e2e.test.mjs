@@ -107,7 +107,7 @@ async function stubMemoTransport(page) {
 }
 
 for (const fixture of cases) {
-  test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: 180000 }, async () => {
+  test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
     const errors = [];
@@ -176,11 +176,12 @@ for (const fixture of cases) {
         await panel.getByLabel("演示访问码").fill(accessCode);
         assert.ok((await panel.innerText()).includes(liveMemo && liveProvider === "openai" ? "OpenAI" : "DeepSeek"));
         const [httpResponse] = await Promise.all([
-          page.waitForResponse((response) => new URL(response.url()).pathname === "/api/research-memo" && response.request().method() === "POST", { timeout: 110000 }),
+          page.waitForResponse((response) => new URL(response.url()).pathname === "/api/research-memo" && response.request().method() === "POST", { timeout: liveMemo && liveProvider === "deepseek" ? 170000 : 110000 }),
           panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click(),
         ]);
         const httpBody = await httpResponse.json().catch(() => ({ code: "NON_JSON_HTTP_RESPONSE" }));
-        const diagnostic = { httpStatus: httpResponse.status(), code: httpBody.code ?? null, failureCode: httpBody.run?.audit?.failureCode ?? null, validation: httpBody.run?.audit?.validation ?? [], provider: httpBody.run?.audit?.provider ?? null, runId: httpBody.run?.runId ?? null };
+        const audit = httpBody.run?.audit;
+        const diagnostic = { httpStatus: httpResponse.status(), code: httpBody.code ?? null, failureCode: audit?.failureCode ?? null, validation: audit?.validation ?? [], provider: audit?.provider ?? null, runId: httpBody.run?.runId ?? null, requestLimits: audit?.requestLimits ?? null, providerStatus: audit?.providerStatus ?? null, incompleteReason: audit?.incompleteReason ?? null, reasoningTokens: audit?.reasoningTokens ?? null };
         await writeFile(new URL(`${prefix}-http.json`, artifacts), JSON.stringify(diagnostic, null, 2));
         if (httpBody.run) {
           await writeFile(new URL(`${prefix}-call.json`, artifacts), JSON.stringify({ evaluation: liveMemo ? "live-provider-call" : "browser-UI-with-stubbed-provider-NOT-live-model-acceptance", run: httpBody.run }, null, 2));
@@ -195,6 +196,8 @@ for (const fixture of cases) {
         assert.equal(modelRun.status, "completed", modelRun.audit.failureCode);
         assert.equal(modelRun.audit.provider, liveMemo ? liveProvider : "deepseek");
         assert.equal(modelRun.audit.requestedModel, liveMemo ? liveModel : "deepseek-v4-pro");
+        assert.deepEqual(modelRun.audit.requestLimits, liveMemo && liveProvider === "openai" ? { maxOutputTokens: 4000, timeoutMs: 90000 } : { maxOutputTokens: 6000, timeoutMs: 150000 });
+        assert.equal(modelRun.audit.providerStatus, "completed");
         assert.equal(typeof modelRun.audit.responseId, "string");
         assert.ok(modelRun.audit.responseId.trim().length > 0);
         if (liveMemo) { assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live"); assert.ok(!/test|stub/i.test(modelRun.audit.returnedModel)); }

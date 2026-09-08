@@ -80,6 +80,11 @@ export type MemoRun = {
     rawOutput: string | null;
     failureCode: string | null;
     validation: string[];
+    // Optional for pre-existing records; never backfill their missing diagnostics.
+    requestLimits?: { maxOutputTokens: number; timeoutMs: number };
+    providerStatus?: "completed" | "incomplete" | "failed" | "in_progress" | "queued" | "cancelled" | "unknown" | null;
+    incompleteReason?: "max_output_tokens" | "content_filter" | "unknown" | null;
+    reasoningTokens?: number | null;
   };
 };
 export type MemoReview = {

@@ -90,8 +90,9 @@ test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and trut
     assert.equal(options.headers.Authorization, `Bearer ${config.apiKey}`);
     assert.equal(options.redirect, "error");
     const sent = JSON.parse(options.body);
-    assert.equal("store" in sent, false); assert.equal(sent.max_output_tokens, 4000);
+    assert.equal("store" in sent, false); assert.equal(sent.max_output_tokens, 6000);
     assert.equal(sent.model, "deepseek-v4-pro");
+    assert.deepEqual(sent.reasoning, { effort: "low" });
     assert.equal(sent.text.format.strict, true); assert.equal(sent.text.format.type, "json_schema");
     assert.deepEqual(sent.text.format.schema, memoSchema(await buildMemoContext(version)));
     assert.equal(sent.input[0].content, MEMO_INSTRUCTIONS);
@@ -104,6 +105,10 @@ test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and trut
   assert.equal(run.audit.responseId, "resp_unit_transport_stub");
   assert.equal(run.audit.requestId, "req_unit_transport_stub");
   assert.equal(run.audit.usage.totalTokens, 300);
+  assert.deepEqual(run.audit.requestLimits, { maxOutputTokens: 6000, timeoutMs: 150000 });
+  assert.equal(run.audit.providerStatus, "completed");
+  assert.equal(run.audit.incompleteReason, null);
+  assert.equal(run.audit.reasoningTokens, null);
   assert.match(run.audit.requestSha256, /^[a-f0-9]{64}$/);
   assert.match(run.audit.responseSha256, /^[a-f0-9]{64}$/);
   assert.equal(canonicalJson(version), before);
@@ -115,12 +120,15 @@ test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and trut
     calls.push(url); assert.equal(url, "https://api.openai.com/v1/responses");
     const sent = JSON.parse(options.body);
     assert.equal(sent.store, false); assert.equal(sent.model, "gpt-5.6-sol");
+    assert.equal(sent.max_output_tokens, 4000);
+    assert.deepEqual(sent.reasoning, { effort: "low" });
     assert.equal(sent.text.format.strict, true);
     assert.deepEqual(sent.text.format.schema, memoSchema(await buildMemoContext(version)));
     assert.equal(sent.input[0].content, MEMO_INSTRUCTIONS);
     return provider();
   } });
   assert.equal(openaiRun.status, "completed"); assert.equal(openaiRun.audit.provider, "openai");
+  assert.deepEqual(openaiRun.audit.requestLimits, { maxOutputTokens: 4000, timeoutMs: 90000 });
   assert.deepEqual(calls, ["https://api.deepseek.com/responses", "https://api.openai.com/v1/responses"]);
 });
 
@@ -187,6 +195,90 @@ test("provider errors, refusal, truncation and invalid output leave failed or bl
   for (const [fetcher, status, code] of cases) { const run = await createMemoRun(snapshot(), config, { fetcher }); assert.equal(run.status, status); assert.equal(run.audit.failureCode, code); assert.equal(run.memo, null); assert.throws(() => memoMarkdown(run)); assert.ok(!JSON.stringify(run).includes("never expose")); }
 });
 
+test("incomplete responses preserve bounded diagnostics but never accept even structurally valid final text", async () => {
+  const raw = JSON.stringify(memo());
+  const reasoningText = "synthetic reasoning must never be retained";
+  let calls = 0;
+  const handler = createMemoHandler(() => config, { fetcher: async () => {
+    calls++;
+    return provider(undefined, { status: "incomplete", incomplete_details: { reason: "max_output_tokens" },
+      usage: { input_tokens: 100, output_tokens: 6000, total_tokens: 6100, output_tokens_details: { reasoning_tokens: 4021 } },
+      output: [{ type: "reasoning", content: [{ type: "reasoning_text", text: reasoningText }] }, { type: "message", content: [{ type: "output_text", text: raw }] }],
+    });
+  } });
+  const response = await handler.POST(request(snapshot()));
+  assert.equal(response.status, 502);
+  const { run } = await response.json();
+  assert.equal(calls, 1);
+  assert.equal(run.status, "failed");
+  assert.equal(run.audit.failureCode, "PROVIDER_INCOMPLETE");
+  assert.equal(run.audit.providerStatus, "incomplete");
+  assert.equal(run.audit.incompleteReason, "max_output_tokens");
+  assert.equal(run.audit.reasoningTokens, 4021);
+  assert.deepEqual(run.audit.requestLimits, { maxOutputTokens: 6000, timeoutMs: 150000 });
+  assert.equal(run.audit.rawOutput, raw);
+  assert.ok(!JSON.stringify(run).includes(reasoningText));
+  assert.deepEqual(validateMemo(JSON.parse(raw), run.context).errors, []);
+  assert.deepEqual(run.audit.validation, []);
+  assert.equal(run.memo, null);
+  assert.throws(() => memoMarkdown(run));
+});
+
+test("missing or unknown diagnostics remain explicit and token exhaustion never invents a provider reason", async () => {
+  const cases = [
+    { status: "incomplete", details: undefined, reasoning: undefined, expectedStatus: "incomplete", expectedReason: null, expectedTokens: null },
+    { status: "incomplete", details: { reason: "content_filter" }, reasoning: 0, expectedStatus: "incomplete", expectedReason: "content_filter", expectedTokens: 0 },
+    { status: "incomplete", details: { reason: "untrusted provider reason" }, reasoning: -1, expectedStatus: "incomplete", expectedReason: "unknown", expectedTokens: null },
+    { status: "untrusted provider status", details: [], reasoning: 6001, expectedStatus: "unknown", expectedReason: "unknown", expectedTokens: null },
+    { status: undefined, details: { reason: null }, reasoning: "4021", expectedStatus: null, expectedReason: null, expectedTokens: null },
+    { status: "failed", details: null, reasoning: 1.5, expectedStatus: "failed", expectedReason: null, expectedTokens: null },
+  ];
+  for (const item of cases) {
+    let calls = 0;
+    const run = await createMemoRun(snapshot(), config, { fetcher: async () => {
+      calls++;
+      return provider(undefined, { status: item.status, incomplete_details: item.details,
+        usage: { input_tokens: 100, output_tokens: 6000, total_tokens: 6100, output_tokens_details: { reasoning_tokens: item.reasoning } },
+      });
+    } });
+    assert.equal(calls, 1);
+    assert.equal(run.audit.providerStatus, item.expectedStatus);
+    assert.equal(run.audit.incompleteReason, item.expectedReason);
+    assert.equal(run.audit.reasoningTokens, item.expectedTokens);
+    assert.equal(run.status, "failed");
+    assert.equal(run.audit.failureCode, "PROVIDER_INCOMPLETE");
+    assert.equal(run.memo, null);
+    assert.ok(!JSON.stringify(run).includes("untrusted provider"));
+  }
+});
+
+test("incomplete final text is kept verbatim only as one bounded message, without joining, repair or reasoning", async () => {
+  const message = (...parts) => ({ type: "message", content: parts.map((text) => ({ type: "output_text", text })) });
+  const partial = '{"summary":{"text":"未完成';
+  const cases = [
+    [[message(partial)], partial],
+    [[message("x".repeat(24000))], "x".repeat(24000)],
+    [[message("x".repeat(24001))], null],
+    [[message(partial, "后半段")], null],
+    [[message(partial), message("后半段")], null],
+    [[{ type: "reasoning", content: [{ type: "reasoning_text", text: "private reasoning" }] }], null],
+    [[{ type: "message", content: [{ type: "refusal", refusal: "private refusal" }, { type: "output_text", text: partial }] }], null],
+    [null, null],
+  ];
+  for (const [output, expected] of cases) {
+    let calls = 0;
+    const run = await createMemoRun(snapshot(), config, { fetcher: async () => { calls++; return provider(undefined, { status: "incomplete", output }); } });
+    assert.equal(calls, 1);
+    assert.equal(run.audit.rawOutput, expected);
+    assert.equal(run.status, "failed");
+    assert.equal(run.audit.failureCode, "PROVIDER_INCOMPLETE");
+    assert.equal(run.memo, null);
+    assert.deepEqual(run.audit.validation, []);
+    assert.ok(!JSON.stringify(run).includes("private reasoning"));
+    assert.ok(!JSON.stringify(run).includes("private refusal"));
+  }
+});
+
 test("HTTP boundary blocks missing config, invalid access, cross-origin and malformed snapshots before provider calls", async () => {
   let calls = 0; const fetcher = async () => { calls++; return provider(); };
   const noConfig = createMemoHandler(() => ({ ...config, apiKey: "" }), { fetcher });
@@ -242,9 +334,12 @@ test("memo and review ledgers append independently, preserve version bytes, and 
     const bytes = data.get(storageKeys().versions);
     const run = await createMemoRun(version, config, { fetcher: async () => provider() });
     const oldOpenAI = await createMemoRun(version, { ...config, provider: "openai", model: "gpt-5.6-sol" }, { fetcher: async () => provider() });
+    for (const field of ["requestLimits", "providerStatus", "incompleteReason", "reasoningTokens"]) delete oldOpenAI.audit[field];
+    const legacyBytes = JSON.stringify(oldOpenAI);
     await appendMemoRun(oldOpenAI, version, "research");
     await appendMemoRun(run, version, "research");
     assert.deepEqual(readMemoLedger("research").runs.map((item) => item.audit.provider), ["openai", "deepseek"]);
+    assert.equal(JSON.stringify(readMemoLedger("research").runs[0]), legacyBytes);
     const savedBeforeInvalid = data.get(memoStorageKey("research"));
     const invalidProvider = structuredClone(run); invalidProvider.runId = "invalid-provider"; invalidProvider.audit.provider = "unknown";
     await assert.rejects(appendMemoRun(invalidProvider, version, "research"));
@@ -256,6 +351,13 @@ test("memo and review ledgers append independently, preserve version bytes, and 
     await appendMemoReview(run.runId, "rejected", "Memo Reviewer", "补充专业复核后再审", "research");
     assert.equal(readMemoLedger("research").reviews.length, 2);
     assert.match(memoMarkdown(run, accepted), /人工已接受/);
+    const failed = await createMemoRun(version, config, { fetcher: async () => provider(undefined, { status: "incomplete", incomplete_details: { reason: "max_output_tokens" } }) });
+    await appendMemoRun(failed, version, "research");
+    const beforeFailedReview = data.get(memoStorageKey("research"));
+    await assert.rejects(appendMemoReview(failed.runId, "accepted", "Memo Reviewer", "不能接受未完成输出", "research"));
+    assert.equal(data.get(memoStorageKey("research")), beforeFailedReview);
+    assert.equal(JSON.stringify(readMemoLedger("research").runs[0]), legacyBytes);
+    assert.deepEqual(readMemoLedger("research").runs.at(-1), failed);
     assert.equal(data.get(storageKeys().versions), bytes);
     assert.equal(readMemoLedger("regression").runs.length, 0);
     const rollback = createRollbackSnapshot(version, readStoredVersions(), "V-02", "research"); appendVersion(rollback);

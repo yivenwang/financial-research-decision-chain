@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。第 5 次真实 S-05 技术验收对应 `research-update-v1-format-2`；[原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订假设与归因表述。本分支按所有者批准加入 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)，普通 CI 已通过；[第 6 次真实运行失败](MEMO_LIVE_RUN_6_DIAGNOSIS.md)，提供方未完成响应且输出用满 4,000 token，尚无完整正文可供评审。调用预算与诊断调整待批准；不能沿用第 5 次成功作为新版通过证明。专业关卡继续待复核。
+更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。第 5 次真实 S-05 技术验收对应 `research-update-v1-format-2`；[原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)建议修订假设与归因表述。本分支按所有者批准加入 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)，首版普通 CI 通过；[第 6 次真实运行失败](MEMO_LIVE_RUN_6_DIAGNOSIS.md)，提供方未完成响应且输出用满 4,000 token。获批的调用预算与诊断调整现已实现，本地 23 项测试通过；当前 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新真实正文及内容验收尚待完成，专业关卡继续待复核。
 
 ## 模型承担的工作
 
@@ -22,8 +22,9 @@
 
 ## 调用和版本记录
 
-- 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。固定 4,000 最大输出 token、low reasoning、90 秒超时；一次操作只发一次请求，无自动重试或模拟兜底。
+- 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。DeepSeek 最大输出 6,000 token、150 秒超时；OpenAI 保留 4,000 / 90 秒。均使用 low reasoning，一次操作只发一次请求，无自动重试或模拟兜底。
 - Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
+- 新调用另外保存 `requestLimits`、`providerStatus`、`incompleteReason`、`reasoningTokens`。状态/原因仅保留允许值，未提供为 null，无法识别为 unknown；推理用量仅保留有效计数，不采集推理正文。旧记录缺少这些可选字段时按原样读取。未完成响应中若有唯一、无拒绝标记且不超过 24,000 字符的最终文本，原样放入 `audit.rawOutput` 供诊断；仍为 failed、`memo = null`，不执行引用校验、不接受审核或导出为备忘录。
 - 当前分支 Prompt 为 `research-update-v2-judgement-1`：在保留的原始研究指令与 JSON 格式指令之间，加入经批准的假设状态、逐项证据支撑和归因边界要求。原始 `MEMO_RESEARCH_INSTRUCTIONS` 哈希仍与 `c96be3d` 一致，但有效 Prompt 的判断表达要求和哈希已改变。财务定义、输入、Schema、结构校验和专业关卡规则保持原实现，详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
