@@ -2,7 +2,7 @@
 
 更新：2026-09-08。项目所有者已批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。
 
-当前状态：指令与离线验证已完成；GitHub CI 及新真实输出验收仍待记录。第 5 次运行的技术成功属于旧 Prompt，不能用作本版本的内容验收。
+当前状态：指令、离线验证及 [24 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34210500556) 已完成。新真实运行第 6 次失败于提供方未完成响应，输出用满 4,000 token，没有完整正文可供内容验收，见 [失败诊断与待批准提案](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。第 5 次运行的技术成功属于旧 Prompt，不能用作本版本的内容验收。
 
 ## 改动与预期行为
 
@@ -61,4 +61,8 @@ API 提供方、模型、输出 token 上限、reasoning 配置、超时、一�
 
 ## 新运行结果
 
-待真实工作流运行后补充运行链接、实际原文审阅和遗留问题。现阶段不记 PASS，不以旧运行替代。
+[第 6 次真实运行 34211479879](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34211479879) 对应 `4cc6a554924055de16dc16774b7d19915ec44e58`，使用本版 Prompt 和 DeepSeek V4 Pro。77.229 秒后应用返回 HTTP 502 / `PROVIDER_INCOMPLETE`，输入 2,650、输出 4,000 token。失败发生在 JSON / 引用校验前，`memo` 和 `rawOutput` 均为空；内容复核尚无法进行。
+
+六文件原始归档的 ZIP 摘要已核验，八项离线一致性核对通过；保存的 context 与第 5 次除快照哈希外完全相同。本次未取得完整研究快照及服务端中断原因，不能据此独立复算快照、断言精确中断原因或评价正文质量。详见 [诊断记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。
+
+保留失败，不自动重跑。提高 DeepSeek 的有限输出预算、配套等待时间和补充诊断已形成具体提案，待所有者确认后实施。现阶段不记 PASS，不合并，不以旧运行替代。
