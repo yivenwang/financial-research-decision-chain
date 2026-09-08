@@ -6,6 +6,8 @@
 
 安克创新是首个验证案例。项目的验收对象是完整研究更新流程，而非对一家公司的报表适配数量。
 
+当前已实现与尚待验证的范围见 [系统方向与案例边界](docs/SYSTEM_SCOPE.md)。模型输入和自动传播仍限定安克 / C-04，跨公司适用性尚未验收。
+
 ## 在 GitHub 开发
 
 GitHub 是代码、修改记录和评测记录的主入口。开发使用分支和 PR；网页预览与正式发布分别记录。旧 Site V5 是迁移来源，后续修改在本仓库进行。
@@ -51,15 +53,17 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | PR #13 已合并；PR #14 接入 DeepSeek，真实 S-05 调用、复核交互、导出和回滚通过；研究内容待专业复核 |
+| 模型备忘录 | PR #14 已合并；真实 S-05 技术验收通过；[原文初审](docs/MEMO_CONTENT_REVIEW_2026-09-08.md)已完成，因假设与归因表述问题建议退回修订，专业复核仍待完成 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
-| 参赛整合 | 见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
+| 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 
 产品命名正在共同讨论，首选建议及备选见 [命名候选](docs/NAMING_CANDIDATES.md)。
 
 ## 变更边界
 
 项目所有者于 2026-09-07 要求：每个新阶段先提案并获批；核心逻辑变更须说明改前/改后及影响并获得确认。PR #14 的接入收尾、测试、文档同步和验收通过后合并已获批，见 [协作约定](AGENTS.md)。
+
+2026-09-08 已批准真实备忘录审阅与演示脚本阶段。本轮只记录评审、系统范围及演示材料；涉及模型判断表达的修订提案仍需另行确认。
 
 - Claims、Assumptions、Kill Criteria、Formula、Valuation、Decision 的业务定义不能为了测试通过而修改。
 - 保留已有版本、首次盲测失败与回滚记录；回归通过不能改写首次盲测结果。
