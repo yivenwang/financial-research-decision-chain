@@ -22,6 +22,8 @@ The owner subsequently approved revising the model instructions to retain the pe
 
 After live run #6 failed, the owner approved the bounded recovery proposal: DeepSeek maximum output 6,000 tokens and 150-second timeout, matching live browser waits, compatible diagnostic fields and bounded final text retention for incomplete responses, then one new manual live acceptance after ordinary checks pass. This does not authorize automatic retries, accepting partial output, changing the Prompt or financial rules, or backfilling historical records. OpenAI keeps its prior limits. Preserve run #6 as failed and review the next complete output before claiming content acceptance.
 
+After reviewing live run #7, the owner approved a targeted Prompt follow-up: distinguish missing structured input from absent disclosure in the whole report, and require citations for each paragraph's facts, comparison sides and rule limits, including the summary and explicit year-on-year period wording. Implement the versioned instructions, run ordinary regressions, then review one new manual live output. Keep the existing provider budgets, inputs, validation, financial rules and historical records. This approval does not mark run #7 as content-accepted or authorize a broader product stage.
+
 ## Repository and evidence
 
 - Work in GitHub branches and PRs. Check the latest PR head before writing. Do not overwrite the newer dev/deepseek-provider-v02 with the old uncommitted v01 draft.

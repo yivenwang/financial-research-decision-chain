@@ -45,7 +45,7 @@ npm start
 
 更多范围说明见 [网页迁移说明](docs/WEB_MIGRATION.md)。
 
-## 已核实进度（2026-09-08）
+## 已核实进度（2026-09-09）
 
 | 项目 | 状态 |
 | --- | --- |
@@ -53,7 +53,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | [判断表达 V0.2](docs/MEMO_PROMPT_V0.2.md)及调用恢复补丁的 27 项普通 CI、[第 7 次真实技术验收](docs/MEMO_CONTENT_REVIEW_RUN_7.md)均通过。12 段内容初审发现比较漏引和材料范围表述仍需定点修订；[PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)保留草稿，内容及专业验收未通过。第 5 次原文和第 6 次失败均保留 |
+| 模型备忘录 | [第 7 次真实技术验收](docs/MEMO_CONTENT_REVIEW_RUN_7.md)通过，内容初审发现比较漏引和材料范围扩大。获批的 [Prompt 定点修订 judgement-2](docs/MEMO_PROMPT_V0.2.md)已实现，本地 23 项回归通过；当前提交的普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)，新版真实输出及内容复核待完成，PR 保留草稿。历史运行及专业待复核状态保留 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 
@@ -64,6 +64,8 @@ npm start
 项目所有者于 2026-09-07 要求：每个新阶段先提案并获批；核心逻辑变更须说明改前/改后及影响并获得确认。PR #14 的接入收尾、测试、文档同步和验收通过后合并已获批，见 [协作约定](AGENTS.md)。
 
 2026-09-08 的真实备忘录审阅与演示脚本已由 PR #15 合并。所有者随后批准修订模型指令中的假设状态和归因要求，并复核一次新真实输出；财务规则、专业关卡和人工决策边界保持原定义。其他核心改动仍须先确认。
+
+第 7 次初审后，所有者已批准进一步明确材料范围与逐段引用（含摘要限制及同比期间），再复核一次真实输出。DeepSeek 沿用 6,000 token / 150 秒，一次手动运行只请求一次模型；本次未扩大输入或修改金融规则。
 
 - Claims、Assumptions、Kill Criteria、Formula、Valuation、Decision 的业务定义不能为了测试通过而修改。
 - 保留已有版本、首次盲测失败与回滚记录；回归通过不能改写首次盲测结果。

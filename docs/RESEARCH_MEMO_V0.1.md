@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。本分支的 [判断表达修订 V0.2](MEMO_PROMPT_V0.2.md)和调用恢复补丁通过 27 项普通 CI 及 [第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)。新版完整正文 12 段初审完成，假设状态表达改善，但比较漏引和材料范围表述仍需定点修订；PR #16 保持草稿，内容及专业验收尚未通过。第 5 次原文审阅和第 6 次失败记录继续保留。
+更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。[第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)使用 judgement-1，12 段初审发现比较漏引和材料范围扩大。所有者已批准的 [judgement-2 定点指令修订](MEMO_PROMPT_V0.2.md)已实现，本地 23 项回归通过；当前普通 CI 见 PR #16，新真实输出及内容复核待完成。PR 保持草稿，专业验收仍待复核；旧原文、失败和接受事件保留。
 
 ## 模型承担的工作
 
@@ -25,7 +25,7 @@
 - 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。DeepSeek 最大输出 6,000 token、150 秒超时；OpenAI 保留 4,000 / 90 秒。均使用 low reasoning，一次操作只发一次请求，无自动重试或模拟兜底。
 - Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
 - 新调用另外保存 `requestLimits`、`providerStatus`、`incompleteReason`、`reasoningTokens`。状态/原因仅保留允许值，未提供为 null，无法识别为 unknown；推理用量仅保留有效计数，不采集推理正文。旧记录缺少这些可选字段时按原样读取。未完成响应中若有唯一、无拒绝标记且不超过 24,000 字符的最终文本，原样放入 `audit.rawOutput` 供诊断；仍为 failed、`memo = null`，不执行引用校验、不接受审核或导出为备忘录。
-- 当前分支 Prompt 为 `research-update-v2-judgement-1`：在保留的原始研究指令与 JSON 格式指令之间，加入经批准的假设状态、逐项证据支撑和归因边界要求。原始 `MEMO_RESEARCH_INSTRUCTIONS` 哈希仍与 `c96be3d` 一致，但有效 Prompt 的判断表达要求和哈希已改变。财务定义、输入、Schema、结构校验和专业关卡规则保持原实现，详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
+- 当前分支 Prompt 为 `research-update-v2-judgement-2`：保留原始研究指令、judgement-1 的假设状态及归因要求和 JSON 格式指令，另加获批的材料范围与逐段引用要求，包含摘要限制出处和同比期间。原始 `MEMO_RESEARCH_INSTRUCTIONS` 哈希仍与 `c96be3d` 一致，有效指令哈希随版本更新。财务定义、输入、Schema、结构校验和专业关卡规则保持原实现，详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
 - 哈希用于关联和复查，不是数字签名。本机记录可由设备持有人修改；CI 来源记录和人工专业审阅应一并保留。
@@ -93,7 +93,7 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 ## 自动测试的证明范围
 
-`npm test` 包括原有三项解析 fixture、六项引擎集成测试及十一项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；V0.1 格式修复已加入相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。
+`npm test` 包括三项解析 fixture、六项引擎集成测试及十四项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；V0.1 格式修复已加入相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分；调用恢复补丁增加三项未完成响应及诊断边界回归。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。judgement-2 沿用这些测试，没有将关键词匹配当作新指令效果的证明。
 
 普通 Web CI 继续真实上传 S-05 / S-06 PDF，并检查未配置时禁用模型。随后 S-05 通过浏览器网络拦截测试备忘录呈现、审核、导出和重载，返回模型名称明确为 `test-transport-not-live`，输出文件带 `stub-model-NOT-LIVE`。这验证 UI 与存储交互，不证明提供方接入成功。
 

@@ -3,7 +3,7 @@ import { getSourceRecord } from "./source-records.ts";
 import type { ResearchVersion, WorkspaceScope } from "./research-versions.ts";
 import { V05_PRIMARY_SCHEMA } from "../../../lib/parser-v05-strict.ts";
 
-export const MEMO_PROMPT_VERSION = "research-update-v2-judgement-1";
+export const MEMO_PROMPT_VERSION = "research-update-v2-judgement-2";
 export type MemoProvider = "deepseek" | "openai";
 export const MEMO_RESEARCH_INSTRUCTIONS = `你是金融研究更新助手。根据输入的已审核结构化证据，为 C-04 生成中文研究更新备忘录。
 任务是解释支持与反证如何共同影响判断、提出有待验证的替代解释，并给出有针对性的下一步研究问题。不要仅改写系统信号。
@@ -22,11 +22,15 @@ export const MEMO_JUDGEMENT_INSTRUCTIONS = `判断与证据边界：先区分已
 非经常性损益是本次材料的披露口径，不能直接改称未来不会重复的一次性项目。其正负不证明是否会重复，也不自动批准会计假设；有关持续性的解释必须保留条件并指向会计复核。
 替代解释要说明已有观察、待验证的假设以及还缺什么证据。没有明确比较对象和依据时，不判断影响已被高估或低估，也不推断未来利润必然恢复。下一步问题应指向可补充材料或具体专业复核事项。
 支持与反证都须保留。逐段核对引用能否支持本段表述，并保留尚未解决的分歧；不以统一免责声明替代每段自身的限定。`;
+// Owner-approved follow-up to live run #7: input scope and local citation coverage.
+export const MEMO_EVIDENCE_SCOPE_INSTRUCTIONS = `材料范围：你仅收到本次结构化 context，没有读取报告全文。“本次输入未提供”不等于“报告未披露”。缺少某项机制或资料时，限定为本次输入未提供或无法核实；只有本次引用明确支持披露范围，才能判断整份报告是否披露，不能从所选证据缺失推断全文缺失。
+逐段引用：输出前核对 text 中每项事实、比较和规则限制，将直接支持它们的本次引用编号放入该段 citations。即使一侧事实用于让步或转折，比较两侧的引用也都须保留；其他段落已有引用不能替代本段引用，假设或规则引用不能替代指标证据。摘要同样适用；提及连续期间缺失或其他规则限制时，也引用记载该限制的规则。不要罗列未用于本段的引用。
+比较期间：以输入明确记载的口径为准，同比表述为“较上年同期”，不写成“较上期”或上一季度；输入无法确认时保留不确定性，不补造期间。`;
 const MEMO_FORMAT_INSTRUCTIONS = `JSON 格式约定：顶层只能包含 summary、supporting、counter、alternatives、questions、gates，每个字段只出现一次。
 summary 是单个段落对象；supporting、counter、alternatives、questions 必须分别是用方括号包裹的数组，即使只有一项也必须使用数组。每个段落对象只包含 text 字符串和 citations 字符串数组。
 同一栏的多条内容放入该栏的数组，用逗号分隔各段落对象；不得通过重复 supporting、counter 等同名字段表达多条内容。任何层级的对象都不得含重复字段。
 返回前核对数组与对象类型、字段唯一性及上文的逐段引用要求。只输出一个 JSON 对象，不使用 Markdown 代码围栏。`;
-export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_JUDGEMENT_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
+export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_JUDGEMENT_INSTRUCTIONS}\n${MEMO_EVIDENCE_SCOPE_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
 
 export type MemoPoint = { text: string; citations: string[] };
 export type ResearchMemo = {

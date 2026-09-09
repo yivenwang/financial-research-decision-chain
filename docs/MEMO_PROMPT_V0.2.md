@@ -1,8 +1,8 @@
 # 备忘录判断表达修订 V0.2
 
-更新：2026-09-08。项目所有者已批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。
+更新：2026-09-09。项目所有者先批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。随后已批准依据 [第 7 次初审](MEMO_CONTENT_REVIEW_RUN_7.md)进一步明确材料范围与逐段引用，并复核一次新输出。
 
-当前状态：本版指令及获批的 [调用预算与诊断调整](MEMO_LIVE_RUN_6_DIAGNOSIS.md)已通过 27 项普通 CI 和 [第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)。12 段内容初审显示假设状态表达改善，但比较漏引和将输入缺失扩大为报告未披露仍需定点修订。本版 Prompt 保持不变，PR #16 保留草稿，内容及专业验收仍未通过；第 5 次原文与第 6 次失败均保留。
+当前状态：judgement-1 及获批的 [调用预算与诊断调整](MEMO_LIVE_RUN_6_DIAGNOSIS.md)已通过 27 项普通 CI 和第 7 次真实技术验收；内容初审仍发现比较漏引和材料范围扩大。获批的 judgement-2 定点指令修订已实现，本地 23 项回归通过；当前提交的普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新真实输出及内容复核待完成，PR 保留草稿，专业关卡继续 pending。各历史运行与审阅结论均保留。
 
 ## 改动与预期行为
 
@@ -13,9 +13,20 @@
 | 将非经常性直接推成一次性或未来不重复 | 保留披露口径；持续性判断须有条件并交会计复核 | 不替模型决定调整项的会计性质 |
 | 替代解释缺少检验路径，或无依据评价高估/低估 | 区分观察、假设和待补证据；没有比较对象和依据时不作高估/低估或必然恢复判断 | 保留提出研究假设和下一步问题的能力 |
 
-首版指令修订只修改 `apps/web/lib/research-memo.ts` 中的版本号、追加指令及组合方式。新增 `MEMO_JUDGEMENT_INSTRUCTIONS`，原始 `MEMO_RESEARCH_INSTRUCTIONS` 和 JSON 格式指令原样保留。有效请求顺序为原始研究指令、判断表达边界、JSON 格式指令。第 6 次后的调用恢复补丁另见下文，未再次修改这些指令。
+首版指令修订只修改 `apps/web/lib/research-memo.ts` 中的版本号、追加指令及组合方式。新增 `MEMO_JUDGEMENT_INSTRUCTIONS`，原始 `MEMO_RESEARCH_INSTRUCTIONS` 和 JSON 格式指令原样保留。首版顺序为原始研究指令、判断表达边界、JSON 格式指令。第 6 次后的调用恢复补丁另见下文，没有修改这些指令。
 
 这是经批准的研究判断表达要求变更，不能称为仅格式调整。没有新增能够证明引用蕴含关系的自动校验；新指令能否改善输出仍需逐段评审。
+
+## judgement-2 的定点修订
+
+| 第 7 次暴露的问题 | 新增指令要求 | 复核方式 |
+| --- | --- | --- |
+| 将输入中缺少机制信息写成整份报告未披露 | 明确模型只见结构化 context；缺少资料时限定为本次输入未提供或无法核实，全文披露判断必须有本次引用直接支持 | 阅读整份新备忘录，区分输入缺失与报告披露范围；不凭关键词通过 |
+| 同段出现多项事实或规则限制，却未逐项引用 | 比较两侧即使用于让步或转折，也须在本段引用；规则或假设不能替代指标证据，其他段落的引用也不能替代本段引用；摘要限制同样有出处 | 将每段事实、比较和限制逐项映射到本段引用；同比按输入明确为上年同期，不补造期间 |
+
+本次新增 `MEMO_EVIDENCE_SCOPE_INSTRUCTIONS`，共 358 字符；有效顺序变为原始研究指令、judgement-1 边界、材料范围与逐段引用要求、JSON 格式指令。原有三个指令块逐字保留，仅版本号、追加指令及组合方式改变；不把审阅文档中的拟议正文注入为标准答案。
+
+DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请求且无自动重试；OpenAI 仍为 4,000 / 90 秒。模型输入、Schema、本地校验、金融规则、专业关卡、历史审核事件及 UI 保留。新指令是研究表达要求的获批变更，不能据普通 CI 宣称其语义效果已验收。
 
 ## 版本记录
 
@@ -23,11 +34,20 @@
 | --- | --- |
 | 旧 Prompt | `research-update-v1-format-2` |
 | 旧有效指令 SHA-256 | `4e780a4ce56e7a81d3140837986d722766a51e66830efa4556e8e251e3988bbe` |
-| 新 Prompt | `research-update-v2-judgement-1` |
-| 新有效指令 SHA-256 | `9c734ab46ccac7ecee7b7e20ce3faed22f9195f2b5fd5994e64129a2ce4de0f3` |
+| 第 6、7 次 Prompt | `research-update-v2-judgement-1` |
+| judgement-1 有效指令 SHA-256 | `9c734ab46ccac7ecee7b7e20ce3faed22f9195f2b5fd5994e64129a2ce4de0f3` |
+| 当前 Prompt | `research-update-v2-judgement-2` |
+| 当前有效指令 SHA-256 | `ed0500174c8f38dbc77c74d3be49f79e717b916607dbdd035bf26b9c2033e60a` |
 | 原始研究指令 SHA-256 | `083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109`，与旧版一致 |
 
 此前的模型正文、失败、接受事件和审阅意见均保留。旧输出通过结构校验的历史事实不改写；本版也不对旧记录静默重新分类。
+
+## judgement-2 的离线验证
+
+- 直接运行现有三个测试文件：三项解析、六项引擎集成、十四项模型边界测试，共 23 项通过，0 失败、0 跳过；没有真实模型调用，没有新增关键词式语义测试。
+- 相比定点修订前的 `14296e4`，`research-memo.ts` 从 `MemoPoint` 数据类型起的全部代码逐字相同；原始研究、judgement-1 与格式指令分别逐字核对未变。
+- 用第 7 次原研究快照重建 context，与归档输入完全一致，快照摘要复算一致；旧正文仍通过既有校验，Markdown 导出逐字一致。专业关卡 pending、正式建议为空、估值不可发布的状态保留。
+- GitHub 普通 CI 还需验证当前提交的生产构建及浏览器回归，结果以 PR #16 对应提交的检查为准。第 7 次技术成功仅属于 judgement-1，不能替代本版真实运行。
 
 ## 首版指令修订的离线验证
 
@@ -40,8 +60,8 @@
 
 ## 一次真实输出的验收流程
 
-1. 等本分支普通 CI 通过，再在 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) 手动执行一次。分支选 `dev/memo-judgement-v02`，模型选 `deepseek-v4-pro`。沿用已有 Secret，无需取出或重新提交密钥。
-2. 记录 run ID、实际 head SHA、提供方、模型、Prompt 版本及哈希、响应编号和用量；核对 S-05 官方 PDF 哈希及材料范围。重复已见材料属于回归，不属于新盲测。
+1. 等当前提交的普通 CI 通过，再在 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) 点 Run workflow 手动执行一次。分支选 `dev/memo-judgement-v02`，模型选 `deepseek-v4-pro`；使用新运行，不重跑旧提交的任务。沿用已有 Secret，无需取出或重新提交密钥。
+2. 记录 run ID、实际 head SHA、提供方、模型、Prompt 版本及哈希、响应编号和用量；本轮必须为 `research-update-v2-judgement-2` 及上表的当前有效指令哈希。核对 S-05 官方 PDF 哈希及材料范围。重复已见材料属于回归，不属于新盲测。
 3. 下载原始 8 文件归档，先核对 ZIP 摘要、调用/导出一致性和专业关卡，再逐段阅读真实正文。若提前失败导致文件不全，保留已有失败文件并记录停止位置，不补造输出。
 4. 按下表评审本次全部段落，记录具体句子、引用和结论。不能用一个通过标记代替内容审查，不能把自动化的接受点击当专家认可。
 
@@ -49,6 +69,7 @@
 | --- | --- |
 | 假设状态 | 涉及核心经营或口径代表性的判断是否保留同段会计前提与 A-03 引用；摘要是否也遵守 |
 | 引用支撑 | 引用是否支撑每项事实比较；是否仅凭引用存在就跨到因果结论 |
+| 材料范围与期间 | 是否把本次输入未提供扩大为整份报告未披露；摘要限制是否有同段出处；同比期间是否明确且来自输入 |
 | 原因与持续性 | 输入未提供的收入、成本、基数、一次性及未来持续性解释是否仍被当作事实 |
 | 替代解释 | 是否明确是假设、说清缺什么证据，而非暗示已证实或必然恢复 |
 | 反证与行动 | 反证是否保留，研究问题是否具体；未自动改动信号、人工状态、估值或专业关卡 |
@@ -61,14 +82,14 @@
 
 ## 第 6 次失败与恢复记录
 
-[第 6 次真实运行 34211479879](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34211479879) 对应 `4cc6a554924055de16dc16774b7d19915ec44e58`，使用本版 Prompt 和 DeepSeek V4 Pro。77.229 秒后应用返回 HTTP 502 / `PROVIDER_INCOMPLETE`，输入 2,650、输出 4,000 token。失败发生在 JSON / 引用校验前，`memo` 和 `rawOutput` 均为空；内容复核尚无法进行。
+[第 6 次真实运行 34211479879](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34211479879) 对应 `4cc6a554924055de16dc16774b7d19915ec44e58`，使用 judgement-1 和 DeepSeek V4 Pro。77.229 秒后应用返回 HTTP 502 / `PROVIDER_INCOMPLETE`，输入 2,650、输出 4,000 token。失败发生在 JSON / 引用校验前，`memo` 和 `rawOutput` 均为空；内容复核尚无法进行。
 
 六文件原始归档的 ZIP 摘要已核验，八项离线一致性核对通过；保存的 context 与第 5 次除快照哈希外完全相同。本次未取得完整研究快照及服务端中断原因，不能据此独立复算快照、断言精确中断原因或评价正文质量。详见 [诊断记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。
 
-保留失败，不自动重跑。所有者已批准提高 DeepSeek 的有限输出预算、配套等待时间、补充诊断，并在普通 CI 通过后手动执行一次新真实验收。实现与本地 23 项验证已完成，见 [恢复记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。Prompt 版本与完整指令 SHA-256 保持本版。
+保留失败，不自动重跑。所有者已批准提高 DeepSeek 的有限输出预算、配套等待时间、补充诊断，并在普通 CI 通过后手动执行一次新真实验收。实现与本地 23 项验证已完成，见 [恢复记录](MEMO_LIVE_RUN_6_DIAGNOSIS.md)。该恢复补丁保留 judgement-1 版本与完整指令 SHA-256。
 
 ## 第 7 次技术成功与内容初审
 
 [运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 通过。提供方 completed，输入 2,650、输出 4,583 token，耗时 76.946 秒。八文件归档已下载并核对 ZIP SHA-256，16 项审计一致性检查及 JSON 字段唯一性核对通过。
 
-完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。进一步明确材料范围、逐段引用和同比期间的指令提案待所有者确认，未新增调用。
+完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。所有者随后批准进一步明确材料范围、逐段引用和同比期间，现以 judgement-2 实现，尚未新增真实调用。
