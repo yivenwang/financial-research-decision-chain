@@ -2,7 +2,7 @@
 
 更新：2026-09-09。项目所有者先批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。随后已批准依据 [第 7 次初审](MEMO_CONTENT_REVIEW_RUN_7.md)进一步明确材料范围与逐段引用，并复核一次新输出。
 
-当前状态：judgement-1 及获批的 [调用预算与诊断调整](MEMO_LIVE_RUN_6_DIAGNOSIS.md)已通过 27 项普通 CI 和第 7 次真实技术验收；内容初审仍发现比较漏引和材料范围扩大。获批的 judgement-2 定点指令修订已实现，本地 23 项回归通过；当前提交的普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新真实输出及内容复核待完成，PR 保留草稿，专业关卡继续 pending。各历史运行与审阅结论均保留。
+当前状态：judgement-2 通过 27 项普通 CI；[第 8 次真实运行](MEMO_LIVE_RUN_8_DIAGNOSIS.md)完整返回，但第三条反证缺少反证方向引用，按既有规则阻断。judgement-3 已明确每条方向要求并增加合成回归，本地 24 项通过；当前提交普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新版本仍需真实运行和逐段内容复核，PR 保留草稿。历史输出、失败及审阅结论保留，专业关卡继续 pending。
 
 ## 改动与预期行为
 
@@ -28,6 +28,14 @@
 
 DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请求且无自动重试；OpenAI 仍为 4,000 / 90 秒。模型输入、Schema、本地校验、金融规则、专业关卡、历史审核事件及 UI 保留。新指令是研究表达要求的获批变更，不能据普通 CI 宣称其语义效果已验收。
 
+## judgement-3 明确现有逐条方向要求
+
+第 8 次的第三条反证只引支持证据与中性规则，虽然前两条已引用反证，仍不满足程序已有的每条 counter 引用条件。此次在已批准的逐段引用工作内，新增 `MEMO_SECTION_REFERENCE_INSTRUCTIONS`，明确每条 supporting / counter 分别陈述并引用本段使用的支持 / 反证事实。数值正负不能代替输入 direction；缺失信息与待复核条件保留在内容匹配的位置，不以无关补引凑过关。
+
+这是将已有栏目校验写清楚，未新增金融判断标准。judgement-2 的四个指令块和 `MemoPoint` 类型起的所有代码逐字一致；原始输入、Schema、校验、方向、预算、审核与 UI 保留。第 8 次原文仍产生原阻断，未进行自动修复或重新归类。完整 12 段内容初审及诊断见 [第 8 次记录](MEMO_LIVE_RUN_8_DIAGNOSIS.md)。
+
+增加一项合成回归，证明一条合法反证不能替另一条满足方向要求，并验证 HTTP 阻断、原文保留、无正文导出、无自动重试和快照不变。本地现有 23 项加新项共 24 项通过。该测试验证既有边界，不证明新指令的语义效果；本次没有新增付费调用。
+
 ## 版本记录
 
 | 项目 | 值 |
@@ -36,8 +44,10 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 | 旧有效指令 SHA-256 | `4e780a4ce56e7a81d3140837986d722766a51e66830efa4556e8e251e3988bbe` |
 | 第 6、7 次 Prompt | `research-update-v2-judgement-1` |
 | judgement-1 有效指令 SHA-256 | `9c734ab46ccac7ecee7b7e20ce3faed22f9195f2b5fd5994e64129a2ce4de0f3` |
-| 当前 Prompt | `research-update-v2-judgement-2` |
-| 当前有效指令 SHA-256 | `ed0500174c8f38dbc77c74d3be49f79e717b916607dbdd035bf26b9c2033e60a` |
+| 第 8 次 Prompt | `research-update-v2-judgement-2` |
+| judgement-2 有效指令 SHA-256 | `ed0500174c8f38dbc77c74d3be49f79e717b916607dbdd035bf26b9c2033e60a` |
+| 当前 Prompt | `research-update-v2-judgement-3` |
+| 当前有效指令 SHA-256 | `1646f136c9be55897cf88e7c18a4ea14a51631cb16ff0611bfe01f49864aeda7` |
 | 原始研究指令 SHA-256 | `083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109`，与旧版一致 |
 
 此前的模型正文、失败、接受事件和审阅意见均保留。旧输出通过结构校验的历史事实不改写；本版也不对旧记录静默重新分类。
@@ -47,7 +57,7 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 - 直接运行现有三个测试文件：三项解析、六项引擎集成、十四项模型边界测试，共 23 项通过，0 失败、0 跳过；没有真实模型调用，没有新增关键词式语义测试。
 - 相比定点修订前的 `14296e4`，`research-memo.ts` 从 `MemoPoint` 数据类型起的全部代码逐字相同；原始研究、judgement-1 与格式指令分别逐字核对未变。
 - 用第 7 次原研究快照重建 context，与归档输入完全一致，快照摘要复算一致；旧正文仍通过既有校验，Markdown 导出逐字一致。专业关卡 pending、正式建议为空、估值不可发布的状态保留。
-- GitHub 普通 CI 还需验证当前提交的生产构建及浏览器回归，结果以 PR #16 对应提交的检查为准。第 7 次技术成功仅属于 judgement-1，不能替代本版真实运行。
+- judgement-2 对应 `eb06b4c` 的 [普通 CI 34307932394](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34307932394) 随后通过 27 项测试、生产构建和浏览器回归；该版本第 8 次真实运行仍被逐条反证引用规则阻断。第 7 次技术成功仅属于 judgement-1，不能替代后续版本真实运行。
 
 ## 首版指令修订的离线验证
 
@@ -61,7 +71,7 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 ## 一次真实输出的验收流程
 
 1. 等当前提交的普通 CI 通过，再在 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) 点 Run workflow 手动执行一次。分支选 `dev/memo-judgement-v02`，模型选 `deepseek-v4-pro`；使用新运行，不重跑旧提交的任务。沿用已有 Secret，无需取出或重新提交密钥。
-2. 记录 run ID、实际 head SHA、提供方、模型、Prompt 版本及哈希、响应编号和用量；本轮必须为 `research-update-v2-judgement-2` 及上表的当前有效指令哈希。核对 S-05 官方 PDF 哈希及材料范围。重复已见材料属于回归，不属于新盲测。
+2. 记录 run ID、实际 head SHA、提供方、模型、Prompt 版本及哈希、响应编号和用量；下一轮必须为 `research-update-v2-judgement-3` 及上表的当前有效指令哈希。核对 S-05 官方 PDF 哈希及材料范围。重复已见材料属于回归，不属于新盲测。
 3. 下载原始 8 文件归档，先核对 ZIP 摘要、调用/导出一致性和专业关卡，再逐段阅读真实正文。若提前失败导致文件不全，保留已有失败文件并记录停止位置，不补造输出。
 4. 按下表评审本次全部段落，记录具体句子、引用和结论。不能用一个通过标记代替内容审查，不能把自动化的接受点击当专家认可。
 
@@ -69,6 +79,7 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 | --- | --- |
 | 假设状态 | 涉及核心经营或口径代表性的判断是否保留同段会计前提与 A-03 引用；摘要是否也遵守 |
 | 引用支撑 | 引用是否支撑每项事实比较；是否仅凭引用存在就跨到因果结论 |
+| 栏目方向 | 每条 supporting / counter 是否引用本段使用的支持 / 反证事实；是否用其他段落、数值正负或无方向规则代替；是否为过关添加无关引用 |
 | 材料范围与期间 | 是否把本次输入未提供扩大为整份报告未披露；摘要限制是否有同段出处；同比期间是否明确且来自输入 |
 | 原因与持续性 | 输入未提供的收入、成本、基数、一次性及未来持续性解释是否仍被当作事实 |
 | 替代解释 | 是否明确是假设、说清缺什么证据，而非暗示已证实或必然恢复 |
@@ -92,4 +103,4 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 
 [运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 通过。提供方 completed，输入 2,650、输出 4,583 token，耗时 76.946 秒。八文件归档已下载并核对 ZIP SHA-256，16 项审计一致性检查及 JSON 字段唯一性核对通过。
 
-完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。所有者随后批准进一步明确材料范围、逐段引用和同比期间，现以 judgement-2 实现，尚未新增真实调用。
+完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。所有者随后批准进一步明确材料范围、逐段引用和同比期间，以 judgement-2 实现；其真实结果见 [第 8 次诊断](MEMO_LIVE_RUN_8_DIAGNOSIS.md)。

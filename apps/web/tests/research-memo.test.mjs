@@ -83,6 +83,31 @@ test("memo validation rejects invented citations, omitted counter-evidence, nume
   ]) { const output = memo(); mutate(output); const checked = validateMemo(output, context); assert.equal(checked.memo, null); assert.ok(checked.errors.includes(code), checked.errors); }
 });
 
+test("a valid counter paragraph cannot cover another paragraph citing only support and a neutral rule", async () => {
+  // Synthetic existing fixture prose reproduces the citation shape, not a live response.
+  const version = snapshot(); const before = canonicalJson(version);
+  const context = await buildMemoContext(version);
+  const output = memo();
+  output.counter.push({ text: output.questions[0].text, citations: ["EV-S-05-C04-NR", "K-07"] });
+  assert.equal(context.references.find((ref) => ref.id === "EV-S-05-C04-NR").direction, "支持");
+  assert.equal(context.references.find((ref) => ref.id === "K-07").direction, null);
+  assert.deepEqual(validateMemo(output, context).errors, ["COUNTER_REFERENCE_MISSING"]);
+  let calls = 0;
+  const handler = createMemoHandler(() => config, { fetcher: async () => { calls++; return provider(output); } });
+  const response = await handler.POST(request(version));
+  assert.equal(response.status, 422);
+  const { run } = await response.json();
+  assert.equal(calls, 1);
+  assert.equal(run.audit.providerStatus, "completed");
+  assert.equal(run.status, "blocked");
+  assert.equal(run.audit.failureCode, "MEMO_VALIDATION_FAILED");
+  assert.deepEqual(run.audit.validation, ["COUNTER_REFERENCE_MISSING"]);
+  assert.equal(run.audit.rawOutput, JSON.stringify(output));
+  assert.equal(run.memo, null);
+  assert.equal(canonicalJson(version), before);
+  assert.throws(() => memoMarkdown(run));
+});
+
 test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and truthful provider audit", async () => {
   const version = snapshot(); const before = canonicalJson(version); const calls = [];
   const run = await createMemoRun(version, config, { fetcher: async (url, options) => {

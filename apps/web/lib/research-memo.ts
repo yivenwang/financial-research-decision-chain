@@ -3,7 +3,7 @@ import { getSourceRecord } from "./source-records.ts";
 import type { ResearchVersion, WorkspaceScope } from "./research-versions.ts";
 import { V05_PRIMARY_SCHEMA } from "../../../lib/parser-v05-strict.ts";
 
-export const MEMO_PROMPT_VERSION = "research-update-v2-judgement-2";
+export const MEMO_PROMPT_VERSION = "research-update-v2-judgement-3";
 export type MemoProvider = "deepseek" | "openai";
 export const MEMO_RESEARCH_INSTRUCTIONS = `你是金融研究更新助手。根据输入的已审核结构化证据，为 C-04 生成中文研究更新备忘录。
 任务是解释支持与反证如何共同影响判断、提出有待验证的替代解释，并给出有针对性的下一步研究问题。不要仅改写系统信号。
@@ -26,11 +26,13 @@ export const MEMO_JUDGEMENT_INSTRUCTIONS = `判断与证据边界：先区分已
 export const MEMO_EVIDENCE_SCOPE_INSTRUCTIONS = `材料范围：你仅收到本次结构化 context，没有读取报告全文。“本次输入未提供”不等于“报告未披露”。缺少某项机制或资料时，限定为本次输入未提供或无法核实；只有本次引用明确支持披露范围，才能判断整份报告是否披露，不能从所选证据缺失推断全文缺失。
 逐段引用：输出前核对 text 中每项事实、比较和规则限制，将直接支持它们的本次引用编号放入该段 citations。即使一侧事实用于让步或转折，比较两侧的引用也都须保留；其他段落已有引用不能替代本段引用，假设或规则引用不能替代指标证据。摘要同样适用；提及连续期间缺失或其他规则限制时，也引用记载该限制的规则。不要罗列未用于本段的引用。
 比较期间：以输入明确记载的口径为准，同比表述为“较上年同期”，不写成“较上期”或上一季度；输入无法确认时保留不确定性，不补造期间。`;
+// Clarify validateMemo's existing per-point direction gate; do not change that gate.
+export const MEMO_SECTION_REFERENCE_INSTRUCTIONS = `栏目方向要求逐条适用：supporting 的每个段落至少引用一条 direction 为“支持”的证据，counter 的每个段落至少引用一条 direction 为“反证”的证据，并在同段陈述该证据对应的事实。其他段落的反证引用不能替代本段要求。direction 为 null 的规则或假设，以及数值为负但 direction 为“支持”的证据，都不能充当反证方向引用。只讨论资料缺失或待复核条件、而未陈述反证事实的内容，不单独作为 counter 条目；可作为关联事实段落的限制，或放入与其内容相符的 summary、alternatives、questions。不能为通过校验而添加正文未使用的引用、捏造事实或改写输入方向。`;
 const MEMO_FORMAT_INSTRUCTIONS = `JSON 格式约定：顶层只能包含 summary、supporting、counter、alternatives、questions、gates，每个字段只出现一次。
 summary 是单个段落对象；supporting、counter、alternatives、questions 必须分别是用方括号包裹的数组，即使只有一项也必须使用数组。每个段落对象只包含 text 字符串和 citations 字符串数组。
 同一栏的多条内容放入该栏的数组，用逗号分隔各段落对象；不得通过重复 supporting、counter 等同名字段表达多条内容。任何层级的对象都不得含重复字段。
 返回前核对数组与对象类型、字段唯一性及上文的逐段引用要求。只输出一个 JSON 对象，不使用 Markdown 代码围栏。`;
-export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_JUDGEMENT_INSTRUCTIONS}\n${MEMO_EVIDENCE_SCOPE_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
+export const MEMO_INSTRUCTIONS = `${MEMO_RESEARCH_INSTRUCTIONS}\n${MEMO_JUDGEMENT_INSTRUCTIONS}\n${MEMO_EVIDENCE_SCOPE_INSTRUCTIONS}\n${MEMO_SECTION_REFERENCE_INSTRUCTIONS}\n${MEMO_FORMAT_INSTRUCTIONS}`;
 
 export type MemoPoint = { text: string; citations: string[] };
 export type ResearchMemo = {

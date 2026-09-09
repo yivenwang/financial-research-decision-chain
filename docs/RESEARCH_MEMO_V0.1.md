@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认接入 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。[第 7 次真实技术验收](MEMO_CONTENT_REVIEW_RUN_7.md)使用 judgement-1，12 段初审发现比较漏引和材料范围扩大。所有者已批准的 [judgement-2 定点指令修订](MEMO_PROMPT_V0.2.md)已实现，本地 23 项回归通过；当前普通 CI 见 PR #16，新真实输出及内容复核待完成。PR 保持草稿，专业验收仍待复核；旧原文、失败和接受事件保留。
+更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。judgement-2 的 [第 8 次真实运行](MEMO_LIVE_RUN_8_DIAGNOSIS.md)完整返回，但第三条反证缺少反证方向引用，按既有规则阻断。[judgement-3](MEMO_PROMPT_V0.2.md)已明确逐条方向要求并补合成回归，本地 24 项通过；当前普通 CI 见 PR #16，新真实输出及内容复核待完成。PR 保留草稿，专业验收仍待复核；历史原文、失败和接受事件保留。
 
 ## 模型承担的工作
 
@@ -25,7 +25,7 @@
 - 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。DeepSeek 最大输出 6,000 token、150 秒超时；OpenAI 保留 4,000 / 90 秒。均使用 low reasoning，一次操作只发一次请求，无自动重试或模拟兜底。
 - Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
 - 新调用另外保存 `requestLimits`、`providerStatus`、`incompleteReason`、`reasoningTokens`。状态/原因仅保留允许值，未提供为 null，无法识别为 unknown；推理用量仅保留有效计数，不采集推理正文。旧记录缺少这些可选字段时按原样读取。未完成响应中若有唯一、无拒绝标记且不超过 24,000 字符的最终文本，原样放入 `audit.rawOutput` 供诊断；仍为 failed、`memo = null`，不执行引用校验、不接受审核或导出为备忘录。
-- 当前分支 Prompt 为 `research-update-v2-judgement-2`：保留原始研究指令、judgement-1 的假设状态及归因要求和 JSON 格式指令，另加获批的材料范围与逐段引用要求，包含摘要限制出处和同比期间。原始 `MEMO_RESEARCH_INSTRUCTIONS` 哈希仍与 `c96be3d` 一致，有效指令哈希随版本更新。财务定义、输入、Schema、结构校验和专业关卡规则保持原实现，详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
+- 当前分支 Prompt 为 `research-update-v2-judgement-3`：保留原始研究、假设状态及归因、材料范围与逐段引用、JSON 格式四个指令块，明确每条 supporting / counter 还须分别引用本段使用的支持 / 反证事实。此项栏目方向校验原本已存在，没有改规则或自动补引。原始研究指令哈希仍与 `c96be3d` 一致，有效指令哈希随版本更新；详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
 - 哈希用于关联和复查，不是数字签名。本机记录可由设备持有人修改；CI 来源记录和人工专业审阅应一并保留。
@@ -61,6 +61,12 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
 
+### 第 8 次模型完整返回，逐段反证引用阻断
+
+[运行 34310296285](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34310296285) 对应 `eb06b4c` / judgement-2。DeepSeek V4 Pro completed，输入 2,858、输出 4,985 token，耗时 70.443 秒；应用返回 HTTP 422 / `COUNTER_REFERENCE_MISSING`。第三条 counter 只有支持方向的 NR 与无方向的 K-07 引用，不能用其他反证段落代替本段要求。
+
+原始最终 JSON 保留，`memo = null`，未进入正文接受、导出和回滚验收。六文件 ZIP 摘要、13 项一致性检查及 12 段初审完成；措辞仍有需复核之处。诊断和既有逐条规则的指令澄清见 [完整记录](MEMO_LIVE_RUN_8_DIAGNOSIS.md)，原校验、预算、金融规则和失败状态保留。
+
 ### 第 7 次真实技术验收通过，内容初审建议定点修订
 
 [运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，使用 `research-update-v2-judgement-1` / DeepSeek V4 Pro。实际输出 4,583 token，其中推理计数 3,311；76.946 秒完成，提供方状态 completed。真实调用、审核交互、导出和回滚主流程 1 项通过，负向项按设计跳过 1 项；跳过项已由同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 覆盖。
@@ -93,7 +99,7 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 ## 自动测试的证明范围
 
-`npm test` 包括三项解析 fixture、六项引擎集成测试及十四项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；V0.1 格式修复已加入相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分；调用恢复补丁增加三项未完成响应及诊断边界回归。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。judgement-2 沿用这些测试，没有将关键词匹配当作新指令效果的证明。
+`npm test` 包括三项解析 fixture、六项引擎集成测试及十五项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；V0.1 格式修复已加入相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分；调用恢复补丁增加三项未完成响应及诊断边界回归；第 8 次后补充多条反证不能跨段满足方向要求的合成回归。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式，也没有将关键词匹配当作指令效果的证明。
 
 普通 Web CI 继续真实上传 S-05 / S-06 PDF，并检查未配置时禁用模型。随后 S-05 通过浏览器网络拦截测试备忘录呈现、审核、导出和重载，返回模型名称明确为 `test-transport-not-live`，输出文件带 `stub-model-NOT-LIVE`。这验证 UI 与存储交互，不证明提供方接入成功。
 
