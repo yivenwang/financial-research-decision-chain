@@ -1,6 +1,6 @@
 # 紧凑备忘录与有限重复验证 V0.3
 
-日期：2026-09-09。所有者已批准 [第 9 次诊断中的调整方案](MEMO_RELIABILITY_REVIEW_RUN_9.md)。本阶段在 PR #16 实施，未合并、未部署。真实模型结果尚待本版本的手动批次与逐份内容审阅，不能由普通 CI 代替。
+日期：2026-09-09。所有者已批准 [第 9 次诊断中的调整方案](MEMO_RELIABILITY_REVIEW_RUN_9.md)。本阶段在 PR #16 实施，未合并、未部署。[第 10 次](MEMO_CONTENT_REVIEW_RUN_10.md)已完成本版本三个独立样本及全部 18 段初审：技术流程三份通过，原样内容仍需修订。
 
 ## 行为与代价
 
@@ -48,7 +48,7 @@ Schema 用必填对象位置限定六段，以 string pattern 表达长度，并
 
 ## 一次手动批次如何执行
 
-普通回归通过后，在 Actions 的 **Live DeepSeek research memo acceptance** 点击 **Run workflow**，选择分支 **dev/memo-judgement-v02** 和 **deepseek-v4-pro**。当前提交及检查结果见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。这会启动一次最多三个样本的批次，无需分别启动三次。不要点击旧运行的 Re-run jobs 来验证新版本。
+本次已批准批次已作为 [第 10 次](MEMO_CONTENT_REVIEW_RUN_10.md)执行完毕；以下说明保留其运行方式，不授权再次启动。该批次在普通回归通过后，从 Actions 的 **Live DeepSeek research memo acceptance** → **Run workflow** 选择 **dev/memo-judgement-v02** 与 **deepseek-v4-pro**，固定提交 `0a41f24`，一次启动最多三个样本。检查结果见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。旧运行的 Re-run jobs 不会验证新提交。
 
 工作流只允许手动触发；固定本次 GITHUB_SHA，每个样本独立走 S-05 真实 PDF 上传、审核、保存、单次模型请求、导出和回滚。顺序执行；每个浏览器样本在发送前阻止第二个模型 POST。任何样本接口、截断、结构、审计或流程失败都会停止剩余样本；没有自动重试或第四个样本。
 
@@ -62,9 +62,9 @@ Schema 用必填对象位置限定六段，以 string pattern 表达长度，并
 
 本地定向普通回归 30 项通过：3 个解析、6 个集成、18 个模型边界及 3 个批次控制测试。涵盖完整六段映射、Unicode 长度和换行边界、错误条数/位置、缺失/未知引用、方向错误、重复 JSON、截断、历史版本可读可审、失败不改研究快照、顺序与调用上限、失败停止、配置及留档失败阻断。使用既有合成文案，不把真实输出写成测试标准答案。
 
-生产构建、迁移文件核验及真实 S-05 / S-06 浏览器普通回归由该提交的 GitHub CI 核验，具体状态以 [PR 检查](https://github.com/yivenwang/financial-research-decision-chain/pull/16/checks) 为准。S-07 不读取、不测试。当前没有本版本真实模型结果，不声明已解决真实生成稳定性。
+`0a41f24` 的 [普通 CI 34315836132](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34315836132) 随后通过 34 项检查，包含生产构建、迁移文件核验及真实 S-05 / S-06 浏览器流程；模型为明确标记的替身。S-07 不读取、不测试。
 
-通过内容验收后收尾整链演示，继续既定 UI 共同评审、有限迁移和参赛材料；未通过则停止本轮调用，依据全部结果重新提案。C-04 / A-03 / K-07 / F-02、财务阈值、估值、决策及专业关卡不在本次修改范围。
+[第 10 次真实批次](MEMO_CONTENT_REVIEW_RUN_10.md)三份均完整返回，合计输出 11,286 token；28 文件归档、52 项离线一致性核对和全部 18 段初审完成。三次完成是同案例的有限记录，内容仍有需要修订的引用及表述，尚不声明原样内容全部通过或长期稳定。本轮停止调用，下一阶段提出[人工修订与版本留痕](MEMO_REVISION_STAGE_PROPOSAL.md)，尚待批准。由此收尾可演示的研究工作，再推进既定 UI、有限迁移和参赛材料。C-04 / A-03 / K-07 / F-02、财务阈值、估值、决策及专业关卡保持原定义。
 
 ## 决赛 token 额度
 

@@ -53,7 +53,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | [第 9 次输出截断](docs/MEMO_RELIABILITY_REVIEW_RUN_9.md)保留；所有者已批准并实现[紧凑备忘录 V0.3](docs/MEMO_COMPACT_V0.3.md)：六段约定、历史兼容与固定版本最多三样本的手动批次。本地 30 项回归通过；普通 CI 状态见 PR #16，真实输出及内容复核仍待取得。PR 保留草稿 |
+| 模型备忘录 | [第 10 次三样本验收](docs/MEMO_CONTENT_REVIEW_RUN_10.md)：同一提交 34 项普通 CI、三份真实技术流程通过；28 文件归档及全部 18 段初审完成。原样内容仍需修订，下一阶段拟议[人工修订与版本留痕](docs/MEMO_REVISION_STAGE_PROPOSAL.md)，待批准。PR #16 保留草稿，历史失败保留 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 
