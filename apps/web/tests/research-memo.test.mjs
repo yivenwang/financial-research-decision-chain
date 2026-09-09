@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
-import { buildMemoContext, canonicalJson, memoMarkdown, memoSchema, sha256Text, validateMemo, MEMO_INSTRUCTIONS, MEMO_RESEARCH_INSTRUCTIONS, MEMO_PROMPT_VERSION } from "../lib/research-memo.ts";
+import { buildMemoContext, canonicalJson, memoMarkdown, memoSchema, sha256Text, validateMemo, MEMO_INSTRUCTIONS, validateMemoOutput, MEMO_PROMPT_VERSION } from "../lib/research-memo.ts";
 import { createMemoHandler, createMemoRun, memoConfig, MAX_MEMO_REQUEST_BYTES } from "../lib/research-memo.server.ts";
 import { appendMemoRun, appendMemoReview, readMemoLedger, memoStorageKey } from "../lib/research-memo-storage.ts";
 import { parseResearchReport, extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
@@ -21,11 +21,12 @@ const memo = () => ({
   supporting: [{ text: "扣非表现支持继续核查核心经营改善的判断。", citations: ["EV-S-05-C04-ADJ"] }],
   counter: [{ text: "归母利润下滑构成反证，不能仅凭扣非指标概括整体表现。", citations: ["EV-S-05-C04-ATTR"] }],
   alternatives: [{ text: "可能存在调整项性质影响利润比较的解释，仍须专业复核。", citations: ["EV-S-05-C04-NR", "A-03"] }],
-  questions: [{ text: "需要核对调整项是否具有经常性，并补充可比期间材料。", citations: ["A-03", "K-07"] }],
+  questions: [{ text: "需要核对调整项是否具有经常性。", citations: ["A-03"] }, { text: "需要补充可比期间材料。", citations: ["K-07"] }],
   gates: { eg01: "pending", eg02: "pending" },
 });
+const wire = (output) => ({ ...output, supporting: output.supporting[0], counter: output.counter[0], alternatives: output.alternatives[0], questions: { first: output.questions[0], second: output.questions[1] } });
 function provider(output = memo(), patch = {}) {
-  return Response.json({ id: "resp_unit_transport_stub", model: "test-model", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
+  return Response.json({ id: "resp_unit_transport_stub", model: "test-model", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(wire(output)) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
 }
 const request = (body, headers = {}) => new Request("http://localhost/api/research-memo", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${config.accessToken}`, ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
 
@@ -83,6 +84,83 @@ test("memo validation rejects invented citations, omitted counter-evidence, nume
   ]) { const output = memo(); mutate(output); const checked = validateMemo(output, context); assert.equal(checked.memo, null); assert.ok(checked.errors.includes(code), checked.errors); }
 });
 
+test("compact wire slots map losslessly to six stored paragraphs and enforce Unicode length and exact counts", async () => {
+  const context = await buildMemoContext(snapshot());
+  const output = memo();
+  output.summary.text = "研".repeat(159) + "𠀀";
+  const raw = wire(output);
+  const checked = validateMemoOutput(raw, context);
+  assert.deepEqual(checked.errors, []);
+  assert.deepEqual(checked.memo, output);
+  const schema = memoSchema(context);
+  assert.deepEqual(Object.keys(schema.properties.questions.properties), ["first", "second"]);
+  assert.deepEqual(schema.properties.questions.required, ["first", "second"]);
+  assert.equal(schema.properties.supporting.type, "object");
+  assert.equal(new RegExp(schema.properties.summary.properties.text.pattern, "u").test(output.summary.text), true);
+  output.summary.text += "研";
+  assert.equal(new RegExp(schema.properties.summary.properties.text.pattern, "u").test(output.summary.text), false);
+  assert.ok(validateMemoOutput(wire(output), context).errors.includes("MEMO_POINT_SCHEMA"));
+  const trailingNewline = memo(); trailingNewline.summary.text = "研".repeat(160) + "\n";
+  assert.ok(validateMemoOutput(wire(trailingNewline), context).errors.includes("MEMO_POINT_SCHEMA"));
+  for (const [section, length] of [["supporting", 0], ["supporting", 2], ["questions", 1], ["questions", 3]]) {
+    const stored = memo(); stored[section] = Array.from({ length }, () => stored[section][0]);
+    assert.ok(validateMemo(stored, context).errors.includes("MEMO_SECTION_SCHEMA"));
+  }
+  assert.equal(validateMemo(memo(), context, "unknown-future-prompt").memo, null);
+});
+
+test("invalid compact output is blocked without fixing missing slots, citations or text and leaves research bytes unchanged", async () => {
+  const version = snapshot(); const before = canonicalJson(version);
+  for (const mutate of [
+    (output) => { delete output.questions.second; },
+    (output) => { output.questions.third = output.questions.first; },
+    (output) => { output.supporting = [output.supporting]; },
+    (output) => { output.summary.text = "研".repeat(161); },
+    (output) => { output.counter.citations = []; },
+    (output) => { output.summary.citations = ["unknown-reference"]; },
+    (output) => { output.summary.extra = "unexpected"; },
+  ]) {
+    const output = wire(memo()); mutate(output); const raw = JSON.stringify(output); let calls = 0;
+    const handler = createMemoHandler(() => config, { fetcher: async () => {
+      calls++; return provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text: raw }] }] });
+    } });
+    const response = await handler.POST(request(version));
+    assert.equal(response.status, 422);
+    const { run } = await response.json();
+    assert.equal(calls, 1); assert.equal(run.status, "blocked");
+    assert.equal(run.audit.rawOutput, raw); assert.equal(run.memo, null);
+    assert.equal(canonicalJson(version), before); assert.throws(() => memoMarkdown(run));
+  }
+});
+
+test("legacy drafts keep their original lengths, arrays, audit bytes and labels when read and reviewed", async () => {
+  // A synthetic historical record, not an archived provider response.
+  const data = new Map(); globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {} };
+  try {
+    const version = snapshot(); appendVersion(version); const versionBytes = data.get(storageKeys().versions);
+    const historical = memo(); historical.summary.text = "研".repeat(201);
+    historical.supporting.push(structuredClone(historical.supporting[0])); historical.questions.pop();
+    const context = await buildMemoContext(version);
+    assert.deepEqual(validateMemo(historical, context, "research-update-v2-judgement-3").errors, []);
+    assert.equal(validateMemo(historical, context).memo, null);
+    const run = await createMemoRun(version, config, { fetcher: async () => provider() });
+    run.audit.promptVersion = "research-update-v2-judgement-3";
+    run.audit.promptSha256 = await sha256Text("synthetic legacy instructions");
+    run.audit.rawOutput = JSON.stringify(historical); run.memo = historical;
+    const bytes = JSON.stringify(run);
+    await appendMemoRun(run, version, "research");
+    const review = await appendMemoReview(run.runId, "accepted", "Synthetic historical reviewer", "history compatibility test", "research");
+    assert.equal(JSON.stringify(readMemoLedger("research").runs[0]), bytes);
+    assert.match(memoMarkdown(run, review), /## 反证与限制/);
+    assert.ok(memoMarkdown(run, review).includes(historical.summary.text));
+    assert.equal(data.get(storageKeys().versions), versionBytes);
+    const before = data.get(memoStorageKey("research"));
+    const unknown = structuredClone(run); unknown.runId = "future-run"; unknown.audit.promptVersion = "future-version";
+    await assert.rejects(appendMemoRun(unknown, version, "research"));
+    assert.equal(data.get(memoStorageKey("research")), before);
+  } finally { delete globalThis.window; }
+});
+
 test("a valid counter paragraph cannot cover another paragraph citing only support and a neutral rule", async () => {
   // Synthetic existing fixture prose reproduces the citation shape, not a live response.
   const version = snapshot(); const before = canonicalJson(version);
@@ -91,7 +169,8 @@ test("a valid counter paragraph cannot cover another paragraph citing only suppo
   output.counter.push({ text: output.questions[0].text, citations: ["EV-S-05-C04-NR", "K-07"] });
   assert.equal(context.references.find((ref) => ref.id === "EV-S-05-C04-NR").direction, "支持");
   assert.equal(context.references.find((ref) => ref.id === "K-07").direction, null);
-  assert.deepEqual(validateMemo(output, context).errors, ["COUNTER_REFERENCE_MISSING"]);
+  assert.deepEqual(validateMemo(output, context, "research-update-v2-judgement-3").errors, ["COUNTER_REFERENCE_MISSING"]);
+  output.counter = [output.counter[1]]; // Current compact shape; valid counter fact remains in summary only.
   let calls = 0;
   const handler = createMemoHandler(() => config, { fetcher: async () => { calls++; return provider(output); } });
   const response = await handler.POST(request(version));
@@ -102,7 +181,7 @@ test("a valid counter paragraph cannot cover another paragraph citing only suppo
   assert.equal(run.status, "blocked");
   assert.equal(run.audit.failureCode, "MEMO_VALIDATION_FAILED");
   assert.deepEqual(run.audit.validation, ["COUNTER_REFERENCE_MISSING"]);
-  assert.equal(run.audit.rawOutput, JSON.stringify(output));
+  assert.equal(run.audit.rawOutput, JSON.stringify(wire(output)));
   assert.equal(run.memo, null);
   assert.equal(canonicalJson(version), before);
   assert.throws(() => memoMarkdown(run));
@@ -164,10 +243,7 @@ test("synthetic repeated section objects are blocked before duplicate fields can
   const sections = ["supporting", "counter", "alternatives", "questions"].flatMap((section) =>
     [output[section][0], output[section][0]].map((point) => `${JSON.stringify(section)}:${JSON.stringify(point)}`));
   const raw = `{${[`"summary":${JSON.stringify(output.summary)}`, ...sections, `"gates":${JSON.stringify(output.gates)}`].join(",")}}`;
-  // Hash of the original research instructions in commit c96be3d, before the format-only addition.
-  assert.equal(await sha256Text(MEMO_RESEARCH_INSTRUCTIONS), "083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109");
-  assert.notEqual(MEMO_PROMPT_VERSION, "research-update-v1");
-  assert.deepEqual(validateMemo(JSON.parse(raw), await buildMemoContext(snapshot())).errors, ["MEMO_SECTION_SCHEMA"]);
+  assert.equal(validateMemoOutput(JSON.parse(raw), await buildMemoContext(snapshot())).memo, null);
   let calls = 0;
   const handler = createMemoHandler(() => config, { fetcher: async () => {
     calls++;
@@ -187,8 +263,8 @@ test("synthetic repeated section objects are blocked before duplicate fields can
 test("duplicate JSON keys include escaped and nested names while independent objects and quoted punctuation remain valid", async () => {
   const output = memo();
   output.summary.text += ' 字段示意 {"text":"保留"} 与逗号、方括号 []、反斜线 \\ 只是正文。';
-  output.supporting.push({ text: "负向调整项提供进一步核查的依据。", citations: ["EV-S-05-C04-NR"] });
-  const raw = JSON.stringify(output);
+  output.supporting[0].text += " 字段示意的相同键在独立段落中有效。";
+  const raw = JSON.stringify(wire(output));
   const replay = (text) => createMemoRun(snapshot(), config, { fetcher: async () => provider(undefined, { output: [{ type: "message", content: [{ type: "output_text", text }] }] }) });
   const valid = await replay(raw);
   assert.equal(valid.status, "completed");
@@ -198,7 +274,7 @@ test("duplicate JSON keys include escaped and nested names while independent obj
     raw.replace('"supporting":', String.raw`"\u0073upporting":[],"supporting":`),
     raw.replace('"summary":{', '"summary":{"text":"被覆盖的前一段",'),
   ]) {
-    assert.deepEqual(JSON.parse(ambiguous), output);
+    assert.deepEqual(JSON.parse(ambiguous), wire(output));
     const run = await replay(ambiguous);
     assert.equal(run.status, "blocked");
     assert.equal(run.audit.failureCode, "MODEL_JSON_DUPLICATE_KEY");
@@ -221,7 +297,7 @@ test("provider errors, refusal, truncation and invalid output leave failed or bl
 });
 
 test("incomplete responses preserve bounded diagnostics but never accept even structurally valid final text", async () => {
-  const raw = JSON.stringify(memo());
+  const raw = JSON.stringify(wire(memo()));
   const reasoningText = "synthetic reasoning must never be retained";
   let calls = 0;
   const handler = createMemoHandler(() => config, { fetcher: async () => {
@@ -243,7 +319,7 @@ test("incomplete responses preserve bounded diagnostics but never accept even st
   assert.deepEqual(run.audit.requestLimits, { maxOutputTokens: 6000, timeoutMs: 150000 });
   assert.equal(run.audit.rawOutput, raw);
   assert.ok(!JSON.stringify(run).includes(reasoningText));
-  assert.deepEqual(validateMemo(JSON.parse(raw), run.context).errors, []);
+  assert.deepEqual(validateMemoOutput(JSON.parse(raw), run.context).errors, []);
   assert.deepEqual(run.audit.validation, []);
   assert.equal(run.memo, null);
   assert.throws(() => memoMarkdown(run));

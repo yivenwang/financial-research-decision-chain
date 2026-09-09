@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemo, type MemoProvider, type MemoRun } from "./research-memo.ts";
+import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
 type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number };
@@ -145,7 +145,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
       run.audit.failureCode = error instanceof DuplicateJsonKeyError ? "MODEL_JSON_DUPLICATE_KEY" : "MODEL_JSON_INVALID";
       return run;
     }
-    const validation = validateMemo(parsed, context);
+    const validation = validateMemoOutput(parsed, context);
     run.audit.validation = validation.errors;
     if (!validation.memo) { run.status = "blocked"; run.audit.failureCode = "MEMO_VALIDATION_FAILED"; return run; }
     run.memo = validation.memo;

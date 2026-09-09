@@ -4,13 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       model:
-        description: DeepSeek model for this one-call acceptance run
+        description: Fixed model for up to three independent S-05 samples (stop on failure)
         required: true
         default: deepseek-v4-pro
         type: choice
         options:
           - deepseek-v4-pro
-          - deepseek-v4-flash
 
 permissions:
   contents: read
@@ -50,12 +49,12 @@ jobs:
           echo "PLAYWRIGHT_PACKAGE_PATH=$RUNNER_TEMP/research-browser/node_modules/playwright" >> "$GITHUB_ENV"
       - name: Prepare Chromium
         run: node "$PLAYWRIGHT_PACKAGE_PATH/cli.js" install --with-deps chromium
-      - name: One real S-05 upload and one live DeepSeek request with review and export
+      - name: Up to three sequential S-05 live samples, one request each, stop on failure
         env:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DEEPSEEK_MODEL: ${{ inputs.model }}
           LIVE_MODEL_E2E: '1'
-        run: npm run test:browser
+        run: node --experimental-strip-types scripts/run-memo-batch.mjs
       - name: Preserve real call, memo, review and screenshots
         if: always()
         uses: actions/upload-artifact@v4

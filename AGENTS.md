@@ -24,6 +24,8 @@ After live run #6 failed, the owner approved the bounded recovery proposal: Deep
 
 After reviewing live run #7, the owner approved a targeted Prompt follow-up: distinguish missing structured input from absent disclosure in the whole report, and require citations for each paragraph's facts, comparison sides and rule limits, including the summary and explicit year-on-year period wording. Implement the versioned instructions, run ordinary regressions, then review one new manual live output. Keep the existing provider budgets, inputs, validation, financial rules and historical records. This approval does not mark run #7 as content-accepted or authorize a broader product stage.
 
+On 2026-09-09, after the run #9 reliability proposal, the owner approved the compact memo stage: five sections containing six paragraphs total (summary, supporting, counter and alternatives one each; questions two), at most 160 Unicode characters per paragraph; one versioned contract shared by instructions, supported schema constraints and local validation; functional counter wording aligned to counter facts and related limits; historical output preserved under its original version. This permits a lossless wire-to-storage shape mapping, not repairing model content or changing evidence requirements. The owner also approved one manual fixed-commit batch of at most three sequential independent S-05 samples, one request each, stopping remaining samples on API, truncation, structure or flow failure. Keep DeepSeek V4 Pro / low / 6,000 output tokens / 150 seconds per sample; no automatic retry, fourth sample, new input or financial change. Three technical completions still require individual content review. The owner asked whether a larger token allowance could be considered for finals: research and propose a rehearsed configuration, but no specific higher allowance or extra paid comparison has been approved yet.
+
 ## Repository and evidence
 
 - Work in GitHub branches and PRs. Check the latest PR head before writing. Do not overwrite the newer dev/deepseek-provider-v02 with the old uncommitted v01 draft.
@@ -31,7 +33,7 @@ After reviewing live run #7, the owner approved a targeted Prompt follow-up: dis
 - Do not read S-07 raw material, truth or first output, or run S-07 tests in this stage. Historical PASS records do not grant fresh authorization.
 - Keep financial calculations in the frozen deterministic engine. EG-01 and EG-02 remain pending until separately supported professional review.
 - API keys stay in server environment variables or GitHub Secrets. Do not request, read out, commit or log a real key.
-- Ordinary CI uses labelled transport stubs. Keep paid live acceptance manual, one request per run, without automatic retries.
+- Ordinary CI uses labelled transport stubs. Each live sample and each product generation action makes at most one model request, without automatic retries. The approved compact-stage manual batch may start at most three sequential samples and must stop after a failure; this bounded batch is not authorization for unattended repeated runs.
 
 ## UI and team
 

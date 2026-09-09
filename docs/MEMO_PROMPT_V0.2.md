@@ -2,7 +2,7 @@
 
 更新：2026-09-09。项目所有者先批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。随后已批准依据 [第 7 次初审](MEMO_CONTENT_REVIEW_RUN_7.md)进一步明确材料范围与逐段引用，并复核一次新输出。
 
-当前状态：judgement-3 的 28 项普通 CI 通过，但[第 9 次真实运行](MEMO_RELIABILITY_REVIEW_RUN_9.md)因输出上限耗尽截断，未进入 JSON / 引用校验。此版本尚未完成真实备忘录验收；连续失败已汇总为设计复核，下一阶段统一约束与固定版本有限验证的具体提案待所有者批准。本轮仅记录诊断，不再次追加指令或调用。PR #16 保留草稿，历史与专业待复核状态保留。
+当前状态：judgement-3 的第 9 次输出截断保留为失败。所有者已批准并实现[紧凑备忘录 V0.3](MEMO_COMPACT_V0.3.md)，统一约定、六段输出、历史兼容与最多三样本的手动批次；本地 30 项回归通过，普通 CI 状态见 PR #16，真实输出和内容复核仍待取得。本文保留 V0.2 的历史修订及失败记录，最新实现与操作以 V0.3 说明为准。
 
 ## 改动与预期行为
 
@@ -46,8 +46,10 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 | judgement-1 有效指令 SHA-256 | `9c734ab46ccac7ecee7b7e20ce3faed22f9195f2b5fd5994e64129a2ce4de0f3` |
 | 第 8 次 Prompt | `research-update-v2-judgement-2` |
 | judgement-2 有效指令 SHA-256 | `ed0500174c8f38dbc77c74d3be49f79e717b916607dbdd035bf26b9c2033e60a` |
-| 当前 Prompt | `research-update-v2-judgement-3` |
-| 当前有效指令 SHA-256 | `1646f136c9be55897cf88e7c18a4ea14a51631cb16ff0611bfe01f49864aeda7` |
+| 第 9 次 Prompt | `research-update-v2-judgement-3` |
+| 第 9 次有效指令 SHA-256 | `1646f136c9be55897cf88e7c18a4ea14a51631cb16ff0611bfe01f49864aeda7` |
+| 后续已批准 Prompt | `research-update-v3-compact-1`，见 [V0.3](MEMO_COMPACT_V0.3.md) |
+| V0.3 有效指令 SHA-256 | `f49922a31be029e29838e1d3f87cc10a8e615dc0b718c3e18f651090589e725e` |
 | 原始研究指令 SHA-256 | `083c971164ac1c92d2d32c2588c4ca7158e923753a7064159d54bb84aebda109`，与旧版一致 |
 
 此前的模型正文、失败、接受事件和审阅意见均保留。旧输出通过结构校验的历史事实不改写；本版也不对旧记录静默重新分类。

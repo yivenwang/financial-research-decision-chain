@@ -17,7 +17,7 @@ const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
 assert.ok(browserPackage, "Set PLAYWRIGHT_PACKAGE_PATH to the installed playwright package directory.");
 const { chromium } = await import(pathToFileURL(resolve(browserPackage, "index.mjs")).href);
 const origin = "http://127.0.0.1:4322";
-const artifacts = new URL("../artifacts-web/", import.meta.url);
+const artifacts = process.env.MEMO_ARTIFACT_DIR ? pathToFileURL(resolve(process.env.MEMO_ARTIFACT_DIR) + "/") : new URL("../artifacts-web/", import.meta.url);
 const liveMemo = process.env.LIVE_MODEL_E2E === "1";
 const liveProvider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deepseek";
 const liveApiKey = liveProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.DEEPSEEK_API_KEY;
@@ -93,10 +93,10 @@ const readLedger = (page, scope) => page.evaluate((key) => JSON.parse(localStora
 async function stubMemoTransport(page) {
   const output = {
     summary: { text: "扣非表现提供支持，归母利润反向变化仍须共同解释。", citations: ["EV-S-05-C04-ADJ", "EV-S-05-C04-ATTR"] },
-    supporting: [{ text: "扣非表现支持进一步核查核心经营改善。", citations: ["EV-S-05-C04-ADJ"] }],
-    counter: [{ text: "归母利润下滑构成反证，不能忽略。", citations: ["EV-S-05-C04-ATTR"] }],
-    alternatives: [{ text: "可能存在调整项性质影响利润比较的解释，仍待验证。", citations: ["EV-S-05-C04-NR", "A-03"] }],
-    questions: [{ text: "需要核对调整项经常性并补充连续可比报告。", citations: ["A-03", "K-07"] }],
+    supporting: { text: "扣非表现支持进一步核查核心经营改善。", citations: ["EV-S-05-C04-ADJ"] },
+    counter: { text: "归母利润下滑构成反证，不能忽略。", citations: ["EV-S-05-C04-ATTR"] },
+    alternatives: { text: "可能存在调整项性质影响利润比较的解释，仍待验证。", citations: ["EV-S-05-C04-NR", "A-03"] },
+    questions: { first: { text: "需要核对调整项经常性。", citations: ["A-03"] }, second: { text: "需要补充连续可比报告。", citations: ["K-07"] } },
     gates: { eg01: "pending", eg02: "pending" },
   };
   await page.route("**/api/research-memo", async (route) => {
@@ -110,6 +110,7 @@ for (const fixture of cases) {
   test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
     const page = await context.newPage();
+    let modelRequests = 0;
     const errors = [];
     page.on("pageerror", (error) => errors.push(error.message));
     try {
@@ -171,6 +172,11 @@ for (const fixture of cases) {
         }
       }
       if (liveMemo || fixture.id === "S-05") {
+        // This guard also runs in ordinary CI before its labelled stub route.
+        await page.route("**/api/research-memo", async (route) => {
+          if (route.request().method() === "POST" && ++modelRequests > 1) { await route.abort(); return; }
+          await route.fallback();
+        });
         const prefix = liveMemo ? `S-05-live-${liveProvider}-model` : "S-05-stub-model-NOT-LIVE";
         const panel = page.getByTestId("memo-panel");
         await panel.getByLabel("演示访问码").fill(accessCode);
@@ -237,6 +243,10 @@ for (const fixture of cases) {
       assert.deepEqual(restored[2].chain, snapshot.chain);
       assert.deepEqual(restored[0], snapshot);
       assert.deepEqual(errors, []);
+      if (liveMemo || fixture.id === "S-05") assert.equal(modelRequests, 1, "Each independent sample may submit exactly one model request");
+      if (liveMemo) {
+        await writeFile(new URL("sample-completion.json", artifacts), JSON.stringify({ technicalFlow: "completed", contentReview: "pending", modelRequests }, null, 2));
+      }
       await writeFile(new URL(`${fixture.id}-browser-audit.json`, artifacts), JSON.stringify({ sourceUrl: getSourceRecord(fixture.id).url, pdfSha256: pdfs.get(fixture.id).sha256, snapshot, afterRollback: restored, errors }, null, 2));
     } catch (error) {
       await page.screenshot({ path: new URL(`${fixture.id}-failure.png`, artifacts).pathname, fullPage: true }).catch(() => {});

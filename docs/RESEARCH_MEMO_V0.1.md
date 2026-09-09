@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。judgement-3 通过 28 项普通 CI，但[第 9 次真实运行](MEMO_RELIABILITY_REVIEW_RUN_9.md)明确因输出上限耗尽而截断，模型层尚未达到稳定演示标准。连续失败诊断与统一约束、精简草稿及固定版本有限验证提案已整理，等待所有者批准；本轮没有再次修改运行代码或付费调用。PR #16 保留草稿，历史及专业待复核状态保留。
+更新：2026-09-09。网页与模型接入已合并。第 9 次真实输出截断保留；所有者已批准并实现[紧凑备忘录 V0.3](MEMO_COMPACT_V0.3.md)，本地 30 项回归通过，普通 CI 状态见 PR #16。该版真实输出和逐份内容复核尚待完成。PR 继续为草稿，专业关卡仍待复核。
 
 ## 模型承担的工作
 
@@ -23,9 +23,9 @@
 ## 调用和版本记录
 
 - 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。DeepSeek 最大输出 6,000 token、150 秒超时；OpenAI 保留 4,000 / 90 秒。均使用 low reasoning，一次操作只发一次请求，无自动重试或模拟兜底。
-- Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
+- Prompt 与输出约定在 `apps/web/lib/research-memo-contract.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
 - 新调用另外保存 `requestLimits`、`providerStatus`、`incompleteReason`、`reasoningTokens`。状态/原因仅保留允许值，未提供为 null，无法识别为 unknown；推理用量仅保留有效计数，不采集推理正文。旧记录缺少这些可选字段时按原样读取。未完成响应中若有唯一、无拒绝标记且不超过 24,000 字符的最终文本，原样放入 `audit.rawOutput` 供诊断；仍为 failed、`memo = null`，不执行引用校验、不接受审核或导出为备忘录。
-- 当前分支 Prompt 为 `research-update-v2-judgement-3`：保留原始研究、假设状态及归因、材料范围与逐段引用、JSON 格式四个指令块，明确每条 supporting / counter 还须分别引用本段使用的支持 / 反证事实。此项栏目方向校验原本已存在，没有改规则或自动补引。原始研究指令哈希仍与 `c96be3d` 一致，有效指令哈希随版本更新；详见 [版本及验收记录](MEMO_PROMPT_V0.2.md)。
+- 当前分支 Prompt 为 `research-update-v3-compact-1`：五个栏目、六段、每段至多 160 个 Unicode 字符。模型返回固定对象位置，无损映射回原有栏目数组；校验不补正文或引用。历史备忘录按各自旧 Prompt 限制保留和审核，不静默截短或重新分类；详见 [V0.3 约定及要求核对](MEMO_COMPACT_V0.3.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
 - 哈希用于关联和复查，不是数字签名。本机记录可由设备持有人修改；CI 来源记录和人工专业审阅应一并保留。
@@ -52,16 +52,16 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 直接运行 Next.js 时，来源按请求协议和 `Host` 核对，支持内部 URL 被规范为 `localhost` 而浏览器使用 `127.0.0.1` 的情况。反向代理可通过服务器环境中的 `RESEARCH_APP_ORIGIN` 指定公开 origin；任意请求中的 `X-Forwarded-*` 不作为信任依据。
 
-## GitHub 中的一次真实验收
+## GitHub 中的一次有限验证批次
 
-当前已经执行到第 9 次，下一步先确认[稳定性调整提案](MEMO_RELIABILITY_REVIEW_RUN_9.md)。以下是现有单次工作流的使用说明，不表示建议继续对当前版本反复运行。
+第 9 次后，所有者已批准[紧凑输出与最多三个独立样本的手动批次](MEMO_COMPACT_V0.3.md)。普通 CI 通过后启动一次批次，自动顺序执行、遇错停止，每样本仅一次请求。
 
 1. 仓库 Actions Secret 名称为 `DEEPSEEK_API_KEY`；项目所有者已经配置，无需重复添加。存在性检查不等于提供方认证或余额验证。
 2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。本次新版验收选择 `dev/memo-judgement-v02`，模型选择 `deepseek-v4-pro`；核对运行实际 head 与本次 PR 一致。已合并的 `main` 当前仍为旧 Prompt，不能替代本分支验收。
-3. 工作流用正式构建的网页上传官方 S-05 PDF，执行一次真实模型请求、引用校验、备忘录审核交互、导出、重载和回滚。演示访问码由测试程序临时随机生成，无需额外配置。
-4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，检查真实 Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
+3. 工作流固定本次提交，最多顺序执行三个独立样本；每个样本用正式网页上传 S-05、请求一次模型、验证引用、审核交互、导出、重载和回滚。接口、截断、结构、审计或流程失败即停止剩余样本，没有自动重试或第四次。演示访问码临时随机生成，无需额外配置。
+4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，先读 `live-batch-manifest.json`，再检查 `sample-01/` 至 `sample-03/` 中实际存在的独立调用、Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
 
-失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
+失败时先读批次 manifest，再检查对应 sample 目录的 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
 
 ### 第 9 次输出上限耗尽，稳定性方案待批准
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildMemoContext, memoMarkdown, type MemoContext, type MemoPoint, type MemoProvider, type MemoReview, type MemoRun } from "@/lib/research-memo";
+import { buildMemoContext, memoMarkdown, MEMO_SECTIONS, memoSectionLabel, type MemoContext, type MemoPoint, type MemoProvider, type MemoReview, type MemoRun } from "@/lib/research-memo";
 import { appendMemoReview, appendMemoRun, MEMO_UPDATED_EVENT, readMemoLedger } from "@/lib/research-memo-storage";
 import type { ResearchVersion, WorkspaceScope } from "@/lib/research-versions";
 
@@ -97,7 +97,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
       <p className="text-sm text-cyan-200" data-testid="memo-status">{statusLabel} · {run.audit.returnedModel ?? run.audit.requestedModel}</p>
       {run.memo && <>
         <Point item={run.memo.summary} runId={run.runId} />
-        {([["supporting", "支持依据"], ["counter", "反证与限制"], ["alternatives", "待验证的替代解释"], ["questions", "下一步研究问题"]] as const).map(([section, label]) => <div key={section} className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4"><h4 className="font-medium text-white">{label}</h4>{run.memo![section].map((item, index) => <Point key={index} item={item} runId={run.runId} />)}</div>)}
+        {MEMO_SECTIONS.map(({ key: section }) => section === "summary" ? null : <div key={section} className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4"><h4 className="font-medium text-white">{memoSectionLabel(section, run.audit.promptVersion)}</h4>{run.memo![section].map((item, index) => <Point key={index} item={item} runId={run.runId} />)}</div>)}
         <details className="rounded-xl border border-white/10 p-4" open><summary className="cursor-pointer text-sm font-medium text-white">引用与固定事实</summary><ul className="mt-3 space-y-3 text-sm leading-6 text-slate-300">{run.context.references.map((ref) => <li key={ref.id} id={`memo-${run.runId}-${ref.id}`}><span className="text-cyan-200">[{ref.id}] {ref.label}</span><p>{ref.excerpt}</p>{ref.url && <a href={ref.url} target="_blank" rel="noreferrer" className="text-cyan-200 underline">查看原文第 {ref.page} 页</a>}</li>)}</ul></details>
         <div className="space-y-3 rounded-xl border border-amber-300/20 p-4">
           <p className="text-sm leading-6 text-amber-100">引用编号已校验；是否足以支持模型解释仍需逐条核对。接受备忘录不会关闭会计或估值复核关卡。</p>
