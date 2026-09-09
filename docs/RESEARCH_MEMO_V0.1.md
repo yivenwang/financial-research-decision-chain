@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。judgement-2 的 [第 8 次真实运行](MEMO_LIVE_RUN_8_DIAGNOSIS.md)完整返回，但第三条反证缺少反证方向引用，按既有规则阻断。[judgement-3](MEMO_PROMPT_V0.2.md)已明确逐条方向要求并补合成回归，本地 24 项通过；当前普通 CI 见 PR #16，新真实输出及内容复核待完成。PR 保留草稿，专业验收仍待复核；历史原文、失败和接受事件保留。
+更新：2026-09-09。网页引擎 PR #12、模型备忘录 PR #13、默认 DeepSeek 的 PR #14 及审阅文档 PR #15 均已合并。judgement-3 通过 28 项普通 CI，但[第 9 次真实运行](MEMO_RELIABILITY_REVIEW_RUN_9.md)明确因输出上限耗尽而截断，模型层尚未达到稳定演示标准。连续失败诊断与统一约束、精简草稿及固定版本有限验证提案已整理，等待所有者批准；本轮没有再次修改运行代码或付费调用。PR #16 保留草稿，历史及专业待复核状态保留。
 
 ## 模型承担的工作
 
@@ -54,12 +54,18 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 ## GitHub 中的一次真实验收
 
+当前已经执行到第 9 次，下一步先确认[稳定性调整提案](MEMO_RELIABILITY_REVIEW_RUN_9.md)。以下是现有单次工作流的使用说明，不表示建议继续对当前版本反复运行。
+
 1. 仓库 Actions Secret 名称为 `DEEPSEEK_API_KEY`；项目所有者已经配置，无需重复添加。存在性检查不等于提供方认证或余额验证。
 2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。本次新版验收选择 `dev/memo-judgement-v02`，模型选择 `deepseek-v4-pro`；核对运行实际 head 与本次 PR 一致。已合并的 `main` 当前仍为旧 Prompt，不能替代本分支验收。
 3. 工作流用正式构建的网页上传官方 S-05 PDF，执行一次真实模型请求、引用校验、备忘录审核交互、导出、重载和回滚。演示访问码由测试程序临时随机生成，无需额外配置。
 4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，检查真实 Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
 
 失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
+
+### 第 9 次输出上限耗尽，稳定性方案待批准
+
+[运行 34311995193](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34311995193) 对应 `cffd6c6` / judgement-3。提供方精确记录 incomplete / max_output_tokens；6,000 输出 token 中推理计数为 4,883，最终 JSON 中途截断，应用 HTTP 502 / `PROVIDER_INCOMPLETE`。尚未进入引用校验及正文审核，不能宣布第 8 次问题已通过真实验收。六文件归档与 12 项一致性检查已完成；完整记录及方案见 [稳定性复核](MEMO_RELIABILITY_REVIEW_RUN_9.md)。
 
 ### 第 8 次模型完整返回，逐段反证引用阻断
 

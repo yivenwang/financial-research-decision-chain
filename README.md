@@ -53,7 +53,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | [第 8 次真实运行](docs/MEMO_LIVE_RUN_8_DIAGNOSIS.md)返回完整正文，但第三条反证缺少反证方向引用，按既有规则阻断。judgement-3 已明确每条引用要求，新增合成回归，本地 24 项通过；当前提交普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)，新真实输出及内容复核待完成。PR 保留草稿，原失败、财务规则与专业待复核状态保留 |
+| 模型备忘录 | judgement-3 的 28 项普通 CI 通过；[第 9 次真实运行](docs/MEMO_RELIABILITY_REVIEW_RUN_9.md)明确因 6,000 输出 token 用尽而截断，尚未进入引用校验。已汇总连续失败的设计原因及“统一输出约束、精简草稿、固定版本有限验证”提案，待所有者批准。PR #16 保留草稿，模型层尚未达到稳定演示标准 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 

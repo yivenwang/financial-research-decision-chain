@@ -2,7 +2,7 @@
 
 更新：2026-09-09。项目所有者先批准：修订模型指令，保留待复核假设的状态，限制无依据归因，并复核一次新的真实输出。依据 [第 5 次原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)；审阅材料已由 PR #15 合并。随后已批准依据 [第 7 次初审](MEMO_CONTENT_REVIEW_RUN_7.md)进一步明确材料范围与逐段引用，并复核一次新输出。
 
-当前状态：judgement-2 通过 27 项普通 CI；[第 8 次真实运行](MEMO_LIVE_RUN_8_DIAGNOSIS.md)完整返回，但第三条反证缺少反证方向引用，按既有规则阻断。judgement-3 已明确每条方向要求并增加合成回归，本地 24 项通过；当前提交普通 CI 见 [PR #16](https://github.com/yivenwang/financial-research-decision-chain/pull/16)。新版本仍需真实运行和逐段内容复核，PR 保留草稿。历史输出、失败及审阅结论保留，专业关卡继续 pending。
+当前状态：judgement-3 的 28 项普通 CI 通过，但[第 9 次真实运行](MEMO_RELIABILITY_REVIEW_RUN_9.md)因输出上限耗尽截断，未进入 JSON / 引用校验。此版本尚未完成真实备忘录验收；连续失败已汇总为设计复核，下一阶段统一约束与固定版本有限验证的具体提案待所有者批准。本轮仅记录诊断，不再次追加指令或调用。PR #16 保留草稿，历史与专业待复核状态保留。
 
 ## 改动与预期行为
 
@@ -70,6 +70,8 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 
 ## 一次真实输出的验收流程
 
+以下为此前已执行至第 9 次的单次工作流安排。当前先审阅 [稳定性调整提案](MEMO_RELIABILITY_REVIEW_RUN_9.md)，不将下列步骤视为继续重跑的指令；新的输出约定及最多三样本的手动批次须另行批准。
+
 1. 等当前提交的普通 CI 通过，再在 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) 点 Run workflow 手动执行一次。分支选 `dev/memo-judgement-v02`，模型选 `deepseek-v4-pro`；使用新运行，不重跑旧提交的任务。沿用已有 Secret，无需取出或重新提交密钥。
 2. 记录 run ID、实际 head SHA、提供方、模型、Prompt 版本及哈希、响应编号和用量；下一轮必须为 `research-update-v2-judgement-3` 及上表的当前有效指令哈希。核对 S-05 官方 PDF 哈希及材料范围。重复已见材料属于回归，不属于新盲测。
 3. 下载原始 8 文件归档，先核对 ZIP 摘要、调用/导出一致性和专业关卡，再逐段阅读真实正文。若提前失败导致文件不全，保留已有失败文件并记录停止位置，不补造输出。
@@ -104,3 +106,11 @@ DeepSeek 继续使用 6,000 输出 token / 150 秒、low reasoning、一次请�
 [运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 通过。提供方 completed，输入 2,650、输出 4,583 token，耗时 76.946 秒。八文件归档已下载并核对 ZIP SHA-256，16 项审计一致性检查及 JSON 字段唯一性核对通过。
 
 完整 12 段初审已完成，见 [逐段记录与具体建议](MEMO_CONTENT_REVIEW_RUN_7.md)。本次较好保留待复核假设和因果解释的条件；`counter[0]` 仍缺扣非引用，`alternatives[1]` 无依据判断整份报告未披露。技术成功保留，内容建议定点修订，尚不记内容 PASS；原模型及自动接受事件不变。所有者随后批准进一步明确材料范围、逐段引用和同比期间，以 judgement-2 实现；其真实结果见 [第 8 次诊断](MEMO_LIVE_RUN_8_DIAGNOSIS.md)。
+
+## 第 9 次截断与下一阶段提案
+
+`cffd6c6` / judgement-3 的[普通 CI 34311543133](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34311543133) 共 28 项通过。[真实运行 34311995193](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34311995193) 返回 incomplete / max_output_tokens；输出 6,000 token，其中推理计数 4,883，调用 82.965 秒。最终 JSON 2,407 字符，引用字符串中途截断，`memo = null`，没有执行 JSON / 引用校验或正文审核。
+
+六文件 ZIP 摘要、12 项离线一致性检查完成。第 7、8、9 次 context 除快照绑定外相同，但 Prompt/预算并非全部相同，不能直接计算成功率或认定指令长度导致推理增长。原始片段未补齐；本轮没有运行代码变更或新增模型请求。
+
+详细原因、当前指令/Schema/校验差异及待批准的六段草稿与有限验证方案见 [稳定性复核](MEMO_RELIABILITY_REVIEW_RUN_9.md)。该提案涉及篇幅、输出约定及一次手动触发的最大请求数，获批前继续保留当前代码与失败状态。
