@@ -1,5 +1,7 @@
 # Financial Research Decision Chain
 
+**English** | [简体中文](README.zh-CN.md)
+
 An auditable AI research-update prototype for fundamental equity research.
 
 Instead of treating a new filing as a summarization task, the system asks:
@@ -27,19 +29,21 @@ Financial research agents should not pretend to replace investor judgment. This 
 
 The design goal is not identical investment conclusions. It is a workflow in which machine-executable steps are auditable and important human decisions remain explicit.
 
-## What is implemented
-
-- PDF-based research update workflow with source metadata and evidence lineage;
-- Parser V0.6 regression-tested financial extraction;
-- deterministic C-04 decision-chain propagation;
-- evidence-aware LLM research memo generation;
-- memo schema, citation/reference validation and blocking rules;
-- human accept / return review state;
-- version save, reload, export and rollback;
-- preserved historical blind-test failures and regression records;
-- Web interface under `apps/web/`.
-
 ## Architecture
+
+```mermaid
+flowchart LR
+    A[Source\nFilings / research materials] --> B[Evidence\nExtraction + source binding]
+    B --> C[Claim\nResearch thesis]
+    C --> D[Assumption / Kill Criteria]
+    D --> E[Formula\nDeterministic calculation]
+    E --> F[Valuation]
+    F --> G[Decision impact]
+    G --> H[Human Review]
+    H --> I[Version\nSave / export / rollback]
+    B --> J[LLM Research Memo\nEvidence-constrained synthesis]
+    J --> H
+```
 
 | Layer | Responsibility |
 | --- | --- |
@@ -51,6 +55,18 @@ The design goal is not identical investment conclusions. It is a workflow in whi
 | `blind-tests/` | preserved test-governance records |
 
 For the precise capability boundary, see [`docs/SYSTEM_SCOPE.md`](docs/SYSTEM_SCOPE.md).
+
+## What is implemented
+
+- PDF-based research update workflow with source metadata and evidence lineage;
+- Parser V0.6 regression-tested financial extraction;
+- deterministic C-04 decision-chain propagation;
+- evidence-aware LLM research memo generation;
+- memo schema, citation/reference validation and blocking rules;
+- human accept / return review state;
+- version save, reload, export and rollback;
+- preserved historical blind-test failures and regression records;
+- Web interface under `apps/web/`.
 
 ## Quick start
 
@@ -151,3 +167,5 @@ The license permits reuse and modification under its terms; it does **not** tran
 ## Competition context
 
 The project is being developed for the 2026 Beijing Undergraduate Financial Artificial Intelligence Competition under the theme of financial research agents. Competition delivery artifacts and product UI will continue to evolve separately from the frozen financial-business definitions above.
+
+> Real product screenshots will be added after the UI is finalized. Until then, this README intentionally avoids mockups that could be mistaken for the running product.
