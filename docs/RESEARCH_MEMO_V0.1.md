@@ -1,6 +1,6 @@
 # 研究更新备忘录 V0.1
 
-更新：2026-09-08。网页引擎 PR #12、模型备忘录 PR #13 和默认接入 DeepSeek V4 Pro 的 PR #14 均已合并。运行代码提交 `047b849` 的普通 CI 与第 5 次真实 S-05 技术验收均通过。第 4 次失败继续保留；[成功原文初审](MEMO_CONTENT_REVIEW_2026-09-08.md)已完成，建议修订假设与归因表述，研究内容验收及专业复核尚未通过。本阶段仅同步文档，不改变运行代码。
+更新：2026-09-09。网页与模型接入已合并。[紧凑备忘录 V0.3](MEMO_COMPACT_V0.3.md)的 [第 10 次验收](MEMO_CONTENT_REVIEW_RUN_10.md)已完成：34 项普通 CI、三份真实技术流程通过，28 文件归档和全部 18 段初审完成；原样内容仍须修订。PR #16 保留草稿，拟议[人工修订留痕](MEMO_REVISION_STAGE_PROPOSAL.md)待批准，专业关卡仍待复核。
 
 ## 模型承担的工作
 
@@ -22,9 +22,10 @@
 
 ## 调用和版本记录
 
-- 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。固定 4,000 最大输出 token、low reasoning、90 秒超时；一次操作只发一次请求，无自动重试或模拟兜底。
-- Prompt 在 `apps/web/lib/research-memo.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
-- 当前 Prompt 版本为 `research-update-v1-format-2`：在原始研究指令后追加数组/对象类型、字段唯一性及返回前格式核对说明。原始研究指令单独保留为 `MEMO_RESEARCH_INSTRUCTIONS`，其 SHA-256 与提交 `c96be3d` 的研究指令一致。金融判断要求、输出 Schema、引用与专业关卡规则未修改。
+- 默认使用 DeepSeek Responses API（`https://api.deepseek.com/responses`），模型 `deepseek-v4-pro`，可选 `deepseek-v4-flash`。设置 `MODEL_PROVIDER=openai` 可使用 OpenAI 对照通道及 `OPENAI_MODEL`。提供方固定到对应官方端点，每条通道只读取自己的密钥。两条通道使用相同 Prompt、JSON Schema 和本地引用校验。DeepSeek 最大输出 6,000 token、150 秒超时；OpenAI 保留 4,000 / 90 秒。均使用 low reasoning，一次操作只发一次请求，无自动重试或模拟兜底。
+- Prompt 与输出约定在 `apps/web/lib/research-memo-contract.ts` 中版本化；记录 Prompt、请求、响应和研究快照的 SHA-256，以及请求/响应编号、模型实际返回名、时间、用量、最终输出与校验错误。记录最终备忘录，不采集隐藏推理过程。
+- 新调用另外保存 `requestLimits`、`providerStatus`、`incompleteReason`、`reasoningTokens`。状态/原因仅保留允许值，未提供为 null，无法识别为 unknown；推理用量仅保留有效计数，不采集推理正文。旧记录缺少这些可选字段时按原样读取。未完成响应中若有唯一、无拒绝标记且不超过 24,000 字符的最终文本，原样放入 `audit.rawOutput` 供诊断；仍为 failed、`memo = null`，不执行引用校验、不接受审核或导出为备忘录。
+- 当前分支 Prompt 为 `research-update-v3-compact-1`：五个栏目、六段、每段至多 160 个 Unicode 字符。模型返回固定对象位置，无损映射回原有栏目数组；校验不补正文或引用。历史备忘录按各自旧 Prompt 限制保留和审核，不静默截短或重新分类；详见 [V0.3 约定及要求核对](MEMO_COMPACT_V0.3.md)。
 - OpenAI 请求设置 `store:false`；DeepSeek 是无状态 Responses API，本地不发送其不支持的 `store` 参数。不应将此解释为超出提供方政策的零保留承诺。
 - 备忘录与审核事件追加到独立本机版本库。原研究快照不改写；回滚产生新研究版本及新绑定，不能自动继承旧备忘录为当前版本结论。
 - 哈希用于关联和复查，不是数字签名。本机记录可由设备持有人修改；CI 来源记录和人工专业审阅应一并保留。
@@ -51,14 +52,38 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 直接运行 Next.js 时，来源按请求协议和 `Host` 核对，支持内部 URL 被规范为 `localhost` 而浏览器使用 `127.0.0.1` 的情况。反向代理可通过服务器环境中的 `RESEARCH_APP_ORIGIN` 指定公开 origin；任意请求中的 `X-Forwarded-*` 不作为信任依据。
 
-## GitHub 中的一次真实验收
+## GitHub 中的一次有限验证批次
+
+第 9 次后，所有者批准的[最多三个独立样本手动批次](MEMO_COMPACT_V0.3.md)已作为第 10 次执行完毕。以下保留其操作方式；本轮调用结束，再次启动需要新的明确安排。
 
 1. 仓库 Actions Secret 名称为 `DEEPSEEK_API_KEY`；项目所有者已经配置，无需重复添加。存在性检查不等于提供方认证或余额验证。
-2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。PR #14 合并前选择 `dev/deepseek-provider-v02`，模型选择 `deepseek-v4-pro`；合并后才选择 `main`。界面在合并前可能仍显示旧名 **Live research memo acceptance**，补丁内名称为 **Live DeepSeek research memo acceptance**。
-3. 工作流用正式构建的网页上传官方 S-05 PDF，执行一次真实模型请求、引用校验、备忘录审核交互、导出、重载和回滚。演示访问码由测试程序临时随机生成，无需额外配置。
-4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，检查真实 Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
+2. 打开 [真实验收工作流](https://github.com/yivenwang/financial-research-decision-chain/actions/workflows/llm-live.yml) → Run workflow。本次新版验收选择 `dev/memo-judgement-v02`，模型选择 `deepseek-v4-pro`；核对运行实际 head 与本次 PR 一致。已合并的 `main` 当前仍为旧 Prompt，不能替代本分支验收。
+3. 工作流固定本次提交，最多顺序执行三个独立样本；每个样本用正式网页上传 S-05、请求一次模型、验证引用、审核交互、导出、重载和回滚。接口、截断、结构、审计或流程失败即停止剩余样本，没有自动重试或第四次。演示访问码临时随机生成，无需额外配置。
+4. 下载 `live-deepseek-research-memo-<run_id>` 审计包，先读 `live-batch-manifest.json`，再检查 `sample-01/` 至 `sample-03/` 中实际存在的独立调用、Response ID、提供方、模型、token 用量、版本/PDF 摘要、备忘录、审核记录及截图。自动化署名仅说明交互测试完成，不构成专家认可；模型内容需另行审阅。
 
-失败时先检查 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
+失败时先读批次 manifest，再检查对应 sample 目录的 `live-provider-configuration.json` 和 `S-05-live-deepseek-model-http.json`（HTTP 状态、错误码、具体校验错误及调用编号）。若接口产生调用记录，`S-05-live-deepseek-model-call.json` 在成功断言前保存。浏览器失败断言及服务端摘要日志包含 `audit.validation` 错误码，不记录正文、请求头或密钥。
+
+### 第 10 次三个技术流程通过，内容仍需修订
+
+[运行 34342481369](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34342481369) 固定 `0a41f24` / `research-update-v3-compact-1`，最多三份且实际三份，每份一次请求，全部完整返回并完成导出/重载/回滚。输出依次为 2,218 / 5,609 / 3,459 token，总计 11,286；每份均在 6,000 / 150 秒内完成。
+
+28 文件归档哈希、原始 JSON、请求与快照重建及 52 项离线一致性核对完成。已逐段审阅全部 18 段：第一份反证存在漏引和含混句；第二、三份可供人工使用，但引用及期间表述尚未全部符合约定。详细处置见 [完整审阅](MEMO_CONTENT_REVIEW_RUN_10.md)。技术成功保留，原始自动接受事件仍仅作交互证据，不能当作用户或专业人员已接受。本轮不再调用模型，下一阶段拟补人工修订和独立版本审核，尚待批准。
+
+### 第 9 次输出上限耗尽，历史失败保留
+
+[运行 34311995193](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34311995193) 对应 `cffd6c6` / judgement-3。提供方精确记录 incomplete / max_output_tokens；6,000 输出 token 中推理计数为 4,883，最终 JSON 中途截断，应用 HTTP 502 / `PROVIDER_INCOMPLETE`。尚未进入引用校验及正文审核，不能宣布第 8 次问题已通过真实验收。六文件归档与 12 项一致性检查已完成；完整记录及方案见 [稳定性复核](MEMO_RELIABILITY_REVIEW_RUN_9.md)。
+
+### 第 8 次模型完整返回，逐段反证引用阻断
+
+[运行 34310296285](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34310296285) 对应 `eb06b4c` / judgement-2。DeepSeek V4 Pro completed，输入 2,858、输出 4,985 token，耗时 70.443 秒；应用返回 HTTP 422 / `COUNTER_REFERENCE_MISSING`。第三条 counter 只有支持方向的 NR 与无方向的 K-07 引用，不能用其他反证段落代替本段要求。
+
+原始最终 JSON 保留，`memo = null`，未进入正文接受、导出和回滚验收。六文件 ZIP 摘要、13 项一致性检查及 12 段初审完成；措辞仍有需复核之处。诊断和既有逐条规则的指令澄清见 [完整记录](MEMO_LIVE_RUN_8_DIAGNOSIS.md)，原校验、预算、金融规则和失败状态保留。
+
+### 第 7 次真实技术验收通过，内容初审建议定点修订
+
+[运行 34246383818](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34246383818) 对应 `cf47037b960c4ead8c5addccdd757a13b4d03f8b`，使用 `research-update-v2-judgement-1` / DeepSeek V4 Pro。实际输出 4,583 token，其中推理计数 3,311；76.946 秒完成，提供方状态 completed。真实调用、审核交互、导出和回滚主流程 1 项通过，负向项按设计跳过 1 项；跳过项已由同提交的 [27 项普通 CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34244606292) 覆盖。
+
+原始八文件归档 ZIP 摘要已核验，16 项输入、调用、引用、导出及历史一致性检查通过。但引用存在不等于逐项支撑：反证第一段漏引扣非指标，替代解释第二段把输入缺失扩大为报告未披露。完整逐段结论和修订建议见 [第 7 次内容初审](MEMO_CONTENT_REVIEW_RUN_7.md)。归档中的自动接受事件保留原样，本次初审未写回任何产品审核事件；专业关卡继续 pending。
 
 ### 第 5 次真实技术验收通过
 
@@ -70,7 +95,7 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 | 验收动作 | 真实 PDF 上传与证据审核、冻结链和版本保存、真实模型返回、引用校验、调用保存一致性、备忘录审核交互、Markdown/审计导出、重载和回滚 |
 | 审计归档 | [10026468551](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34142444878/artifacts/10026468551)：8 个文件上传成功；ZIP SHA-256 `79aa1580eb918869f1d295cbad594f06784705636d0505e84adee0db754f377b` |
 
-已核对 GitHub 的运行提交、日志、步骤及该提交的浏览器验收断言。PR #14 合并前，成功附件下载曾返回 HTTP 403，当时没有据此宣布专业内容合格。2026-09-08 后续下载成功并核对 ZIP 哈希，完成原文、官方 PDF 和 13 项审计一致性核查；[内容初审](MEMO_CONTENT_REVIEW_2026-09-08.md)发现待复核假设被写成结论、归因超出引用等问题，建议退回修订。自动化执行的“接受备忘录”仅验收交互与保存，原事件未被本次审阅改写，EG-01 / EG-02 继续待专业复核。技术验收状态保留；内容修订提案尚待所有者确认。
+已核对 GitHub 的运行提交、日志、步骤及该提交的浏览器验收断言。PR #14 合并前，成功附件下载曾返回 HTTP 403，当时没有据此宣布专业内容合格。2026-09-08 后续下载成功并核对 ZIP 哈希，完成原文、官方 PDF 和 13 项审计一致性核查；[内容初审](MEMO_CONTENT_REVIEW_2026-09-08.md)发现待复核假设被写成结论、归因超出引用等问题，建议退回修订。自动化执行的“接受备忘录”仅验收交互与保存，原事件未被本次审阅改写，EG-01 / EG-02 继续待专业复核。技术验收状态保留；所有者随后批准的判断表达修订见 [V0.2 记录](MEMO_PROMPT_V0.2.md)，其新内容验收仍未完成。
 
 ### 历史失败保留
 
@@ -86,10 +111,10 @@ OpenAI 对照运行使用 `MODEL_PROVIDER=openai`、`OPENAI_API_KEY` 和 `OPENAI
 
 ## 自动测试的证明范围
 
-`npm test` 包括原有三项解析 fixture、六项引擎集成测试及十一项模型边界测试。检查覆盖提供方/密钥选择、Next.js 来源规范化、代理 origin、伪造转发头阻断和 OpenAI/DeepSeek 历史记录共存；本次新增相同错误结构的合成回归、转义或嵌套的重复字段、合法独立对象与字符串内标点的区分。回归还核对原始研究指令的 SHA-256。模型单元测试使用显式注入的传输替身；生产代码没有模拟模式。
+当前 `npm test` 包括三项解析 fixture、六项引擎集成、十八项模型边界及三项批次控制测试，共 30 项。完整普通 CI 再加入一项运行时和三项浏览器测试，共 34 项。检查覆盖提供方/密钥选择、来源校验、历史兼容、重复 JSON、截断及诊断、逐段方向、固定六段的无损映射与长度边界、单次请求和批次遇错停止。回归还核对有效指令 SHA-256。测试文案为合成数据；模型使用显式替身，生产代码没有模拟兜底，也不把关键词匹配当作语义评审。
 
 普通 Web CI 继续真实上传 S-05 / S-06 PDF，并检查未配置时禁用模型。随后 S-05 通过浏览器网络拦截测试备忘录呈现、审核、导出和重载，返回模型名称明确为 `test-transport-not-live`，输出文件带 `stub-model-NOT-LIVE`。这验证 UI 与存储交互，不证明提供方接入成功。
 
-只有手动真实验收工作流以真实 API Key 运行并通过，才可将本阶段状态改为“真实调用验收通过”。该模式只请求一次 S-05；其他 PDF 负向回归在普通 Web CI 运行，跳过不能算通过。
+真实调用验收须对应手动工作流的实际提交和独立输出。本版已批准批次最多三个 S-05 样本、每份一次请求；负向回归在普通 Web CI 运行，真实模式跳过不能算通过。技术验收与内容初审分别记录，当前内容修订项仍待处理。
 
 官方接口依据：[DeepSeek Responses API](https://api-docs.deepseek.com/zh-cn/guides/responses_api/)、[OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)。

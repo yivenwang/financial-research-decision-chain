@@ -14,7 +14,7 @@
     "test:parser": "node --experimental-strip-types --test tests/parser-v04-regression.test.mjs",
     "test:integration": "node --experimental-strip-types --test tests/engine-integration.test.mjs",
     "test": "npm run test:parser && npm run test:integration && npm run test:memo",
-    "test:memo": "node --experimental-strip-types --test tests/research-memo.test.mjs",
+    "test:memo": "node --experimental-strip-types --test tests/research-memo.test.mjs tests/memo-batch.test.mjs",
     "test:runtime": "node --test tests/runtime-smoke.test.mjs",
     "test:browser": "node --experimental-strip-types --test tests/browser-e2e.test.mjs",
     "lint": "eslint . --ignore-pattern .next"
