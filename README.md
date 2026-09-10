@@ -45,7 +45,7 @@ npm start
 
 更多范围说明见 [网页迁移说明](docs/WEB_MIGRATION.md)。
 
-## 已核实进度（2026-09-09）
+## 已核实进度（2026-09-10）
 
 | 项目 | 状态 |
 | --- | --- |
@@ -53,7 +53,7 @@ npm start
 | Chain V0.1 | 已合并，仅覆盖 C-04 及关联传播；见 [冻结记录](docs/CHAIN_V0.1_FREEZE.md) |
 | Parser V0.7 | `dev/v0.7-adjusted-label` 待修复；[S-10 新回归失败记录](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/33939654582) |
 | 网页 | PR #12 已合并；真实 S-05 / S-06 上传、审核、保存、回滚通过 |
-| 模型备忘录 | [第 10 次三样本验收](docs/MEMO_CONTENT_REVIEW_RUN_10.md)：同一提交 34 项普通 CI、三份真实技术流程通过；28 文件归档及全部 18 段初审完成。原样内容仍需修订，下一阶段拟议[人工修订与版本留痕](docs/MEMO_REVISION_STAGE_PROPOSAL.md)，待批准。PR #16 保留草稿，历史失败保留 |
+| 模型备忘录 | [第 10 次三样本验收](docs/MEMO_CONTENT_REVIEW_RUN_10.md)：同一提交 34 项普通 CI、三份真实技术流程通过；28 文件归档及全部 18 段初审完成。原样内容仍需修订；[人工修订与版本留痕](docs/MEMO_REVISION_STAGE_PROPOSAL.md) 保留为后续功能提案，本阶段不继续扩展。PR #16 的实现与验证已完成，待合并，历史失败保留 |
 | UI | 保留原布局；与用户一起优化的时点和标准已列入 [UI 验收](docs/UI_ACCEPTANCE.md) |
 | 参赛整合 | [演示脚本 V0.1](docs/COMPETITION_DEMO_SCRIPT_V0.1.md)已整理，待 UI 共同评审、预演与录制；见 [参赛路线图](docs/COMPETITION_ROADMAP.md) |
 
@@ -71,6 +71,6 @@ npm start
 
 - Claims、Assumptions、Kill Criteria、Formula、Valuation、Decision 的业务定义不能为了测试通过而修改。
 - 保留已有版本、首次盲测失败与回滚记录；回归通过不能改写首次盲测结果。
-- 本轮继续遵守 S-07 冻结限制，不读取原始材料、真值或首次输出，不运行相关测试。历史冻结文档中的测试记载不构成本轮授权。
+- S-07 曾作为冻结 Blind Test 02 首次暴露 Parser 失败；首次运行记录永久保留。其后 S-07 仅作为修复后的回归材料，不再被视为未见测试集。PR #16 本轮没有重新读取或运行 S-07；后续泛化验证必须使用新的 holdout 材料。
 - 财务计算使用确定性代码；模型判断需要证据；专业关卡未关闭时不发布正式投资建议。
 - 当前仓库为 private。公开后 Star 可反映关注度；评测、可运行演示和贡献记录承担作品能力证明。Star 数不是准确率或用户采用率。
