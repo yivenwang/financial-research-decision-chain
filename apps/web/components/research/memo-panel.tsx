@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { buildMemoContext, memoMarkdown, MEMO_SECTIONS, memoSectionLabel, type MemoContext, type MemoPoint, type MemoProvider, type MemoReview, type MemoRun } from "@/lib/research-memo";
 import { appendMemoReview, appendMemoRun, MEMO_UPDATED_EVENT, readMemoLedger } from "@/lib/research-memo-storage";
 import type { ResearchVersion, WorkspaceScope } from "@/lib/research-versions";
+import { MEMO_PROMPT_VERSION } from "@/lib/research-memo";
+import { MemoRevisionPanel } from "@/components/research/memo-revision-panel";
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -94,8 +96,10 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     {notice && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-6 text-amber-100">{notice}</p>}
     {runs.length > 1 && <label className="block space-y-2 text-sm text-slate-300"><span>本版本的模型调用</span><select aria-label="选择模型调用" value={run?.runId ?? ""} onChange={(event) => { setSelectedId(event.target.value); setReviewer(""); setNote(""); setNotice(null); }} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2">{runs.map((item, index) => <option key={item.runId} value={item.runId}>第 {index + 1} 次 · {item.audit.finishedAt} · {item.status === "completed" ? "已生成" : "未生成有效备忘录"}</option>)}</select></label>}
     {run && <div className="space-y-5" data-testid="memo-run">
-      <p className="text-sm text-cyan-200" data-testid="memo-status">{statusLabel} · {run.audit.returnedModel ?? run.audit.requestedModel}</p>
+      <p className="text-sm text-cyan-200" data-testid="memo-status">AI 原稿：{statusLabel} · {run.audit.returnedModel ?? run.audit.requestedModel}</p>
       {run.memo && <>
+        {run.status === "completed" && run.audit.promptVersion === MEMO_PROMPT_VERSION && <MemoRevisionPanel key={`${workspace}:${run.runId}`} run={run} workspace={workspace} />}
+        <details className="space-y-4 rounded-xl border border-white/10 p-4" open><summary className="cursor-pointer font-medium text-white">AI 原稿、固定事实与原稿审核</summary><div className="space-y-5">
         <Point item={run.memo.summary} runId={run.runId} />
         {MEMO_SECTIONS.map(({ key: section }) => section === "summary" ? null : <div key={section} className="space-y-3 rounded-xl border border-white/10 bg-white/[0.025] p-4"><h4 className="font-medium text-white">{memoSectionLabel(section, run.audit.promptVersion)}</h4>{run.memo![section].map((item, index) => <Point key={index} item={item} runId={run.runId} />)}</div>)}
         <details className="rounded-xl border border-white/10 p-4" open><summary className="cursor-pointer text-sm font-medium text-white">引用与固定事实</summary><ul className="mt-3 space-y-3 text-sm leading-6 text-slate-300">{run.context.references.map((ref) => <li key={ref.id} id={`memo-${run.runId}-${ref.id}`}><span className="text-cyan-200">[{ref.id}] {ref.label}</span><p>{ref.excerpt}</p>{ref.url && <a href={ref.url} target="_blank" rel="noreferrer" className="text-cyan-200 underline">查看原文第 {ref.page} 页</a>}</li>)}</ul></details>
@@ -106,6 +110,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
           <div className="flex flex-wrap gap-3"><Button onClick={() => reviewMemo("accepted")} disabled={!reviewer.trim()} className="bg-emerald-300 text-emerald-950 hover:bg-emerald-200">接受备忘录</Button><Button onClick={() => reviewMemo("rejected")} disabled={!reviewer.trim()} variant="outline" className="border-rose-300/30 bg-transparent text-rose-200">退回备忘录</Button></div>
           {review && <p className="text-sm text-slate-400">最近记录：{review.reviewer} · {review.reviewedAt} · {review.note || "未填写意见"}。身份未核验。</p>}
         </div>
+        </div></details>
       </>}
       <div className="flex flex-wrap gap-3">
         {run.memo && <Button variant="outline" className="border-white/15 bg-transparent text-slate-200" onClick={() => download(`research-memo-${version.versionId}-${run.runId}.md`, memoMarkdown(run, review), "text/markdown;charset=utf-8")}><Download />导出备忘录</Button>}

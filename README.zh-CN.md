@@ -67,6 +67,7 @@ flowchart LR
 - 带证据约束的 LLM Research Memo；
 - Schema、引用校验与 blocker；
 - 人工 Accept / Return 审核状态；
+- 正文与引用的人工修订、独立版本审核，以及原稿和修订稿共同导出；
 - 版本保存、重载、导出和回滚；
 - 历史 blind-test 失败及修复回归记录；
 - `apps/web/` 下的 Web 原型。
@@ -111,7 +112,7 @@ OpenAI 保留为可选对照提供方，环境变量见 `apps/web/.env.example`�
 
 ## 当前验收状态
 
-截至 2026-09-10：
+截至 2026-09-13，本功能分支状态：
 
 | 模块 | 状态 |
 | --- | --- |
@@ -122,11 +123,13 @@ OpenAI 保留为可选对照提供方，环境变量见 `apps/web/.env.example`�
 | 专业会计复核 EG-01 | Pending |
 | 专业估值 / 投资复核 EG-02 | Pending |
 | 跨公司泛化 | 尚未验证 |
-| 人工修改 Memo 与独立版本留痕 | 已提案，尚未实现 |
+| 人工修改 Memo 与独立版本留痕 | 本分支已实现；本地构建及 38 项测试通过，浏览器与 GitHub CI 验收待完成 |
 
 **技术流程通过，不等于金融内容准确、专业认可、长期稳定，也不等于跨公司泛化完成。**
 
-最新 Memo 阶段见 [`docs/MEMO_CONTENT_REVIEW_RUN_10.md`](docs/MEMO_CONTENT_REVIEW_RUN_10.md)。历史失败记录有意保留，不会在修复后改写首次测试结果。
+使用方法、审核状态、导出与 UI 任务说明见[人工修订 V0.1](docs/MEMO_HUMAN_REVISION_V0.1.md)。PR #16 已于 9 月 10 日合并，人工修订以独立功能分支交付。
+
+最近一次真实模型内容审阅见 [`docs/MEMO_CONTENT_REVIEW_RUN_10.md`](docs/MEMO_CONTENT_REVIEW_RUN_10.md)。历史失败记录有意保留，不会在修复后改写首次测试结果。
 
 ### 关于 S-07
 
