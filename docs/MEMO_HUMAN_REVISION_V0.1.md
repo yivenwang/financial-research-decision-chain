@@ -1,6 +1,6 @@
 # 人工修订、审核与版本记录 V0.1
 
-日期：2026-09-13。所有者明确批准实现、必要修复、构建、浏览器验收、GitHub CI、文档与一个 PR 的完整交付。基于 main `6848721` 建立 `dev/memo-human-revision-v01`，整合先前未提交的实现；PR #16 已合并，本功能独立交付。本地 38 项定向测试及生产构建通过，浏览器和 GitHub CI 结果待核对。未合并、未部署。
+日期：2026-09-13。所有者明确批准实现、必要修复、构建、浏览器验收、GitHub CI、文档与一个 PR 的完整交付。基于 main `6848721` 建立 `dev/memo-human-revision-v01`，整合先前未提交的实现；PR #16 已合并，本功能在 [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 独立交付。功能提交 `5902e83` 的 GitHub CI、生产构建及 Chromium 流程已通过，42 项测试零失败/跳过，截图与导出记录已核对。未合并、未部署。
 
 ## 使用方法
 
@@ -50,7 +50,34 @@
 - `apps/web/lib/research-memo-revisions.ts`：独立记录、校验、并发写入、审核绑定、差异与导出。
 - `apps/web/components/research/memo-revision-panel.tsx`：编辑、引用摘录、历史查看及审核界面；在原备忘录面板接入，沿用现有视觉样式。
 - `apps/web/tests/memo-revisions.test.mjs`：八项边界测试覆盖保存到导出、接受不继承、无效内容与绑定、原始记录变化、损坏台账、并发写入、容量/浏览器能力失败、旧版/截断稿保护。
-- 本地原有 30 项加新增八项，共 38 项通过，零失败/跳过。普通浏览器回归扩展 S-05 流程：编辑摘要与引用、保存/刷新、接受/导出、继续修订重新待审、退回、查看历史与回滚隔离。构建和浏览器结果以本次 GitHub CI 为准。
+- 本地原有 30 项加新增八项，共 38 项通过，零失败/跳过；本地生产构建、TypeScript 与生产运行检查通过。普通浏览器回归扩展 S-05 流程：编辑摘要与引用、保存/刷新、接受/导出、继续修订重新待审、退回、查看历史与回滚隔离。
+
+### GitHub 验收证据
+
+[Web research integration #34748664478](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34748664478) 于 2026-09-13 09:00:49 UTC 完成，结论为成功。功能提交为 `5902e83d6f8750ca133c869d9b809ec0c45ef83f`，基线为 `6848721542e74c881c10eb3cd15b54ca9348b019`；Actions 检查的是两者的 PR 合并预览。后续验收收尾提交只回填文档，不改变本次通过的应用代码、测试、依赖或工作流。
+
+| 验收项 | 实际结果 |
+| --- | --- |
+| 定向自动化测试 | 38 项通过：解析 3、集成 6、模型/批次/修订边界 29 |
+| 生产构建与运行 | Next.js 构建和 TypeScript 通过；1 项生产 HTML、CSS、PDF worker 检查通过 |
+| Chromium 浏览器 | 3 项通过：S-05 整链及人工修订、隔离的 S-06、上传/审核错误阻断；使用 Ubuntu 24.04、Node.js 22.16.0、Playwright 1.62.1 |
+| 迁移保留文件 | 78 个文件哈希一致 |
+| 其他四个工作流 | 仅变更范围检查通过，根目录财务回归任务按范围规则跳过；不计入上述 42 项 |
+| 截图与导出核对 | 两份新增截图可读；原模型调用及原审核与导出相同，两版修订的来源/正文摘要匹配，接受与退回分别绑定准确版本；研究原快照和 EG-01 / EG-02 状态保留 |
+
+[下载 14 文件验收包](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34748664478/artifacts/10314842983)（4,373,723 字节；GitHub 显示过期时间为 2026-12-12）。下载后已复算 ZIP SHA-256，与 GitHub 元数据及上传日志一致：`b7a7751224b8e10f58d8fa98d0420a860044fe909f7e2e2bf51ef2372a557b91`。
+
+UI 队员和审阅者可重点查看包内文件：
+
+| 文件 | 用途 |
+| --- | --- |
+| `S-05-human-revision-editor-NOT-LIVE.png` | 摘要正文、字符计数和本段引用摘录 |
+| `S-05-human-revision-history-NOT-LIVE.png` | 第二版退回后的正文、历史选择、审核和导出入口 |
+| `S-05-human-revision-NOT-LIVE.md` | 第一版接受后的正文、修改差异、原稿及其独立审核 |
+| `S-05-human-revision-NOT-LIVE-audit.json` | 第一版导出，包含原调用/原审核及准确版本绑定 |
+| `S-05-human-revision-history-NOT-LIVE.json` | 两版修订与分别接受、退回的两条审核事件 |
+
+这些是现有界面的功能验收材料，供后续 UI 设计理解行为；整体视觉验收和正式演示录制仍待完成。
 
 测试使用既有合成文案和明确标记的传输替身。浏览器产物命名包含 `NOT-LIVE`，自动填写人员均标注 CI；这些记录只证明功能及绑定，不能充当真实人工内容签署。第 10 次三份原文的[内容初审](MEMO_CONTENT_REVIEW_RUN_10.md)继续保留修订项，人工编辑功能通过也不会倒改 AI 原稿的评价。
 

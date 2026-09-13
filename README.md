@@ -116,7 +116,7 @@ As of 2026-09-13 on this feature branch:
 | Professional accounting review (EG-01) | pending |
 | Professional valuation/investment review (EG-02) | pending |
 | Cross-company generalization | not yet validated |
-| Human memo revision/version lineage | implemented; local build and 38 tests pass; browser / GitHub CI acceptance pending |
+| Human memo revision/version lineage | implemented in [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22); [CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34748664478) passed 38 targeted tests, 1 production runtime check and 3 Chromium flows, plus the production build; awaiting PR review |
 
 **Technical workflow completion is not the same as financial accuracy, professional approval, long-term stability or cross-company generalization.**
 

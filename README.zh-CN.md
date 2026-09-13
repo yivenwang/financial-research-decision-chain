@@ -123,7 +123,7 @@ OpenAI 保留为可选对照提供方，环境变量见 `apps/web/.env.example`�
 | 专业会计复核 EG-01 | Pending |
 | 专业估值 / 投资复核 EG-02 | Pending |
 | 跨公司泛化 | 尚未验证 |
-| 人工修改 Memo 与独立版本留痕 | 本分支已实现；本地构建及 38 项测试通过，浏览器与 GitHub CI 验收待完成 |
+| 人工修改 Memo 与独立版本留痕 | [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 已实现；[CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34748664478) 的 38 项定向测试、1 项生产运行检查、3 项 Chromium 流程及生产构建通过，待 PR 审阅 |
 
 **技术流程通过，不等于金融内容准确、专业认可、长期稳定，也不等于跨公司泛化完成。**
 
