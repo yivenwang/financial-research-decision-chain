@@ -1,0 +1,151 @@
+{
+  "schemaVersion": "demo-archive-registration.v1",
+  "workflowRun": 34342481369,
+  "artifactId": 10100481118,
+  "sourceCommit": "0a41f242ce465d9f9770c044a79b3f2cf8e51872",
+  "archiveBytes": 8558456,
+  "archiveSha256": "60ba9cef5a7f523faa869bc2676c2c8e81e4fdd6b8d0aa63c3be0ecc23f23bfe",
+  "artifactUrl": "https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34342481369/artifacts/10100481118",
+  "files": [
+    {
+      "path": "live-batch-manifest.json",
+      "bytes": 3649,
+      "sha256": "7a3de9389c9f1a79503683c5506116430d8f4b6954709082b037e49beb607072"
+    },
+    {
+      "path": "sample-01/live-provider-configuration.json",
+      "bytes": 101,
+      "sha256": "0644c68bf0e64d7b3795756a1aee13aea8e934d4157b454d0691a4a4ab5d008d"
+    },
+    {
+      "path": "sample-01/S-05-browser-audit.json",
+      "bytes": 44876,
+      "sha256": "8d890c436f111ab2681e6e4aa2116324a1a0b25ed8bdd43c50854aff6d71f707"
+    },
+    {
+      "path": "sample-01/S-05-live-deepseek-model-audit.json",
+      "bytes": 10865,
+      "sha256": "82c912baa6564847b5ba2efebdd4c481a27861b58d3cc7d1298290d18d8e9b81"
+    },
+    {
+      "path": "sample-01/S-05-live-deepseek-model-call.json",
+      "bytes": 10384,
+      "sha256": "e0a87061c51ce39ca060eb417c0a9be499d779fc4f0516b8a2b4463774eb6b82"
+    },
+    {
+      "path": "sample-01/S-05-live-deepseek-model-http.json",
+      "bytes": 326,
+      "sha256": "1ed60f758c70efff6df71d25066e572d77ccf8241a87e54f5ff88d956b2d2abf"
+    },
+    {
+      "path": "sample-01/S-05-live-deepseek-model-memo.md",
+      "bytes": 4862,
+      "sha256": "521a81e82eda88a71ab9700d4d2245eaead51c7c174ebd7ea54ada682a44445f"
+    },
+    {
+      "path": "sample-01/S-05-live-deepseek-model-memo.png",
+      "bytes": 1883995,
+      "sha256": "da5c1b8bd51da1afa119572b4e6d1e9650a87c5be6d35ac46969df7b2cd5c2f6"
+    },
+    {
+      "path": "sample-01/S-05-reviewed-chain.png",
+      "bytes": 989171,
+      "sha256": "585092a06d48e4bd93b43a401cb13a419de53be2c3673a4672f75162883aa1e7"
+    },
+    {
+      "path": "sample-01/sample-completion.json",
+      "bytes": 86,
+      "sha256": "291d5cda6b08e53b265ddfd9081b34cb88339105700b16cd8fecc39dc3a2736c"
+    },
+    {
+      "path": "sample-02/live-provider-configuration.json",
+      "bytes": 101,
+      "sha256": "0644c68bf0e64d7b3795756a1aee13aea8e934d4157b454d0691a4a4ab5d008d"
+    },
+    {
+      "path": "sample-02/S-05-browser-audit.json",
+      "bytes": 44876,
+      "sha256": "3374df7fdb76f54e1980696f8af688ba3a72e3c7dff45cc4c1331fa67afb04a0"
+    },
+    {
+      "path": "sample-02/S-05-live-deepseek-model-audit.json",
+      "bytes": 11305,
+      "sha256": "49444c4afd6abc6ec889a3c8525fe7398f1f804f374eb5593b38e35f23300bf1"
+    },
+    {
+      "path": "sample-02/S-05-live-deepseek-model-call.json",
+      "bytes": 10824,
+      "sha256": "8f36a49c02612a4808571d9e290022c3373f41b82eb0f7eec722aa7f367fdc71"
+    },
+    {
+      "path": "sample-02/S-05-live-deepseek-model-http.json",
+      "bytes": 326,
+      "sha256": "b158bd52fbaa13fb85cb98821a6ae17c101fb181466f334d768935571fd78d67"
+    },
+    {
+      "path": "sample-02/S-05-live-deepseek-model-memo.md",
+      "bytes": 4968,
+      "sha256": "7fccf920d742a7fc59e56ca988ed77a723db4ce3fa124eee9e43e16f3e83b5b5"
+    },
+    {
+      "path": "sample-02/S-05-live-deepseek-model-memo.png",
+      "bytes": 1956002,
+      "sha256": "e137d937b8ef2e76bbb8b08c903a61d6d1388c766ff96e2e7065f833d21fcec6"
+    },
+    {
+      "path": "sample-02/S-05-reviewed-chain.png",
+      "bytes": 989597,
+      "sha256": "13b5eb5f2c0bb9b2d05c41a77c33e12f24aeb8d46584a243cf46ad57a8420e55"
+    },
+    {
+      "path": "sample-02/sample-completion.json",
+      "bytes": 86,
+      "sha256": "291d5cda6b08e53b265ddfd9081b34cb88339105700b16cd8fecc39dc3a2736c"
+    },
+    {
+      "path": "sample-03/live-provider-configuration.json",
+      "bytes": 101,
+      "sha256": "0644c68bf0e64d7b3795756a1aee13aea8e934d4157b454d0691a4a4ab5d008d"
+    },
+    {
+      "path": "sample-03/S-05-browser-audit.json",
+      "bytes": 44876,
+      "sha256": "9a057ed377dd13cd08b0733f18747f30552c41af215ac904828cbcec6e3fd188"
+    },
+    {
+      "path": "sample-03/S-05-live-deepseek-model-audit.json",
+      "bytes": 10955,
+      "sha256": "42d1221cf3fb78911568946e61e02755b41d716b8b19cb3ae45839bd57dbbe44"
+    },
+    {
+      "path": "sample-03/S-05-live-deepseek-model-call.json",
+      "bytes": 10474,
+      "sha256": "e3df7e836ca31106f585986676201aa344fe050211a4812806c2aa7686aba3c4"
+    },
+    {
+      "path": "sample-03/S-05-live-deepseek-model-http.json",
+      "bytes": 326,
+      "sha256": "386968e9bb2df5339eaaed24eec2e6d8fdd584c8d457a824bb0fb60f93c2feac"
+    },
+    {
+      "path": "sample-03/S-05-live-deepseek-model-memo.md",
+      "bytes": 4834,
+      "sha256": "d599f975e20050cc078ef45efcf70e88183dea71142d64a7478faeb55daadaa7"
+    },
+    {
+      "path": "sample-03/S-05-live-deepseek-model-memo.png",
+      "bytes": 1879889,
+      "sha256": "1657ee8b5c9124b5d4fa56f1d8c61e97e31a3d784f65bd67334fbe1d6dc3cb0c"
+    },
+    {
+      "path": "sample-03/S-05-reviewed-chain.png",
+      "bytes": 989090,
+      "sha256": "8da8588843cf5f4b164bd492b5348e118a24411431defcc058032e8a7a5f5084"
+    },
+    {
+      "path": "sample-03/sample-completion.json",
+      "bytes": 86,
+      "sha256": "291d5cda6b08e53b265ddfd9081b34cb88339105700b16cd8fecc39dc3a2736c"
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+{
+  "schemaVersion": "memo-revision-proposals.v1",
+  "preparedAt": "2026-09-14",
+  "preparedBy": "Codex",
+  "origin": "assistant-prepared-editorial-proposal",
+  "status": "proposed-awaiting-owner-review",
+  "scope": "memo-only",
+  "identityVerified": false,
+  "sourceRun": 34342481369,
+  "sourceCommit": "0a41f242ce465d9f9770c044a79b3f2cf8e51872",
+  "sourceArchiveSha256": "60ba9cef5a7f523faa869bc2676c2c8e81e4fdd6b8d0aa63c3be0ecc23f23bfe",
+  "samples": [
+    {
+      "index": 1,
+      "runId": "143bb535-68b6-4f90-9ef1-fb2c660cf0b2",
+      "snapshotSha256": "c553a63a080fb6be5d83033251257cace51513a7c8907e9156bbbf0dfa111f53",
+      "sourceRunSha256": "0c483878b1c89b992dd5b4261e9dd178c55a254ded6ff84cbd2fb55181630284",
+      "sourceMemoSha256": "05cc2a385c01cd2bbbdfbafd9fe26e96bcce618088b52045ce795463c4552686",
+      "proposalSha256": "d2f92297f113e901d8f72c5d612a42a51461514443c47de438c0509857b9409a",
+      "status": "proposed-awaiting-owner-review",
+      "memo": {
+        "gates": {
+          "eg01": "pending",
+          "eg02": "pending"
+        },
+        "summary": {
+          "text": "本期扣非归母净利润较上年同期上升，归母净利润较上年同期下降，增速差为正。本期非经常性损益为负，利润桥闭合；该本期口径关系不能单独解释同比变化。扣非更具代表性仍待专业复核。",
+          "citations": [
+            "EV-S-05-C04-ADJ",
+            "EV-S-05-C04-ATTR",
+            "EV-S-05-C04-NR",
+            "EV-S-05-C04-SPREAD",
+            "F-02",
+            "A-03"
+          ]
+        },
+        "supporting": [
+          {
+            "text": "扣非归母净利润较上年同期上升，增速高于归母口径；本期利润桥闭合，复算值与披露值一致。这些提供给定规则下的支持线索，扣非更能代表核心经营仍待专业复核，经营原因尚未证实。",
+            "citations": [
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-SPREAD",
+              "F-02",
+              "A-03"
+            ]
+          }
+        ],
+        "counter": [
+          {
+            "text": "归母净利润较上年同期下降，与扣非归母净利润较上年同期上升形成分歧，构成反证。仅凭本期非经常性损益为负，不能确认两者增速差的原因；调整项性质及扣非代表性仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-SPREAD",
+              "A-03"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "text": "两种利润增速的差异可能与基数、口径变化或项目重分类有关，尚待验证。本次输入未提供收入确认、成本及连续可比期间资料；扣非代表性的会计前提仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-SPREAD",
+              "K-07",
+              "A-03"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "text": "请补充非经常性损益明细、分项性质认定及连续可比期间的归母与扣非利润，核对增速差是否涉及基数或重分类，并复核扣非代表性的会计前提。",
+            "citations": [
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-SPREAD",
+              "A-03",
+              "K-07"
+            ]
+          },
+          {
+            "text": "请补充本期股数、估值倍数依据及会计、估值复核意见，并说明利润桥的适用口径。本期桥闭合不证明跨期口径稳定；年化输入仅为展示占位，不构成预测或可发布估值。",
+            "citations": [
+              "Valuation-B5",
+              "F-02",
+              "A-03"
+            ]
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "path": "summary",
+          "disposition": "revise",
+          "reason": "明确较上年同期及本期口径，避免把本期损失直接解释为同比下降原因。",
+          "originalPointSha256": "9bfa7e1d76c82300993bef0450c67c13a1b652c3fdd982c4570cac5c6a45f983",
+          "characters": 85
+        },
+        {
+          "path": "supporting[0]",
+          "disposition": "revise",
+          "reason": "补齐比较双方ATTR；删除正文不再使用的NR，保留会计前提。",
+          "originalPointSha256": "04976784d5b0b5ccc3e001b9353d3527b262a8e5ce0b465eece9c9dd00e9d889",
+          "characters": 83
+        },
+        {
+          "path": "counter[0]",
+          "disposition": "revise",
+          "reason": "补齐ADJ/SPREAD；删除未证实的同比因果及“不应滞后”含混句，保留归母反证。",
+          "originalPointSha256": "8cc61ded46bf36f70d4534908294e7b8d1e72a0e67c8fc146e7a1f6bd86367fb",
+          "characters": 82
+        },
+        {
+          "path": "alternatives[0]",
+          "disposition": "revise",
+          "reason": "补ADJ并明确替代解释与会计前提均待验证。",
+          "originalPointSha256": "4450b526e57f44ee3e544fc4fc653e9216198b2f9a7f6b214a6be73bbcddeb3c",
+          "characters": 74
+        },
+        {
+          "path": "questions[0]",
+          "disposition": "revise",
+          "reason": "补齐比较另一侧ATTR，保留补证任务。",
+          "originalPointSha256": "22c661bb06cd12d0116439b36bcf8028b25560ead8b03e2fd3137bc39fb3aa19",
+          "characters": 64
+        },
+        {
+          "path": "questions[1]",
+          "disposition": "revise",
+          "reason": "取消“足以披露/口径稳定”暗示；区分本期复算、跨期适用与展示年化，去除未使用K-07。",
+          "originalPointSha256": "9ef94bb127ad8c3c45699d1f9f5bd6ed6dc45a023f6e19ce1b512b6a8b50a6de",
+          "characters": 75
+        }
+      ]
+    },
+    {
+      "index": 2,
+      "runId": "bdffade1-eadd-4d59-b57c-ab3fb43d3350",
+      "snapshotSha256": "9752b61c2cd59c359ad667a5ca62945061a3917991407432e93363eb50758d4b",
+      "sourceRunSha256": "441c3e481ca80aabcfb8e862cf2b13552d99d65746d626100c2552e2dc8b96f7",
+      "sourceMemoSha256": "42fee8748094723ad0dd2ef808027f219b2053d63e4110c8e88b48d51cb16099",
+      "proposalSha256": "0c6a4b05718948ebd5f0c6a1aaecadcd012ccec240a1b02494eadaaf2ca6f612",
+      "status": "proposed-awaiting-owner-review",
+      "memo": {
+        "gates": {
+          "eg01": "pending",
+          "eg02": "pending"
+        },
+        "summary": {
+          "text": "归母净利润较上年同期下降，扣非归母净利润较上年同期上升，增速差为正；本期非经常性损益为负，利润桥闭合。相关线索提供规则支持，扣非更具代表性仍待专业复核；年化输入仅为展示占位，不作预测。",
+          "citations": [
+            "EV-S-05-C04-ATTR",
+            "EV-S-05-C04-ADJ",
+            "EV-S-05-C04-SPREAD",
+            "EV-S-05-C04-NR",
+            "F-02",
+            "Valuation-B5",
+            "A-03"
+          ]
+        },
+        "supporting": [
+          {
+            "text": "扣非归母净利润较上年同期上升，增速高于归母口径；本期非经常性损益为负，利润桥复算与披露值一致。这些是本次规则的支持线索，扣非更能代表核心经营仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-SPREAD",
+              "F-02",
+              "A-03"
+            ]
+          }
+        ],
+        "counter": [
+          {
+            "text": "归母净利润较上年同期下降，与扣非归母净利润较上年同期上升形成分歧，构成反证并限制仅依扣非口径作判断。归母的同比降幅不证明调整项性质或经营持续恶化；扣非代表性仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "A-03"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "text": "本期非经常性损益为负，只能说明本期口径关系；两种利润增速的差异还可能涉及基数或口径，尚待验证。本次输入未提供连续可比序列及调整项定性，不能据此确认经常性或扣非代表性。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-SPREAD",
+              "F-02",
+              "K-07",
+              "A-03"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "text": "请补充连续可比期间的非经常性损益明细、基期数据、收入确认与成本费用时点，以验证增速差的持续性和扣非口径是否更接近经营核心。",
+            "citations": [
+              "A-03",
+              "K-07",
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-SPREAD"
+            ]
+          },
+          {
+            "text": "请补充本期股数、估值倍数依据和会计、估值复核意见，核查调整项性质与年化输入的适用边界。当前年化仅为展示占位，不构成预测或可发布估值。",
+            "citations": [
+              "Valuation-B5",
+              "K-07",
+              "A-03"
+            ]
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "path": "summary",
+          "disposition": "revise",
+          "reason": "统一较上年同期，注明本期损益及规则支持范围。",
+          "originalPointSha256": "e4b09b5c5817f2b2bd361c02046a493a6ebfe7a897f3c99c5f75dd67f38605b9",
+          "characters": 92
+        },
+        {
+          "path": "supporting[0]",
+          "disposition": "revise",
+          "reason": "补齐比较双方ATTR，并明确本期与期间口径。",
+          "originalPointSha256": "da65b6c12f6ca53e5dc6d79107033c5b120db9918746282702f78bd64339a071",
+          "characters": 77
+        },
+        {
+          "path": "counter[0]",
+          "disposition": "revise",
+          "reason": "明确负的是同比变化，不是利润值；保留反证和代表性待复核，去除未使用K-07。",
+          "originalPointSha256": "9f529c721d001a818d91b38244d3589cc147eee6a680605d730efb0eed3c5aa9",
+          "characters": 85
+        },
+        {
+          "path": "alternatives[0]",
+          "disposition": "revise",
+          "reason": "分开本期口径关系与增速差假说；补F-02对应本期关系。",
+          "originalPointSha256": "cc1216aef080d3e796ae1f65779b6357144cf93267cb79bc6e0a024f10acb365",
+          "characters": 83
+        },
+        {
+          "path": "questions[0]",
+          "disposition": "retain",
+          "reason": "原段保留：请求可比明细及机制资料，没有自行确认会计前提。",
+          "originalPointSha256": "10263f6243def6996990b1f17c989bb71e8714935d28f441cbeabba83752f38b",
+          "characters": 61
+        },
+        {
+          "path": "questions[1]",
+          "disposition": "revise",
+          "reason": "补估值复核依据，去除未使用F-02，保留年化展示边界。",
+          "originalPointSha256": "e9862b47c08c52d9fcc38886c9527fc5481f599d92f77bdf528954e1b57de652",
+          "characters": 66
+        }
+      ]
+    },
+    {
+      "index": 3,
+      "runId": "262273bc-df90-47b8-bdba-131d7d99260a",
+      "snapshotSha256": "9b296fac5c41ed2dcedf4ae6e03796aa9f25d880d5104c074a84a87daf96f48e",
+      "sourceRunSha256": "f929f2af0d6f450d76b16ae97958e2996dbb2b9d497a620c20fcf58cfc27c0a3",
+      "sourceMemoSha256": "92f71647e5ebb1c39603ddef25c4fb2ce2b08f9c867f11ff3f1551878c759caa",
+      "proposalSha256": "f1081a76c2ef4f22d94a3fb90ffaeca1cbeb7b18647138a5ef18fffe0edae45e",
+      "status": "proposed-awaiting-owner-review",
+      "memo": {
+        "gates": {
+          "eg01": "pending",
+          "eg02": "pending"
+        },
+        "summary": {
+          "text": "本期归母净利润较上年同期下降，扣非归母净利润较上年同期上升，增速差为正；本期非经常性损益为负且利润桥闭合。本次论点的规则信号为增强，扣非更具代表性的会计前提仍待专业复核。",
+          "citations": [
+            "EV-S-05-C04-ATTR",
+            "EV-S-05-C04-ADJ",
+            "EV-S-05-C04-NR",
+            "EV-S-05-C04-SPREAD",
+            "A-03",
+            "F-02"
+          ]
+        },
+        "supporting": [
+          {
+            "text": "扣非归母净利润较上年同期上升，增速高于归母口径；本期非经常性损益为负，利润桥复算值与披露值一致，构成给定规则下的支持线索。扣非更能代表核心经营仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-NR",
+              "EV-S-05-C04-SPREAD",
+              "F-02",
+              "A-03"
+            ]
+          }
+        ],
+        "counter": [
+          {
+            "text": "归母净利润较上年同期下降，而扣非归母净利润较上年同期上升，两者形成分歧并构成反证。该分歧的经营原因尚未确认；解释调整项性质及扣非代表性的会计前提仍待专业复核。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "A-03"
+            ]
+          }
+        ],
+        "alternatives": [
+          {
+            "text": "归母与扣非利润较上年同期的变化方向不同，可能涉及非经常项目、收入、成本或基数差异，尚待验证。本次输入未提供连续可比期间和会计定性，暂不能认定扣非更具代表性，调整项未来是否重复仍无法核实。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-NR",
+              "A-03",
+              "K-07"
+            ]
+          }
+        ],
+        "questions": [
+          {
+            "text": "请提供非经常性损益明细及连续可比期间数据，以判断调整项是否为经常性，并支持扣非更具代表性的会计前提是否成立。",
+            "citations": [
+              "EV-S-05-C04-NR",
+              "A-03",
+              "K-07"
+            ]
+          },
+          {
+            "text": "请补充本期与上年同期的收入、成本和利润口径资料，以核查两种利润增速的差异，并补齐股数、估值倍数及专业复核依据。年化输入仍仅为展示占位。",
+            "citations": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-SPREAD",
+              "Valuation-B5"
+            ]
+          }
+        ]
+      },
+      "paragraphs": [
+        {
+          "path": "summary",
+          "disposition": "revise",
+          "reason": "将“整体信号”限定为本次C-04规则信号，保留专业待复核。",
+          "originalPointSha256": "a8818805afd0eade2cd1ca39234883aa62be6e0d243e5a175b4457fa612139c1",
+          "characters": 85
+        },
+        {
+          "path": "supporting[0]",
+          "disposition": "revise",
+          "reason": "补比较另一侧ATTR及代表性前提A-03。",
+          "originalPointSha256": "6b4f1b245f5e8c11691d758cfd659785a494f1433269aa9ae273389d6226f69f",
+          "characters": 78
+        },
+        {
+          "path": "counter[0]",
+          "disposition": "revise",
+          "reason": "删除没有NR/F-02引用支持的额外损益关系，直接保留双侧变化及反证。",
+          "originalPointSha256": "e7e721d3b6204a2e1ffb900668217d9b887b42224639e53abf33e3d305296b6a",
+          "characters": 79
+        },
+        {
+          "path": "alternatives[0]",
+          "disposition": "revise",
+          "reason": "明确较上年同期和假说状态，将“不应重复”改为未来是否重复无法核实。",
+          "originalPointSha256": "c19a6fb70fb90e75f567037286253107ce46c91442395ad19f8f3d294996a419",
+          "characters": 93
+        },
+        {
+          "path": "questions[0]",
+          "disposition": "retain",
+          "reason": "原段保留：补证指向项目性质与会计前提，不代签专业意见。",
+          "originalPointSha256": "489f3859baed0e00b2bdf4d74581b54610bdbbd21071577fe1bbbda29cd985c7",
+          "characters": 54
+        },
+        {
+          "path": "questions[1]",
+          "disposition": "revise",
+          "reason": "明确待补跨期资料，补SPREAD并重申年化展示占位。",
+          "originalPointSha256": "0e11c4803d6c8ef8773a7417c99d898e1add6be00200b73ff84c522cfe2e62c1",
+          "characters": 67
+        }
+      ]
+    }
+  ]
+}

@@ -143,6 +143,10 @@ Meaningful changes to those definitions require explicit review. Historical fail
 
 See [`AGENTS.md`](AGENTS.md) and [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
+## UI handoff and replay preparation
+
+The [non-visual readiness package](docs/NON_VISUAL_READINESS_V0.1.md) maps current pages to actual data and states, proposes paragraph-level edits for all three archived memos, and provides an offline replay tool, run/deployment plan and professional review packet. Proposals await owner review; product UI and deployment remain pending.
+
 ## Contributing
 
 External technical review is welcome, particularly in:
