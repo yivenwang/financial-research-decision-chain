@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
@@ -11,6 +11,7 @@ import { getSourceRecord } from "../lib/source-records.ts";
 import { storageKeys } from "../lib/research-versions.ts";
 import { memoStorageKey } from "../lib/research-memo-storage.ts";
 import { createMemoRun } from "../lib/research-memo.server.ts";
+import { memoRevisionStorageKey } from "../lib/research-memo-revisions.ts";
 
 const require = createRequire(import.meta.url);
 const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
@@ -104,6 +105,73 @@ async function stubMemoTransport(page) {
     const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
     await route.fulfill({ json: { run } });
   });
+}
+
+async function exerciseMemoRevisions(page, modelRun, scope) {
+  // Ordinary browser acceptance only. Synthetic prose remains explicitly labelled.
+  const originalBytes = await page.evaluate(key => localStorage.getItem(key), memoStorageKey(scope));
+  const revisions = page.getByTestId("memo-revisions");
+  const firstText = modelRun.memo.summary.text + " 扣非代表性仍待专业复核。";
+  await revisions.getByRole("button", { name: "创建人工修订稿", exact: true }).click();
+  await revisions.getByLabel("摘要正文", { exact: true }).fill(firstText);
+  const summary = revisions.getByTestId("revision-field-summary-0");
+  await summary.getByText("选择本段引用并核对摘录", { exact: true }).click();
+  await summary.getByRole("checkbox", { name: "摘要引用 A-03", exact: true }).check();
+  await revisions.getByLabel("修订者（自行填写）", { exact: true }).fill("CI synthetic editor");
+  await revisions.getByLabel("修改理由", { exact: true }).fill("合成回归：补会计前提及对应引用，不作专业签署。");
+  await summary.screenshot({ path: new URL("S-05-human-revision-editor-NOT-LIVE.png", artifacts).pathname });
+  await revisions.getByRole("button", { name: "保存人工修订", exact: true }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
+  await page.reload({ waitUntil: "load" });
+  await page.getByRole("tab", { name: "版本历史" }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
+  assert.ok((await revisions.innerText()).includes(firstText));
+  await revisions.getByLabel("修订稿审核人（自行填写）", { exact: true }).fill("CI synthetic revision reviewer");
+  await revisions.getByLabel("修订稿复核意见", { exact: true }).fill("合成交互与版本绑定验收，专业关卡保持待复核。");
+  await revisions.getByRole("button", { name: "接受此修订稿", exact: true }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "人工已接受修订稿" }).waitFor();
+  const [markdownDownload] = await Promise.all([page.waitForEvent("download"), revisions.getByRole("button", { name: "导出人工修订稿", exact: true }).click()]);
+  const markdownPath = new URL("S-05-human-revision-NOT-LIVE.md", artifacts);
+  await markdownDownload.saveAs(markdownPath.pathname);
+  assert.match(await readFile(markdownPath, "utf8"), /状态：人工已接受修订稿/);
+  const [auditDownload] = await Promise.all([page.waitForEvent("download"), revisions.getByRole("button", { name: "导出修订与原始记录", exact: true }).click()]);
+  const auditPath = new URL("S-05-human-revision-NOT-LIVE-audit.json", artifacts);
+  await auditDownload.saveAs(auditPath.pathname);
+  const exported = JSON.parse(await readFile(auditPath, "utf8"));
+  assert.deepEqual(exported.original.run, modelRun);
+  assert.equal(exported.revisions.length, 1); assert.equal(exported.reviews.length, 1);
+  const first = exported.revisions[0];
+  assert.equal(first.memo.summary.text, firstText);
+  assert.ok(first.memo.summary.citations.includes("A-03"));
+  assert.equal(exported.reviews[0].revisionId, first.id);
+  assert.equal(exported.reviews[0].contentSha256, first.contentSha256);
+  await revisions.getByRole("button", { name: "继续修订", exact: true }).click();
+  await revisions.getByLabel("下一步研究问题 · 第 2 段正文", { exact: true }).fill(first.memo.questions[1].text + " 请补充复核依据。");
+  await revisions.getByLabel("修订者（自行填写）", { exact: true }).fill("CI synthetic editor");
+  await revisions.getByLabel("修改理由", { exact: true }).fill("合成回归：继续补充待核对材料，产生独立版本。");
+  await revisions.getByRole("button", { name: "保存人工修订", exact: true }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
+  let stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(scope));
+  assert.equal(stored.revisions.length, 2); assert.equal(stored.reviews.length, 1);
+  assert.deepEqual(stored.revisions[0], first); assert.equal(stored.revisions[1].parentRevisionId, first.id);
+  assert.equal(stored.reviews.some(item => item.revisionId === stored.revisions[1].id), false);
+  await revisions.getByLabel("修订稿审核人（自行填写）", { exact: true }).fill("CI synthetic revision reviewer");
+  await revisions.getByLabel("修订稿复核意见", { exact: true }).fill("合成回归：保留退回事件，不代替人工专业结论。");
+  await revisions.getByRole("button", { name: "退回此修订稿", exact: true }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿已退回" }).waitFor();
+  await revisions.getByLabel("选择人工修订版本", { exact: true }).selectOption(first.id);
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "人工已接受修订稿 · 历史版本" }).waitFor();
+  assert.equal(await revisions.getByRole("button", { name: "继续修订", exact: true }).isDisabled(), true);
+  assert.equal(await revisions.getByRole("button", { name: "接受此修订稿", exact: true }).count(), 0);
+  await revisions.getByLabel("选择人工修订版本", { exact: true }).selectOption(stored.revisions[1].id);
+  await page.reload({ waitUntil: "load" });
+  await page.getByRole("tab", { name: "版本历史" }).click();
+  await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿已退回" }).waitFor();
+  await revisions.screenshot({ path: new URL("S-05-human-revision-history-NOT-LIVE.png", artifacts).pathname });
+  stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(scope));
+  assert.deepEqual(stored.reviews.map(item => item.status), ["accepted", "rejected"]);
+  assert.equal(await page.evaluate(key => localStorage.getItem(key), memoStorageKey(scope)), originalBytes);
+  await writeFile(new URL("S-05-human-revision-history-NOT-LIVE.json", artifacts), JSON.stringify({ evaluation: "synthetic-browser-revision-flow-NOT-live-content-review", ...stored }, null, 2));
 }
 
 for (const fixture of cases) {
@@ -227,6 +295,7 @@ for (const fixture of cases) {
         await page.getByRole("tab", { name: "版本历史" }).click();
         await page.getByTestId("memo-status").filter({ hasText: "人工已接受" }).waitFor();
         await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
+        if (!liveMemo) await exerciseMemoRevisions(page, modelRun, fixture.scope);
       }
       await page.getByRole("button").filter({ hasText: "V-01" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
@@ -243,6 +312,12 @@ for (const fixture of cases) {
       assert.deepEqual(restored[2].chain, snapshot.chain);
       assert.deepEqual(restored[0], snapshot);
       assert.deepEqual(errors, []);
+      if (!liveMemo && fixture.id === "S-05") {
+        assert.equal(await page.getByTestId("memo-revisions").count(), 0, "A new rollback snapshot must not inherit the previous memo or revision acceptance");
+        const history = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(fixture.scope));
+        assert.equal(history.revisions.length, 2); assert.equal(history.reviews.length, 2);
+        assert.deepEqual((await readLedger(page, fixture.scope))[0], snapshot);
+      }
       if (liveMemo || fixture.id === "S-05") assert.equal(modelRequests, 1, "Each independent sample may submit exactly one model request");
       if (liveMemo) {
         await writeFile(new URL("sample-completion.json", artifacts), JSON.stringify({ technicalFlow: "completed", contentReview: "pending", modelRequests }, null, 2));

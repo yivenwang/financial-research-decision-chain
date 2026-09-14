@@ -64,6 +64,7 @@ For the precise capability boundary, see [`docs/SYSTEM_SCOPE.md`](docs/SYSTEM_SC
 - evidence-aware LLM research memo generation;
 - memo schema, citation/reference validation and blocking rules;
 - human accept / return review state;
+- human memo edits with separate revision history, content-bound reviews and original-versus-edited exports;
 - version save, reload, export and rollback;
 - preserved historical blind-test failures and regression records;
 - Web interface under `apps/web/`.
@@ -104,7 +105,7 @@ OpenAI remains an optional comparison provider through the variables documented 
 
 ## Validation status
 
-As of 2026-09-10:
+As of 2026-09-13 on this feature branch:
 
 | Area | Status |
 | --- | --- |
@@ -115,11 +116,13 @@ As of 2026-09-10:
 | Professional accounting review (EG-01) | pending |
 | Professional valuation/investment review (EG-02) | pending |
 | Cross-company generalization | not yet validated |
-| Human memo revision/version lineage | proposed, not implemented |
+| Human memo revision/version lineage | implemented in [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22); [CI](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34748664478) passed 38 targeted tests, 1 production runtime check and 3 Chromium flows, plus the production build; awaiting PR review |
 
 **Technical workflow completion is not the same as financial accuracy, professional approval, long-term stability or cross-company generalization.**
 
-The latest memo stage is documented in [`docs/MEMO_CONTENT_REVIEW_RUN_10.md`](docs/MEMO_CONTENT_REVIEW_RUN_10.md). Historical failures are intentionally preserved rather than rewritten after repairs.
+The [human revision guide](docs/MEMO_HUMAN_REVISION_V0.1.md) explains editing, review states, exports and the UI task flow. PR #16 merged on 2026-09-10; human revision is delivered separately from its original model-content review.
+
+The latest real-model content review is documented in [`docs/MEMO_CONTENT_REVIEW_RUN_10.md`](docs/MEMO_CONTENT_REVIEW_RUN_10.md). Historical failures are intentionally preserved rather than rewritten after repairs.
 
 ### Blind-test note
 
