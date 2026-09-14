@@ -150,6 +150,10 @@ S-07 最初作为 Blind Test 02 使用，并在首次运行中暴露 Parser 失�
 
 协作规则见 [`AGENTS.md`](AGENTS.md) 与 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
 
+## UI 定稿前的交接材料
+
+2026-09-14 已准备[非视觉收尾包](docs/NON_VISUAL_READINESS_V0.1.md)：页面字段与状态、三份真实输出的逐段修订建议、离线回放工具、运行部署方案和专业复核材料。建议仍待本人确认，整体 UI 与实际部署待完成。
+
 ## 外部技术评审
 
 当前尤其欢迎以下三类 Review：

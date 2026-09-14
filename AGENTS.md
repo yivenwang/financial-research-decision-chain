@@ -30,6 +30,8 @@ On 2026-09-13, the owner explicitly approved completing human memo revision and 
 
 ## Repository and evidence
 
+On 2026-09-14, the owner said “继续” in response to the proposed non-visual readiness package: map current pages to data and states, prepare editorial revision suggestions for all three archived run-10 outputs, deliver reproducible demo/replay material, a run/deployment plan, and a professional review packet. Routine documentation, offline tooling, validation and one PR are authorized together. PR #22 is still open; this package may be stacked on its branch without merging either PR. Original archive bytes and CI review events remain unchanged; editorial proposals are pending owner review and are not stored as accepted product revisions. No new live model call, new company/material, product UI redesign, core-logic change, deployment, merge or professional signature is included. Any issue requiring a change to research judgement or version-difference semantics must be explained and confirmed before implementation.
+
 - Work in GitHub branches and PRs. Check the latest PR head before writing. Do not overwrite the newer dev/deepseek-provider-v02 with the old uncommitted v01 draft.
 - Preserve historical versions, rollback records and first blind-test failures. Passing a regression never changes a first-run result.
 - Do not read S-07 raw material, truth or first output, or run S-07 tests in this stage. Historical PASS records do not grant fresh authorization.

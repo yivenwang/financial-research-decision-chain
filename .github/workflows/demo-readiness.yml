@@ -1,0 +1,47 @@
+name: Non-visual demo readiness
+
+on:
+  pull_request:
+    branches: [main, dev/memo-human-revision-v01]
+    paths:
+      - 'apps/web/scripts/prepare-demo-replay.mjs'
+      - 'apps/web/tests/demo-replay.test.mjs'
+      - 'apps/web/tests/demo-replay-browser.test.mjs'
+      - 'docs/demo/**'
+      - '.github/workflows/demo-readiness.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            /apps/web/
+            /lib/
+            /docs/demo/
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Verify offline replay boundaries using synthetic bytes
+        run: node --experimental-strip-types --test apps/web/tests/demo-replay.test.mjs
+      - name: Install isolated report browser checker
+        run: |
+          npm install --prefix "$RUNNER_TEMP/replay-browser" --no-package-lock --no-save --no-audit --no-fund playwright@1.62.1
+          echo "PLAYWRIGHT_PACKAGE_PATH=$RUNNER_TEMP/replay-browser/node_modules/playwright" >> "$GITHUB_ENV"
+          node "$RUNNER_TEMP/replay-browser/node_modules/playwright/cli.js" install --with-deps chromium
+      - name: Check read-only report layout with synthetic content
+        run: node --experimental-strip-types --test apps/web/tests/demo-replay-browser.test.mjs
+      - name: Preserve report layout evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nonvisual-report-layout-${{ github.run_id }}
+          path: artifacts-demo-layout/
+          if-no-files-found: warn
