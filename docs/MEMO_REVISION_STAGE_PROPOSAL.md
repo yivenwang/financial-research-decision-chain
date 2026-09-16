@@ -1,6 +1,6 @@
 # 人工修订与版本留痕：下一阶段提案
 
-提案日期：2026-09-09；状态更新：2026-09-13。**所有者已明确批准实现、必要修复、验证、文档和一个 PR 的交付。** PR #16 已合并，本功能从最新 main 独立建立 `dev/memo-human-revision-v01` 分支，在 [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 完成交付。GitHub CI 的 42 项测试、生产构建及 Chromium 流程通过，截图、导出与版本绑定已核对。使用与验证见 [人工修订 V0.1](MEMO_HUMAN_REVISION_V0.1.md)。未合并、未部署。以下保留获批方案，依据为 [第 10 次全部输出的审阅](MEMO_CONTENT_REVIEW_RUN_10.md)。
+提案日期：2026-09-09；状态更新：2026-09-16。**所有者已明确批准实现、必要修复、验证、文档和一个 PR 的交付。** PR #16 已合并，本功能从当时最新 main 独立建立 `dev/memo-human-revision-v01` 分支，在 [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 完成交付并于 2026-09-14 合并。GitHub CI 的 42 项测试、生产构建及 Chromium 流程通过，截图、导出与版本绑定已核对。使用与验证见 [人工修订 V0.1](MEMO_HUMAN_REVISION_V0.1.md)。尚未部署。以下保留获批方案，依据为 [第 10 次全部输出的审阅](MEMO_CONTENT_REVIEW_RUN_10.md)。
 
 ## 要解决的问题
 
