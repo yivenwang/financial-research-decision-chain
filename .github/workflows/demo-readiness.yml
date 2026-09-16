@@ -7,6 +7,7 @@ on:
       - 'apps/web/scripts/prepare-demo-replay.mjs'
       - 'apps/web/tests/demo-replay.test.mjs'
       - 'apps/web/tests/demo-replay-browser.test.mjs'
+      - 'apps/web/tests/memo-owner-review.test.mjs'
       - 'docs/demo/**'
       - '.github/workflows/demo-readiness.yml'
   workflow_dispatch:
@@ -30,7 +31,7 @@ jobs:
         with:
           node-version: '22.16.0'
       - name: Verify offline replay boundaries using synthetic bytes
-        run: node --experimental-strip-types --test apps/web/tests/demo-replay.test.mjs
+        run: node --experimental-strip-types --test apps/web/tests/demo-replay.test.mjs apps/web/tests/memo-owner-review.test.mjs
       - name: Install isolated report browser checker
         run: |
           npm install --prefix "$RUNNER_TEMP/replay-browser" --no-package-lock --no-save --no-audit --no-fund playwright@1.62.1

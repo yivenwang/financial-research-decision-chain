@@ -1,0 +1,79 @@
+{
+  "schemaVersion": "memo-revision-owner-decision.v1",
+  "recordedAt": "2026-09-16",
+  "decisionSource": {
+    "channel": "project-workspace",
+    "instruction": "三份全部按建议通过",
+    "approverRole": "project-owner",
+    "authorizationRecorded": true,
+    "identityVerifiedByApplication": false
+  },
+  "scope": "memo-only",
+  "status": "accepted-by-project-owner",
+  "proposalBinding": {
+    "schemaVersion": "memo-revision-proposals.v1",
+    "sourceRun": 34342481369,
+    "sourceCommit": "0a41f242ce465d9f9770c044a79b3f2cf8e51872",
+    "sourceArchiveSha256": "60ba9cef5a7f523faa869bc2676c2c8e81e4fdd6b8d0aa63c3be0ecc23f23bfe"
+  },
+  "summary": {
+    "samples": 3,
+    "paragraphs": 18,
+    "revised": 16,
+    "retained": 2
+  },
+  "samples": [
+    {
+      "index": 1,
+      "runId": "143bb535-68b6-4f90-9ef1-fb2c660cf0b2",
+      "snapshotSha256": "c553a63a080fb6be5d83033251257cace51513a7c8907e9156bbbf0dfa111f53",
+      "sourceRunSha256": "0c483878b1c89b992dd5b4261e9dd178c55a254ded6ff84cbd2fb55181630284",
+      "sourceMemoSha256": "05cc2a385c01cd2bbbdfbafd9fe26e96bcce618088b52045ce795463c4552686",
+      "proposalSha256": "d2f92297f113e901d8f72c5d612a42a51461514443c47de438c0509857b9409a",
+      "decision": "accepted",
+      "paragraphs": {
+        "revised": 6,
+        "retained": 0
+      }
+    },
+    {
+      "index": 2,
+      "runId": "bdffade1-eadd-4d59-b57c-ab3fb43d3350",
+      "snapshotSha256": "9752b61c2cd59c359ad667a5ca62945061a3917991407432e93363eb50758d4b",
+      "sourceRunSha256": "441c3e481ca80aabcfb8e862cf2b13552d99d65746d626100c2552e2dc8b96f7",
+      "sourceMemoSha256": "42fee8748094723ad0dd2ef808027f219b2053d63e4110c8e88b48d51cb16099",
+      "proposalSha256": "0c6a4b05718948ebd5f0c6a1aaecadcd012ccec240a1b02494eadaaf2ca6f612",
+      "decision": "accepted",
+      "paragraphs": {
+        "revised": 5,
+        "retained": 1
+      }
+    },
+    {
+      "index": 3,
+      "runId": "262273bc-df90-47b8-bdba-131d7d99260a",
+      "snapshotSha256": "9b296fac5c41ed2dcedf4ae6e03796aa9f25d880d5104c074a84a87daf96f48e",
+      "sourceRunSha256": "f929f2af0d6f450d76b16ae97958e2996dbb2b9d497a620c20fcf58cfc27c0a3",
+      "sourceMemoSha256": "92f71647e5ebb1c39603ddef25c4fb2ce2b08f9c867f11ff3f1551878c759caa",
+      "proposalSha256": "f1081a76c2ef4f22d94a3fb90ffaeca1cbeb7b18647138a5ef18fffe0edae45e",
+      "decision": "accepted",
+      "paragraphs": {
+        "revised": 5,
+        "retained": 1
+      }
+    }
+  ],
+  "professionalReview": {
+    "eg01": "pending",
+    "eg02": "pending"
+  },
+  "effects": {
+    "originalModelRunsChanged": false,
+    "historicalReviewEventsChanged": false,
+    "browserRevisionLedgerWritten": false,
+    "promptChanged": false,
+    "modelBudgetChanged": false,
+    "financialRulesChanged": false,
+    "decisionLogicChanged": false
+  }
+}
