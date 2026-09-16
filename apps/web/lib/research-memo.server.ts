@@ -22,7 +22,7 @@ export function memoConfig(env: NodeJS.ProcessEnv = process.env): MemoConfig {
     appOrigin: env.RESEARCH_APP_ORIGIN?.trim() || undefined,
   };
 }
-function configured(config: MemoConfig) {
+export function configured(config: MemoConfig) {
   const definition = providerDefinition(config.provider);
   return Boolean(definition && config.apiKey.trim() && config.accessToken.length >= 16 && definition.accepts(config.model) && (!config.appOrigin || serializedOrigin(config.appOrigin)));
 }
@@ -49,7 +49,7 @@ export async function readBoundedJson(source: Request | Response, maxBytes: numb
 }
 
 class DuplicateJsonKeyError extends SyntaxError {}
-function parseMemoJson(raw: string): unknown {
+export function parseMemoJson(raw: string): unknown {
   // Validate JSON syntax first, then inspect keys before using JSON.parse's result.
   // Otherwise duplicate keys silently discard earlier model content.
   const parsed: unknown = JSON.parse(raw);
@@ -77,7 +77,7 @@ function diagnosticEnum<T extends string>(value: unknown, allowed: readonly T[])
   if (value == null) return null;
   return typeof value === "string" && allowed.includes(value as T) ? value as T : "unknown";
 }
-function finalOutput(data: unknown) {
+export function finalOutput(data: unknown) {
   const parts: string[] = [];
   let refused = false;
   if (Array.isArray(data)) for (const item of data) {
@@ -162,7 +162,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
 
 const failureMessage = (run: MemoRun) => run.status === "blocked" ? "模型输出未通过引用或内容校验，已保留调用记录，请复核后重试。" : "模型服务暂未完成此次请求，已保留调用记录；没有生成备忘录。";
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "Cache-Control": "no-store" } }); }
-function authorized(request: Request, token: string) {
+export function authorized(request: Request, token: string) {
   const supplied = Buffer.from(request.headers.get("authorization") ?? "");
   const expected = Buffer.from(`Bearer ${token}`);
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
@@ -173,7 +173,7 @@ function serializedOrigin(value: string) {
     return ["http:", "https:"].includes(url.protocol) && url.origin === value;
   } catch { return false; }
 }
-function sameOrigin(request: Request, appOrigin?: string) {
+export function sameOrigin(request: Request, appOrigin?: string) {
   const rawOrigin = request.headers.get("origin");
   if (!rawOrigin || !serializedOrigin(rawOrigin)) return false;
   if (appOrigin) return serializedOrigin(appOrigin) && rawOrigin === appOrigin;

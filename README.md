@@ -1,5 +1,7 @@
 # Financial Research Decision Chain
 
+Question entry: [`/questions`, implementation and acceptance boundaries](docs/QUESTION_INPUT_V0.1.md) supports confirmed research contracts, three bounded intents, validated evidence, structured answers and separately recorded draft review. New question prompts still require live-model content acceptance; ordinary CI uses explicitly labelled transport stubs.
+
 **English** | [简体中文](README.zh-CN.md)
 
 An auditable AI research-update prototype for fundamental equity research.

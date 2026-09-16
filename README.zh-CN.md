@@ -60,6 +60,7 @@ flowchart LR
 
 ## 当前已实现
 
+- [受控问题输入 V0.1](docs/QUESTION_INPUT_V0.1.md)：`/questions` 支持任务确认、三类意图、证据复核、结构化结果及独立草稿审核；新 Prompt 真实模型内容验收待完成；
 - 基于 PDF 的研究更新流程；
 - Source Metadata 与 Evidence lineage；
 - Parser V0.6 财务提取与回归测试；
