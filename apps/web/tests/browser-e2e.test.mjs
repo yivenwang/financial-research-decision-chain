@@ -34,13 +34,40 @@ let browser;
 let server;
 let exited;
 let logs = "";
+async function downloadOfficialPdf(url) {
+  const outcomes = [];
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          accept: "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
+          "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
+          referer: "https://www.cninfo.com.cn/",
+          "sec-fetch-dest": "document",
+          "sec-fetch-mode": "navigate",
+          "sec-fetch-site": "same-site",
+          "upgrade-insecure-requests": "1",
+          "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(90000),
+      });
+      outcomes.push(String(response.status));
+      if (response.ok) return Buffer.from(await response.arrayBuffer());
+      await response.body?.cancel();
+      if (![403, 408, 425, 429].includes(response.status) && response.status < 500) break;
+    } catch (error) {
+      outcomes.push(error instanceof Error ? error.name : "network-error");
+    }
+    if (attempt < 3) await delay(attempt * 1500);
+  }
+  throw new Error(`Official PDF download failed after bounded attempts: ${outcomes.join(", ")}`);
+}
 before(async () => {
   await mkdir(artifacts, { recursive: true });
   for (const fixture of cases) {
     const source = getSourceRecord(fixture.id);
-    const response = await fetch(source.url, { headers: { "user-agent": "Mozilla/5.0 FinanceResearchRegression", accept: "application/pdf" }, signal: AbortSignal.timeout(90000) });
-    assert.ok(response.ok, `Official PDF download failed: ${response.status}`);
-    const buffer = Buffer.from(await response.arrayBuffer());
+    const buffer = await downloadOfficialPdf(source.url);
     assert.ok(buffer.length > 10000);
     assert.ok(buffer.subarray(0, 5).toString().startsWith("%PDF-"));
     pdfs.set(fixture.id, { buffer, sha256: createHash("sha256").update(buffer).digest("hex") });
