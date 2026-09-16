@@ -26,23 +26,36 @@ const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : proces
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
 if (liveMemo) assert.ok(liveApiKey?.trim(), `Live ${liveProvider} acceptance requires its API key supplied by the runner.`);
 const cases = [
-  { id: "S-05", scope: "research", attr: 471.59418971, adj: 546.7588969, nr: -75.16470719, ay: -0.0487, jy: 0.2439, factor: 4 },
-  { id: "S-06", scope: "regression", attr: 1702.03721539, adj: 1438.77516582, nr: 263.26204957, ay: 0.4586, jy: 0.4965, factor: 2 },
+  {
+    id: "S-05", scope: "research", attr: 471.59418971, adj: 546.7588969, nr: -75.16470719, ay: -0.0487, jy: 0.2439, factor: 4,
+    expectedPdfSha256: "88d2ab7c603a94b7e0943ef07e219235ee59b9048e1dfa8e38bd6ebac99b6d03",
+    verifiedMirrorUrl: "https://pdf.dfcfw.com/pdf/H2_AN202604291821773803_1.pdf",
+  },
+  {
+    id: "S-06", scope: "regression", attr: 1702.03721539, adj: 1438.77516582, nr: 263.26204957, ay: 0.4586, jy: 0.4965, factor: 2,
+    expectedPdfSha256: "ff81b9e7c2e8eb04bd450fce3c084b28f5b4be4c1e2638250160b7bb813ebac1",
+    verifiedMirrorUrl: "https://pdf.dfcfw.com/pdf/H2_AN202608300006761478_1.pdf",
+  },
 ].filter((fixture) => !liveMemo || fixture.id === "S-05");
 const pdfs = new Map();
 let browser;
 let server;
 let exited;
 let logs = "";
-async function downloadOfficialPdf(url) {
+async function downloadVerifiedPdf({ officialUrl, mirrorUrl, expectedSha256 }) {
   const outcomes = [];
-  for (let attempt = 1; attempt <= 3; attempt++) {
+  const candidates = [
+    { label: "registered-cninfo", url: officialUrl, referer: "https://www.cninfo.com.cn/" },
+    { label: "byte-identical-eastmoney", url: mirrorUrl, referer: "https://data.eastmoney.com/" },
+  ];
+  for (const candidate of candidates) {
+    let response;
     try {
-      const response = await fetch(url, {
+      response = await fetch(candidate.url, {
         headers: {
           accept: "application/pdf,application/octet-stream;q=0.9,*/*;q=0.8",
           "accept-language": "zh-CN,zh;q=0.9,en;q=0.8",
-          referer: "https://www.cninfo.com.cn/",
+          referer: candidate.referer,
           "sec-fetch-dest": "document",
           "sec-fetch-mode": "navigate",
           "sec-fetch-site": "same-site",
@@ -52,25 +65,36 @@ async function downloadOfficialPdf(url) {
         redirect: "follow",
         signal: AbortSignal.timeout(90000),
       });
-      outcomes.push(String(response.status));
-      if (response.ok) return Buffer.from(await response.arrayBuffer());
-      await response.body?.cancel();
-      if (![403, 408, 425, 429].includes(response.status) && response.status < 500) break;
     } catch (error) {
-      outcomes.push(error instanceof Error ? error.name : "network-error");
+      outcomes.push(`${candidate.label}:${error instanceof Error ? error.name : "network-error"}`);
+      continue;
     }
-    if (attempt < 3) await delay(attempt * 1500);
+    outcomes.push(`${candidate.label}:${response.status}`);
+    if (!response.ok) {
+      await response.body?.cancel();
+      continue;
+    }
+    const buffer = Buffer.from(await response.arrayBuffer());
+    if (buffer.length <= 10000 || !buffer.subarray(0, 5).toString().startsWith("%PDF-")) {
+      throw new Error(`${candidate.label} returned a non-PDF payload`);
+    }
+    const sha256 = createHash("sha256").update(buffer).digest("hex");
+    if (sha256 !== expectedSha256) {
+      throw new Error(`${candidate.label} PDF hash mismatch: expected ${expectedSha256}, received ${sha256}`);
+    }
+    return { buffer, sha256, retrieval: candidate.label, retrievalUrl: candidate.url };
   }
-  throw new Error(`Official PDF download failed after bounded attempts: ${outcomes.join(", ")}`);
+  throw new Error(`Verified PDF download failed after bounded sources: ${outcomes.join(", ")}`);
 }
 before(async () => {
   await mkdir(artifacts, { recursive: true });
   for (const fixture of cases) {
     const source = getSourceRecord(fixture.id);
-    const buffer = await downloadOfficialPdf(source.url);
-    assert.ok(buffer.length > 10000);
-    assert.ok(buffer.subarray(0, 5).toString().startsWith("%PDF-"));
-    pdfs.set(fixture.id, { buffer, sha256: createHash("sha256").update(buffer).digest("hex") });
+    pdfs.set(fixture.id, await downloadVerifiedPdf({
+      officialUrl: source.url,
+      mirrorUrl: fixture.verifiedMirrorUrl,
+      expectedSha256: fixture.expectedPdfSha256,
+    }));
   }
   server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: "", ...(!liveMemo ? { MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", OPENAI_API_KEY: "", DEEPSEEK_API_KEY: "" } : {}) } });
   let spawnError;
@@ -349,7 +373,7 @@ for (const fixture of cases) {
       if (liveMemo) {
         await writeFile(new URL("sample-completion.json", artifacts), JSON.stringify({ technicalFlow: "completed", contentReview: "pending", modelRequests }, null, 2));
       }
-      await writeFile(new URL(`${fixture.id}-browser-audit.json`, artifacts), JSON.stringify({ sourceUrl: getSourceRecord(fixture.id).url, pdfSha256: pdfs.get(fixture.id).sha256, snapshot, afterRollback: restored, errors }, null, 2));
+      await writeFile(new URL(`${fixture.id}-browser-audit.json`, artifacts), JSON.stringify({ sourceUrl: getSourceRecord(fixture.id).url, pdfRetrieval: pdfs.get(fixture.id).retrieval, pdfRetrievalUrl: pdfs.get(fixture.id).retrievalUrl, pdfSha256: pdfs.get(fixture.id).sha256, snapshot, afterRollback: restored, errors }, null, 2));
     } catch (error) {
       await page.screenshot({ path: new URL(`${fixture.id}-failure.png`, artifacts).pathname, fullPage: true }).catch(() => {});
       await writeFile(new URL(`${fixture.id}-failure.txt`, artifacts), `${error.stack}\n${errors.join("\n")}\n${await page.locator("body").innerText()}`);
