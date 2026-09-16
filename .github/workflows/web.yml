@@ -50,6 +50,8 @@ jobs:
         run: node "$PLAYWRIGHT_PACKAGE_PATH/cli.js" install --with-deps chromium
       - name: Real S-05 and isolated S-06 browser upload, review, save and rollback
         run: npm run test:browser
+      - name: Question entry, controlled execution, audit export and human review (model NOT-LIVE)
+        run: npm run test:question-browser
       - name: Preserve browser regression evidence
         if: always()
         uses: actions/upload-artifact@v4

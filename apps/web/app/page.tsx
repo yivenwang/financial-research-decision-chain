@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
@@ -219,6 +220,10 @@ export default function Home() {
           </div>
         </header>
 
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-cyan-300/20 bg-cyan-300/5 p-4">
+          <p className="text-sm text-slate-300">先提出研究问题，核对证据、计算和对现有判断的影响。</p>
+          <Link href="/questions" className="rounded-lg bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">进入研究问题</Link>
+        </div>
         <Tabs defaultValue="update" className="gap-4">
           <TabsList className="h-auto w-full flex-wrap justify-start rounded-xl border border-white/10 bg-slate-950/70 p-1">
             <TabsTrigger
