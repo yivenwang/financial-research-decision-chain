@@ -1,0 +1,42 @@
+name: Blind Test 02 S-07 First Run
+
+on:
+  push:
+    branches:
+      - blind-test-02/s07-first-run
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s07-first-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Confirm frozen parser file is unchanged from main
+        run: |
+          git fetch origin main --depth=1
+          git diff --exit-code origin/main -- lib/parser-v04.ts
+
+      - name: Run S-07 first output with no expected-value assertions
+        run: node --experimental-strip-types --test tests/s07-first-run.mjs
+
+      - name: Upload immutable first-run artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s07-first-run
+          path: artifacts/s07-first-run.json
+          if-no-files-found: error
