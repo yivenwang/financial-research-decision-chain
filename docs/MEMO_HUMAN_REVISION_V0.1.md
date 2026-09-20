@@ -1,6 +1,6 @@
 # 人工修订、审核与版本记录 V0.1
 
-日期：2026-09-13。所有者明确批准实现、必要修复、构建、浏览器验收、GitHub CI、文档与一个 PR 的完整交付。基于 main `6848721` 建立 `dev/memo-human-revision-v01`，整合先前未提交的实现；PR #16 已合并，本功能在 [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 独立交付。功能提交 `5902e83` 的 GitHub CI、生产构建及 Chromium 流程已通过，42 项测试零失败/跳过，截图与导出记录已核对。未合并、未部署。
+日期：2026-09-13；状态更新：2026-09-16。所有者明确批准实现、必要修复、构建、浏览器验收、GitHub CI、文档与一个 PR 的完整交付。基于当时 main `6848721` 建立 `dev/memo-human-revision-v01`，整合先前未提交的实现；PR #16 已合并，本功能由 [PR #22](https://github.com/yivenwang/financial-research-decision-chain/pull/22) 独立交付并于 2026-09-14 合并。功能提交 `5902e83` 的 GitHub CI、生产构建及 Chromium 流程已通过，42 项测试零失败/跳过，截图与导出记录已核对；[合并后主分支回归](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/34814594731)通过。尚未部署。
 
 ## 使用方法
 
