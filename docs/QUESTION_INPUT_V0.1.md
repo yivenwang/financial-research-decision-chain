@@ -67,7 +67,13 @@ npm run test:question-browser
 
 新浏览器测试读取前一步真实 S-05 上传测试生成的 `artifacts-web/S-05-browser-audit.json`，在新上下文重载该真实解析快照，再验证问题链路。模型响应是明确标记的传输替身，包含主问题、另两类问题、缺材料、范围外、损坏快照、审核、重载、导出、历史及桌面/窄屏截图。CI 署名不是用户内容确认或专家签署。
 
-本地：49 项应用测试、TypeScript、生产构建、运行检查及 78 个迁移文件核对通过。Chromium 下载超时，本地浏览器未能运行；GitHub CI 的最终浏览器结果以 PR 验收记录为准，不提前计为通过。
+本地：49 项应用测试、TypeScript、生产构建、运行检查及 78 个迁移文件核对通过。Chromium 下载超时，本地浏览器未能运行，此部分已由 GitHub CI 完成。
+
+功能提交 `f4fe2fdaf0aab8be476c009f3d6164589430736c` 的 [Web CI #35098431974](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/35098431974) 已通过：49 项应用测试、1 项生产运行检查、3 项既有真实 PDF 浏览器流程、1 项问题入口浏览器流程，合计 **54 项，0 失败、0 跳过**，生产构建与 TypeScript 同时通过。Ubuntu 24.04 / Node 22.16.0 / Playwright 1.62.1。
+
+[CI 验收包](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/35098431974/artifacts/10447590864)保留问题桌面/窄屏截图、JSON/Markdown、浏览器运行记录及既有上传回归证据。GitHub 登记大小 5,381,693 字节，SHA-256 `9894f90cbdcde94c5af0c77b40f07bdaada35ddfe9905ad938902770774198b1`，与上传日志一致。本环境读取下载地址返回 403，未人工打开截图或复验 ZIP 字节；截图生成、导出内容及窄屏溢出已在浏览器测试中检查，不据此声称视觉定稿。
+
+与基线相比，首批新增 10 文件、修改 10 文件、无删除，175 个既有文件对象保持一致。根目录引擎、业务定义、原备忘录 Prompt、研究版本存储及依赖锁文件一致。其他四个根引擎工作流仅通过变更范围检查、按规则跳过执行，不计入上述 54 项。
 
 旧浏览器测试文件沿用 PR #24 `8009c9e` 的完整同字节修复：官方地址优先，必要时只接受 SHA-256 与既有官方原件一致的测试镜像。正式 Source 登记不变，不混入 #24 的内容确认文档。
 
