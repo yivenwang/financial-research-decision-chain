@@ -1,0 +1,70 @@
+name: Live question acceptance (manual, at most six requests)
+on:
+  workflow_dispatch:
+    inputs:
+      expected_commit:
+        description: Full 40-character SHA reviewed for this one manual batch
+        required: true
+        type: string
+      authorization:
+        description: Owner-approved batch; one attempt, stop at first failure
+        required: true
+        type: choice
+        options:
+          - question-acceptance-2026-09-20
+permissions:
+  contents: read
+concurrency:
+  group: live-research-question
+  cancel-in-progress: false
+jobs:
+  question-live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/web
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Refuse a different commit or rerun before using credentials
+        env:
+          EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit }}
+        run: node -e 'if(process.env.GITHUB_SHA!==process.env.EXPECTED_COMMIT_SHA || process.env.GITHUB_RUN_ATTEMPT!=="1") process.exit(1)'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Ordinary checks without provider credentials
+        run: npm test
+      - run: npm run build
+      - name: Install isolated browser test tool
+        run: |
+          npm install --prefix "$RUNNER_TEMP/question-browser" --no-package-lock --no-save --no-audit --no-fund playwright@1.62.1
+          echo "PLAYWRIGHT_PACKAGE_PATH=$RUNNER_TEMP/question-browser/node_modules/playwright" >> "$GITHUB_ENV"
+      - name: Prepare Chromium
+        run: node "$PLAYWRIGHT_PACKAGE_PATH/cli.js" install --with-deps chromium
+      - name: Parse and review real registered PDFs with model NOT-LIVE
+        run: npm run test:browser
+      - name: Ordinary question browser acceptance with model NOT-LIVE
+        run: npm run test:question-browser
+      - name: One fixed batch, three intents, at most six provider requests, stop on failure
+        env:
+          MODEL_PROVIDER: deepseek
+          DEEPSEEK_MODEL: deepseek-v4-pro
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit }}
+          QUESTION_ACCEPTANCE_APPROVAL: ${{ inputs.authorization }}
+        run: node --experimental-strip-types scripts/run-question-batch.mjs
+      - name: Preserve successes, partial results and first failures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: question-live-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            apps/web/artifacts-question-live/
+            apps/web/artifacts-web/
+          if-no-files-found: warn

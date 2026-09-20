@@ -1,4 +1,8 @@
-# Financial Research Decision Chain
+# Beacon｜研灯
+
+让变化被看见，让影响被理解，让决策有据可循。
+
+[统一项目状态与跨聊天核查](docs/PROJECT_STATE.md) · [UI 接入基线](docs/UI_HANDOFF_V0.2.md) · [问题入口真实验收](docs/QUESTION_LIVE_ACCEPTANCE_V0.1.md)
 
 [English](README.md) | **简体中文**
 
