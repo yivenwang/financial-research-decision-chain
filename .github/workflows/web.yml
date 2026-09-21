@@ -10,6 +10,7 @@ on:
       - 'lib/**'
       - '.github/workflows/web.yml'
       - '.github/workflows/llm-live.yml'
+      - '.github/workflows/question-live.yml'
       - 'snapshots/web-v5-migration.json'
   workflow_dispatch:
 
@@ -40,6 +41,10 @@ jobs:
         run: node scripts/verify-migration.mjs
       - name: Build standalone Next.js app
         run: npm run build
+      - name: Record clean commit and local build provenance (no model request)
+        run: npm run release:preflight
+      - name: Inventory exact dependency versions, sources and declared licenses
+        run: node scripts/dependency-inventory.mjs
       - name: Check production HTML, CSS and PDF worker
         run: npm run test:runtime
       - name: Install isolated browser test tool
@@ -57,5 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: web-research-audit-${{ github.run_id }}
-          path: apps/web/artifacts-web/
+          path: |
+            apps/web/artifacts-web/
+            apps/web/artifacts-release/
           if-no-files-found: warn

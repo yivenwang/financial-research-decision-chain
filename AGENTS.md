@@ -2,6 +2,14 @@
 
 Recorded from the project owner's instructions on 2026-09-07.
 
+## Current cross-chat baseline (2026-09-20)
+
+Read `docs/PROJECT_STATE.md` and check the actual GitHub HEAD / PR status before continuing. The owner confirmed the brand **Beacon｜研灯**, Question First, Workspace, Diff → Impact → Review → Commit, a light theme, five desktop task screens and a Mobile Companion. Final visual designs are still pending; implement their approved design when supplied, preserving the existing financial and review semantics. Older dated approval entries below are historical scope, not a reason to ask again for actions authorized later.
+
+The owner approved all six proposed non-UI workstreams: one fixed manual question-acceptance batch covering three intents (planning and execution, at most six provider requests total, stop the entire batch on the first failure, no automatic retries); reviewed PR integration and release preparation; a fixed evaluation protocol; one limited additional-company public-report validation; competition materials; and professional-review preparation. This includes routine implementation, fixes, ordinary tests and documentation together. PR #24 and #25 have merged following green ordinary CI. Keep new question live content acceptance pending until actual output and review exist. Do not create paid deployments, broaden financial logic or fabricate expert approval. Real execution uses the existing GitHub Secret only in the explicit manual workflow. Do not expose keys or dispatch another batch to evade the first-failure stop.
+
+The cross-company exercise is isolated validation: preserve the first output and classify acquisition/execution/format/reconciliation failures separately. Do not register another company in the product or transfer Anker's investment assumptions/thresholds just to claim generalization. A separate tracking/Shadow Portfolio idea is still being scoped; it is not authority for real trades or unattended model spend.
+
 ## Product mainline
 
 New materials update a traceable research decision chain: source evidence, affected claims and assumptions, deterministic calculations, a cited research memo, human judgement, and version history. Anker is the first validation case. The target is a reproducible competition entry that can later become a useful research product for secondary-market investors.
@@ -45,4 +53,4 @@ On 2026-09-16, after receiving a concise account of the three exact run-10 propo
 
 ## UI and team
 
-The owner leads core work; two supporting teammates collect UI references and prepare PPT, video and documents. Overall visual direction and the candidates 研序 / 证衡 / 研迹 await confirmation. Correct functional labels within approved work; agree on visual and information-design changes before presentation recording.
+The owner leads core work; supporting teammates prepare UI references, PPT, video and documents. Beacon｜研灯 and the workbench direction are confirmed. Follow `docs/UI_HANDOFF_V0.2.md`; final visual files and task-state layouts remain the UI implementation input. Genuine financial-semantic changes still need the before/after explanation and owner confirmation.

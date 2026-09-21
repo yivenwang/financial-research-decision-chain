@@ -1,4 +1,6 @@
-# Financial Research Decision Chain
+# Beacon｜研灯 — Financial Research Decision Chain
+
+[Current project state and cross-chat baseline](docs/PROJECT_STATE.md) · [UI handoff](docs/UI_HANDOFF_V0.2.md) · [Manual question acceptance](docs/QUESTION_LIVE_ACCEPTANCE_V0.1.md)
 
 Question entry: [`/questions`, implementation and acceptance boundaries](docs/QUESTION_INPUT_V0.1.md) supports confirmed research contracts, three bounded intents, validated evidence, structured answers and separately recorded draft review. New question prompts still require live-model content acceptance; ordinary CI uses explicitly labelled transport stubs.
 
