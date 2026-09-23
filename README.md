@@ -173,6 +173,8 @@ This repository is a research and engineering prototype, not investment, account
 
 Licensed under the [Apache License 2.0](LICENSE).
 
+The public community core remains Apache-2.0. Future commercial modules may be developed separately. See the [open-source and commercialization boundary](docs/OPEN_SOURCE_COMMERCIAL_BOUNDARY.md), [NOTICE](NOTICE), and [project name guidance](TRADEMARKS.md). These documents do not restrict commercial reuse permitted by LICENSE.
+
 The license permits reuse and modification under its terms; it does **not** transfer authorship of this repository or allow removal of required attribution notices.
 
 ## Competition context

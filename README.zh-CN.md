@@ -187,6 +187,8 @@ S-07 最初作为 Blind Test 02 使用，并在首次运行中暴露 Parser 失�
 
 项目采用 [Apache License 2.0](LICENSE)。
 
+公共社区核心继续使用 Apache-2.0，未来商业模块可独立开发。见 [开源与商业化边界](docs/OPEN_SOURCE_COMMERCIAL_BOUNDARY.md)、[NOTICE](NOTICE) 及 [名称说明](TRADEMARKS.md)；这些文档不限制 LICENSE 允许的商业复用。
+
 该许可证允许在其条款下复用和修改代码，但并不转移本仓库的原创归属，也不允许删除许可证要求保留的归属与版权声明。
 
 ## 比赛背景
