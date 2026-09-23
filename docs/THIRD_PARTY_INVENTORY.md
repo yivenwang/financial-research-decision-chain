@@ -12,6 +12,7 @@
 | @types/node | 22.19.19 | MIT | [npm 包](https://www.npmjs.com/package/@types/node) | 开发/构建声明；不表示部署启用 |
 | @types/react | 19.2.14 | MIT | [npm 包](https://www.npmjs.com/package/@types/react) | 开发/构建声明；不表示部署启用 |
 | @types/react-dom | 19.2.3 | MIT | [npm 包](https://www.npmjs.com/package/@types/react-dom) | 开发/构建声明；不表示部署启用 |
+| @typesafe-ai/sdk | 0.6.0 | MIT | [npm 包](https://www.npmjs.com/package/@typesafe-ai/sdk) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | @vitejs/plugin-react | 6.0.2 | MIT | [npm 包](https://www.npmjs.com/package/@vitejs/plugin-react) | 开发/构建声明；不表示部署启用 |
 | @vitejs/plugin-rsc | 0.5.26 | MIT | [npm 包](https://www.npmjs.com/package/@vitejs/plugin-rsc) | 开发/构建声明；不表示部署启用 |
 | class-variance-authority | 0.7.1 | Apache-2.0 | [npm 包](https://www.npmjs.com/package/class-variance-authority) | 应用/继承 UI 依赖；实际调用以源码为准 |
@@ -50,6 +51,8 @@
 核心实际用途：Next.js 为应用与服务端路由，React 为界面，pdfjs-dist 为 PDF 文本/坐标解析，TypeScript 为类型与构建。Playwright 1.62.1 由 CI 单独安装用于浏览器验收，不是生产模型。工具版本与用法见工作流。
 
 模型：DeepSeek V4 Pro，商业托管 Responses API；任务规划、证据约束解释及 Memo，不再分发模型权重。模型服务条款独立于本仓库 Apache-2.0。OpenAI 路径为已有可配置提供方，本批固定使用 DeepSeek。
+
+可选实验：@typesafe-ai/sdk 0.6.0（MIT）用于独立 Jev 审查，未接入正式路由；TypeSafe 托管服务条款独立适用。Promptfoo 0.123.1 通过固定版本 npx 运行合成离线判定回放，不在应用锁文件内；其依赖不包含在上述应用清单。正式分发评测工具前须另行保存其完整依赖与许可证。
 
 数据：安克创新 S-05 / S-06 法定披露报告，原始链接和期间见 source-records.ts。公开披露不等于可把原件或第三方内容统一重许可为本项目 Apache-2.0。
 

@@ -1,0 +1,30 @@
+description: "Beacon reviewer policy: fixed synthetic labels, no provider calls"
+prompts:
+  - "Review policy replay"
+providers:
+  - file://./reviewer-offline.mjs
+tests:
+  - description: "Strong and complete evidence stays a candidate pending human review"
+    vars:
+      verdict: '{"decision":"supported","confidence":0.96,"evidenceSupports":0.95,"counterAddressed":0.93,"model":"synthetic"}'
+    assert:
+      - type: equals
+        value: PASS_CANDIDATE
+  - description: "Material contradiction cannot pass"
+    vars:
+      verdict: '{"decision":"contradicted","confidence":0.91,"evidenceSupports":0.8,"counterAddressed":0.85,"model":"synthetic"}'
+    assert:
+      - type: equals
+        value: BLOCK
+  - description: "Missing counter-evidence remains blocked even if the overall choice says supported"
+    vars:
+      verdict: '{"decision":"supported","confidence":0.96,"evidenceSupports":0.95,"counterAddressed":0.1,"model":"synthetic"}'
+    assert:
+      - type: equals
+        value: BLOCK
+  - description: "Ambiguous semantic evidence escalates"
+    vars:
+      verdict: '{"decision":"uncertain","confidence":0.56,"evidenceSupports":0.58,"counterAddressed":0.63,"model":"synthetic"}'
+    assert:
+      - type: equals
+        value: REVIEW

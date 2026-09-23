@@ -55,3 +55,5 @@ Passing one category does not imply the others.
 ## License
 
 By contributing, you agree that your contributions will be licensed under the Apache License 2.0 used by this repository.
+
+Review the [public/private development boundary](docs/OPEN_SOURCE_COMMERCIAL_BOUNDARY.md) before submitting customer integrations, datasets or evaluation material. This repository has no new CLA requirement in this change; contribution under Apache-2.0 does not assign ownership to the maintainer. Any future relicensing requires the necessary rights and permissions.
