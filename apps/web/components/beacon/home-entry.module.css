@@ -30,11 +30,7 @@
 .brandMark {
   width: 36px;
   height: 36px;
-  display: grid;
-  place-items: center;
-  border: 1px solid #111827;
-  font: 700 14px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
-  letter-spacing: .04em;
+  flex: none;
 }
 
 .brandWord {
@@ -72,6 +68,15 @@
   color: #111827;
   background: rgba(31,111,235,.055);
   transform: translateY(-1px);
+}
+
+.nav a:focus-visible,
+.brand:focus-visible,
+.heroLinks a:focus-visible,
+.traceTitle a:focus-visible,
+.questionActions button:focus-visible {
+  outline: 2px solid #1f6feb;
+  outline-offset: 3px;
 }
 
 .headerNote {
@@ -347,6 +352,15 @@
 .previewStatus svg { width: 12px; }
 
 .previewBody { padding: 28px; }
+
+.previewFootnote {
+  margin: 0;
+  padding: 12px 28px 15px;
+  border-top: 1px solid #e7ebf0;
+  color: #657487;
+  font-size: 10px;
+  line-height: 1.5;
+}
 
 .previewQuestion small,
 .sectionLabel {
@@ -690,8 +704,9 @@
   .traceSection,
   .footer { width: min(100% - 28px, 1540px); }
 
-  .header { min-height: 66px; }
-  .nav { display: none; }
+  .header { min-height: 66px; grid-template-columns: 1fr; gap: 0; padding: 10px 0 6px; }
+  .nav { width: 100%; overflow-x: auto; justify-content: space-between; gap: 0; }
+  .nav a { padding: 10px 8px; white-space: nowrap; font-size: 11px; }
   .brandWord small { display: none; }
   .hero { min-height: auto; padding: 58px 0 62px; gap: 44px; }
   .hero h1 { font-size: clamp(49px, 15vw, 68px); }

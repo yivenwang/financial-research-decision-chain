@@ -42,6 +42,9 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
     for (const route of ["/questions", "/changes", "/evidence", "/versions"]) {
       const routeResponse = await fetch(`${origin}${route}`);
       assert.equal(routeResponse.status, 200, route);
+      const routeHtml = await routeResponse.text();
+      assert.match(routeHtml, /产品导航/, `${route} must expose the task navigation on narrow screens too`);
+      assert.match(routeHtml, /aria-current="page"/, `${route} must identify the current task`);
     }
 
     const cssUrls = [...html.matchAll(/href="([^"\s]+\.css(?:\?[^"\s]*)?)"/g)].map((match) => match[1]);

@@ -1,6 +1,9 @@
 import { BeaconShell } from "@/components/beacon/shell";
 import styles from "@/components/beacon/legacy-light.module.css";
 import { QuestionWorkflow } from "@/components/research/question-workflow";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "研究提问 · Beacon｜研灯" };
 
 export default function QuestionsPage() {
   return (

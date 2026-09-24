@@ -1,6 +1,9 @@
 import { BeaconShell } from "@/components/beacon/shell";
 import styles from "@/components/beacon/legacy-light.module.css";
 import { VersionHistory } from "@/components/research/version-history";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "研究版本 · Beacon｜研灯" };
 
 export default function VersionsPage() {
   return (

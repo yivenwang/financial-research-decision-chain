@@ -9,13 +9,13 @@ import {
   CircleDot,
   FileSearch,
   GitCompareArrows,
-  History,
   Layers3,
   Search,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import styles from "./home-entry.module.css";
+import { BrandMark } from "./brand-mark";
 
 const defaultQuestion = "为什么安克表观利润下降，而扣非利润反而增长？";
 
@@ -64,7 +64,7 @@ export function HomeEntry() {
     <main className={styles.page}>
       <header className={styles.header}>
         <Link href="/" className={styles.brand} aria-label="Beacon 研灯首页">
-          <span className={styles.brandMark}>B</span>
+          <BrandMark className={styles.brandMark} />
           <span className={styles.brandWord}>
             <strong>BEACON</strong>
             <small>研灯 · RESEARCH INTELLIGENCE</small>
@@ -139,13 +139,13 @@ export function HomeEntry() {
         <aside className={styles.preview} aria-label="Current research preview">
           <div className={styles.previewBar}>
             <span className={styles.previewDots}><i /><i /><i /></span>
-            <span>Current research</span>
+            <span>S-05 · 案例预览</span>
             <span className={styles.previewStatus}><CircleDot /> REVIEW REQUIRED</span>
           </div>
 
           <div className={styles.previewBody}>
             <div className={styles.previewQuestion}>
-              <small>Research question</small>
+              <small>已验证范围 · 安克创新 2026Q1</small>
               <strong>Why did reported profit decline while adjusted profit increased?</strong>
             </div>
 
@@ -177,6 +177,7 @@ export function HomeEntry() {
               </div>
             </div>
           </div>
+          <p className={styles.previewFootnote}>案例数据用于展示已验证研究链；实时研究状态以工作台记录为准。</p>
         </aside>
       </section>
 

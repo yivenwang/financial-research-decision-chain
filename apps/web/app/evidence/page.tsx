@@ -1,5 +1,8 @@
 import { BeaconShell } from "@/components/beacon/shell";
 import { AlertTriangle, CheckCircle2, FileText } from "lucide-react";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = { title: "证据核验 · Beacon｜研灯" };
 
 const items = [
   { id: "E-105", label: "归母净利润", value: "4.72 亿元", change: "同比 -4.87%", location: "S-05 · P2", kind: "反证", note: "表面利润下降，不能被删除；必须与调整项共同解释。" },
