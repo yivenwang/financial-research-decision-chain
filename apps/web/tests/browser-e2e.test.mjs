@@ -273,6 +273,14 @@ for (const fixture of cases) {
       assert.equal(snapshot.chain.evidence.find((item) => item.metricKey === "attributable_np").direction, fixture.ay < 0 ? "反证" : "中性");
       assert.deepEqual(snapshot.chain.graphDiff.unchangedNodeIds, ["C-01", "C-02", "C-03", "C-05", "C-06"]);
       assert.equal((await readLedger(page, fixture.scope === "research" ? "regression" : "research")).length, 0);
+      if (fixture.scope === "research") {
+        await page.goto(`${origin}/evidence`, { waitUntil: "load" });
+        const currentEvidence = page.getByTestId("current-evidence");
+        await currentEvidence.getByText(snapshot.versionId, { exact: true }).waitFor();
+        assert.ok((await currentEvidence.innerText()).includes(snapshot.evidence[0].label));
+        assert.ok((await currentEvidence.innerText()).includes("EG-01 / EG-02"));
+        await currentEvidence.screenshot({ path: new URL("S-05-current-evidence.png", artifacts).pathname });
+      }
       await page.reload({ waitUntil: "load" });
       await page.goto(`${origin}/versions`, { waitUntil: "load" });
       if (fixture.scope === "regression") {

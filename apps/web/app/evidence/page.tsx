@@ -3,8 +3,9 @@ import { AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getSourceRecord } from "@/lib/source-records";
+import { CurrentEvidence } from "@/components/beacon/current-evidence";
 
-export const metadata: Metadata = { title: "证据核验 · Beacon｜研灯" };
+export const metadata: Metadata = { title: "证据核验 · Beacon｜研灯", icons: { icon: "/beacon-mark.svg" } };
 
 const items = [
   { id: "E-105", label: "归母净利润", value: "4.72 亿元", change: "同比 -4.87%", location: "S-05 · P2", kind: "反证", note: "表面利润下降，不能被删除；必须与调整项共同解释。" },
@@ -20,6 +21,7 @@ export default function EvidencePage() {
       title="每个正式判断都必须能回到来源"
       description="下方是 S-05 已验证案例的展示卡片。实际研究状态请在变更审核和版本记录中核对；引用编号不能替代原文检查。"
     >
+      <CurrentEvidence />
       <div className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
         <section className="rounded-xl border border-[#d1d5db] bg-white p-5 shadow-sm">
           <div className="flex items-center gap-2"><FileText className="size-5 text-[#1f6feb]" /><h2 className="font-semibold">Source · S-05</h2></div>

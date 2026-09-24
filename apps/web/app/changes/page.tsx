@@ -3,7 +3,7 @@ import styles from "@/components/beacon/legacy-light.module.css";
 import { UpdateWorkflow } from "@/components/research/update-workflow";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "变更审核 · Beacon｜研灯" };
+export const metadata: Metadata = { title: "变更审核 · Beacon｜研灯", icons: { icon: "/beacon-mark.svg" } };
 
 export default function ChangesPage() {
   return (
