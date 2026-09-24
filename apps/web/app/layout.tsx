@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "安克创新研究决策链 MVP",
-  description: "将来源、证据、论点、假设、确定性计算与研究决策串成可追溯更新闭环。",
+  title: "Beacon｜研灯 — Evidence before conclusion",
+  description: "让变化被看见，让影响被理解，让决策有据可循。Beacon 将研究问题转化为可核验、可审核、可版本化的研究状态。",
   other: {
     "codex-preview": "development",
   },
