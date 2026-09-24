@@ -1,4 +1,5 @@
 import { BeaconShell } from "@/components/beacon/shell";
+import styles from "@/components/beacon/legacy-light.module.css";
 import { UpdateWorkflow } from "@/components/research/update-workflow";
 
 export default function ChangesPage() {
@@ -13,7 +14,7 @@ export default function ChangesPage() {
         <div className="rounded-lg border border-[#d1d5db] bg-white p-4"><p className="text-xs text-[#6b7280]">Counter signal</p><p className="mt-1 text-sm font-semibold">扣非归母净利润同比 +24.39%</p></div>
         <div className="rounded-lg border border-[#d1d5db] bg-white p-4"><p className="text-xs text-[#6b7280]">Human gate</p><p className="mt-1 text-sm font-semibold text-[#a66500]">EG-01 / EG-02 pending</p></div>
       </div>
-      <div className="legacy-research-surface rounded-xl border border-[#d1d5db] bg-white p-3 shadow-sm sm:p-5">
+      <div className={`${styles.surface} rounded-xl border border-[#d1d5db] bg-white p-3 shadow-sm sm:p-5`}>
         <UpdateWorkflow />
       </div>
     </BeaconShell>
