@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, CircleDot, FileSearch, GitCompareArrows, History, House, Smartphone } from "lucide-react";
+import { CircleDot, FileSearch, GitCompareArrows, History, House } from "lucide-react";
 
 const nav = [
   { href: "/", label: "Workspace", icon: House },
@@ -39,11 +39,6 @@ export function BeaconShell({
               </Link>
             ))}
           </nav>
-          <Link href="/mobile" className="flex items-center gap-2 rounded-md border border-[#d1d5db] bg-white px-3 py-2 text-sm font-medium text-[#374151] hover:border-[#1f6feb] hover:text-[#1f6feb]">
-            <Smartphone className="size-4" />
-            <span className="hidden sm:inline">Mobile Companion</span>
-            <ArrowUpRight className="size-3.5" />
-          </Link>
         </div>
       </header>
 
