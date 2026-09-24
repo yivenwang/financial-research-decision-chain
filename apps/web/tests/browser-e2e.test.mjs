@@ -275,6 +275,10 @@ for (const fixture of cases) {
       assert.equal((await readLedger(page, fixture.scope === "research" ? "regression" : "research")).length, 0);
       if (fixture.scope === "research") {
         await page.goto(`${origin}/evidence`, { waitUntil: "load" });
+        const contextBar = page.getByTestId("research-context");
+        await contextBar.getByText(`当前版本 ${snapshot.versionId}`, { exact: true }).waitFor();
+        assert.ok((await contextBar.innerText()).includes(`来源 ${fixture.id} · 2026Q1`));
+        assert.ok((await contextBar.innerText()).includes("仅此浏览器"));
         const currentEvidence = page.getByTestId("current-evidence");
         await currentEvidence.getByText(snapshot.versionId, { exact: true }).waitFor();
         assert.ok((await currentEvidence.innerText()).includes(snapshot.evidence[0].label));

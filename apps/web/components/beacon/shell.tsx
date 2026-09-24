@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BrandMark } from "./brand-mark";
 import { BeaconNavigation } from "./navigation";
+import { ResearchContext } from "./research-context";
 
 export function BeaconShell({
   children,
@@ -34,6 +35,7 @@ export function BeaconShell({
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-[#111827] sm:text-3xl">{title}</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-[#6b7280]">{description}</p>
         </section>
+        <ResearchContext />
         {children}
       </div>
     </main>
