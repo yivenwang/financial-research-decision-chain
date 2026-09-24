@@ -1,4 +1,5 @@
 import { BeaconShell } from "@/components/beacon/shell";
+import styles from "@/components/beacon/legacy-light.module.css";
 import { QuestionWorkflow } from "@/components/research/question-workflow";
 
 export default function QuestionsPage() {
@@ -8,7 +9,7 @@ export default function QuestionsPage() {
       title="你想弄清什么？"
       description="先提出研究问题，再由 Research Contract 约束公司、期间、材料、输出与禁止动作。当前首批能力仍限定安克创新 / S-05 / 2026Q1 / C-04。"
     >
-      <div className="legacy-research-surface rounded-xl border border-[#d1d5db] bg-white p-3 shadow-sm sm:p-5">
+      <div className={`${styles.surface} rounded-xl border border-[#d1d5db] bg-white p-3 shadow-sm sm:p-5`}>
         <QuestionWorkflow />
       </div>
     </BeaconShell>
