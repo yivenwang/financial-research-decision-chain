@@ -90,7 +90,7 @@ export function CurrentEvidence() {
                     </span>
                   </div>
                   <p className="mt-4 font-mono text-base font-semibold tabular-nums">{number(item.valueMn)} <span className="text-xs font-normal text-[#6b7280]">CNY mn</span></p>
-                  <p className="mt-2 text-xs text-[#6b7280]">方向：{item.direction} · 同比：{item.changePct === null ? "—" : `${(item.changePct * 100).toFixed(2)}%`}</p>
+                  <p className="mt-2 text-xs text-[#6b7280]">方向：{item.direction} · 同比：{item.changePct === null ? "—" : `${item.changePct.toFixed(2)}%`}</p>
                   <p className="mt-3 border-t border-[#e5e7eb] pt-3 text-xs leading-5 text-[#4b5563]">{item.snippet}</p>
                 </article>
               ))}
