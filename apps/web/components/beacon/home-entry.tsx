@@ -41,7 +41,7 @@ const capabilities = [
 ];
 
 const trace = [
-  ["Source", "12 registered"],
+  ["Source", "S-05 case"],
   ["Evidence", "reviewed facts"],
   ["Calculation", "deterministic"],
   ["Claim", "impact-aware"],

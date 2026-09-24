@@ -1,6 +1,8 @@
 import { BeaconShell } from "@/components/beacon/shell";
 import { AlertTriangle, CheckCircle2, FileText } from "lucide-react";
 import type { Metadata } from "next";
+import Link from "next/link";
+import { getSourceRecord } from "@/lib/source-records";
 
 export const metadata: Metadata = { title: "证据核验 · Beacon｜研灯" };
 
@@ -11,11 +13,12 @@ const items = [
 ];
 
 export default function EvidencePage() {
+  const source = getSourceRecord("S-05");
   return (
     <BeaconShell
       eyebrow="Evidence inspector"
       title="每个正式判断都必须能回到来源"
-      description="这里展示当前 S-05 样本已在既有产品中使用的 Evidence。它是核验入口，不用 citation 编号替代证据检查。"
+      description="下方是 S-05 已验证案例的展示卡片。实际研究状态请在变更审核和版本记录中核对；引用编号不能替代原文检查。"
     >
       <div className="grid gap-5 xl:grid-cols-[.9fr_1.1fr]">
         <section className="rounded-xl border border-[#d1d5db] bg-white p-5 shadow-sm">
@@ -28,7 +31,11 @@ export default function EvidencePage() {
             <dt className="text-[#6b7280]">Professional</dt><dd className="text-[#a66500]">EG-01 / EG-02 pending</dd>
           </dl>
           <div className="mt-5 rounded-lg bg-[#fff8e8] p-4 text-sm leading-6 text-[#7a4d00]">
-            页面位置和数值来自既有 S-05 验证链；本页不新增财务判断，也不把当前样本外推成跨公司泛化。
+            页面位置和数值来自既有 S-05 验证链；这些卡片不随浏览器中的当前研究版本自动更新，也不构成新的财务判断。
+          </div>
+          <div className="mt-5 flex flex-wrap gap-3 text-sm font-medium">
+            {source && <a href={source.url} target="_blank" rel="noopener noreferrer" className="rounded-md bg-[#1f6feb] px-4 py-2 text-white hover:bg-[#195fc7]">查看登记的原始 PDF ↗</a>}
+            <Link href="/changes" className="rounded-md border border-[#d1d5db] px-4 py-2 text-[#175eb8] hover:bg-[#f3f7fd]">核对当前研究记录 →</Link>
           </div>
         </section>
 
