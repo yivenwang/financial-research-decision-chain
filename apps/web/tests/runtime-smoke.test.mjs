@@ -33,7 +33,8 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
     }
     assert.ok(response?.ok, logs);
     const html = await response.text();
-    assert.match(html, /BEACON/);\n    assert.ok(html.includes("研灯"), "研灯");
+    assert.match(html, /BEACON/);
+    assert.ok(html.includes("研灯"), "研灯");
     for (const label of ["From change", "to conviction.", "Workspace", "Ask", "Evidence", "Versions", "你想弄清什么？"]) {
       assert.ok(html.includes(label), label);
     }
