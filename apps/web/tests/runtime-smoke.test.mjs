@@ -7,7 +7,7 @@ import test from "node:test";
 
 const require = createRequire(import.meta.url);
 
-test("production app serves the research screen, CSS and matching PDF worker", { timeout: 60000 }, async () => {
+test("production app serves the Beacon workspace, CSS and matching PDF worker", { timeout: 60000 }, async () => {
   const port = 4321;
   const origin = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", String(port), "-H", "127.0.0.1"], {
@@ -33,8 +33,16 @@ test("production app serves the research screen, CSS and matching PDF worker", {
     }
     assert.ok(response?.ok, logs);
     const html = await response.text();
-    assert.match(html, /安克创新研究决策链/);
-    for (const label of ["盲测报告", "材料更新", "版本历史"]) assert.ok(html.includes(label), label);
+    assert.match(html, /Beacon｜研灯/);
+    for (const label of ["Research state, not another AI answer", "Workspace", "Ask", "Changes", "Evidence", "Versions"]) {
+      assert.ok(html.includes(label), label);
+    }
+
+    for (const route of ["/questions", "/changes", "/evidence", "/versions", "/mobile"]) {
+      const routeResponse = await fetch(`${origin}${route}`);
+      assert.equal(routeResponse.status, 200, route);
+    }
+
     const cssUrls = [...html.matchAll(/href="([^"\s]+\.css(?:\?[^"\s]*)?)"/g)].map((match) => match[1]);
     assert.ok(cssUrls.length > 0, "Page must load compiled styles");
     for (const url of cssUrls) {
