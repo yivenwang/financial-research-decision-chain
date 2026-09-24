@@ -46,7 +46,14 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
       const response = request.method() === "GET" ? await handler.GET() : await handler.POST(new Request(request.url(), { method: "POST", headers: request.headers(), body: request.postData() }));
       await route.fulfill({ status: response.status, contentType: "application/json", body: await response.text() });
     });
-    await page.goto(origin); await page.getByRole("link", { name: "进入研究问题" }).click();
+    await page.goto(origin);
+    await mkdir(artifacts, { recursive: true });
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.screenshot({ path: new URL("beacon-home-1440-full.png", artifacts).pathname, fullPage: true });
+    await page.setViewportSize({ width: 1366, height: 768 });
+    await page.screenshot({ path: new URL("beacon-home-1366x768.png", artifacts).pathname, fullPage: false });
+    await page.getByRole("button", { name: "Start research", exact: true }).click();
+    await page.waitForURL("**/questions?q=*");
     await page.getByLabel("问题研究访问码").fill(questionTestConfig.accessToken);
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();

@@ -131,7 +131,7 @@ after(async () => {
 });
 
 async function upload(page, id, selected = id) {
-  await page.goto(origin, { waitUntil: "load" });
+  await page.goto(`${origin}/changes`, { waitUntil: "load" });
   if (selected === "S-06") {
     await page.getByRole("combobox", { name: "选择已登记材料" }).click();
     await page.getByRole("option", { name: "S-06 · 2026H1 · 回归演示", exact: true }).click();
@@ -174,7 +174,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   await revisions.getByRole("button", { name: "保存人工修订", exact: true }).click();
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
   await page.reload({ waitUntil: "load" });
-  await page.getByRole("tab", { name: "版本历史" }).click();
+  await page.goto(`${origin}/versions`, { waitUntil: "load" });
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
   assert.ok((await revisions.innerText()).includes(firstText));
   await revisions.getByLabel("修订稿审核人（自行填写）", { exact: true }).fill("CI synthetic revision reviewer");
@@ -216,7 +216,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   assert.equal(await revisions.getByRole("button", { name: "接受此修订稿", exact: true }).count(), 0);
   await revisions.getByLabel("选择人工修订版本", { exact: true }).selectOption(stored.revisions[1].id);
   await page.reload({ waitUntil: "load" });
-  await page.getByRole("tab", { name: "版本历史" }).click();
+  await page.goto(`${origin}/versions`, { waitUntil: "load" });
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿已退回" }).waitFor();
   await revisions.screenshot({ path: new URL("S-05-human-revision-history-NOT-LIVE.png", artifacts).pathname });
   stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(scope));
@@ -273,8 +273,22 @@ for (const fixture of cases) {
       assert.equal(snapshot.chain.evidence.find((item) => item.metricKey === "attributable_np").direction, fixture.ay < 0 ? "反证" : "中性");
       assert.deepEqual(snapshot.chain.graphDiff.unchangedNodeIds, ["C-01", "C-02", "C-03", "C-05", "C-06"]);
       assert.equal((await readLedger(page, fixture.scope === "research" ? "regression" : "research")).length, 0);
+      if (fixture.scope === "research") {
+        await page.goto(`${origin}/evidence`, { waitUntil: "load" });
+        const contextBar = page.getByTestId("research-context");
+        await contextBar.getByText(`当前版本 ${snapshot.versionId}`, { exact: true }).waitFor();
+        assert.ok((await contextBar.innerText()).includes(`来源 ${fixture.id} · 2026Q1`));
+        assert.ok((await contextBar.innerText()).includes("仅此浏览器"));
+        const currentEvidence = page.getByTestId("current-evidence");
+        await currentEvidence.getByText(snapshot.versionId, { exact: true }).waitFor();
+        assert.ok((await currentEvidence.innerText()).includes(snapshot.evidence[0].label));
+        assert.ok((await currentEvidence.innerText()).includes("EG-01 / EG-02"));
+        assert.ok((await currentEvidence.innerText()).includes("同比：-4.87%"));
+        assert.ok((await currentEvidence.innerText()).includes("同比：+24.39%") || (await currentEvidence.innerText()).includes("同比：24.39%"));
+        await currentEvidence.screenshot({ path: new URL("S-05-current-evidence.png", artifacts).pathname });
+      }
       await page.reload({ waitUntil: "load" });
-      await page.getByRole("tab", { name: "版本历史" }).click();
+      await page.goto(`${origin}/versions`, { waitUntil: "load" });
       if (fixture.scope === "regression") {
         await page.getByRole("combobox", { name: "选择版本库" }).click();
         await page.getByRole("option", { name: "回归演示版本库", exact: true }).click();
@@ -287,7 +301,7 @@ for (const fixture of cases) {
         if (fixture.id === "S-05") {
           await stubMemoTransport(page);
           await page.reload({ waitUntil: "load" });
-          await page.getByRole("tab", { name: "版本历史" }).click();
+          await page.goto(`${origin}/versions`, { waitUntil: "load" });
         }
       }
       if (liveMemo || fixture.id === "S-05") {
@@ -343,7 +357,7 @@ for (const fixture of cases) {
         await auditDownload.saveAs(new URL(`${prefix}-audit.json`, artifacts).pathname);
         assert.deepEqual((await readLedger(page, fixture.scope))[0], snapshot);
         await page.reload({ waitUntil: "load" });
-        await page.getByRole("tab", { name: "版本历史" }).click();
+        await page.goto(`${origin}/versions`, { waitUntil: "load" });
         await page.getByTestId("memo-status").filter({ hasText: "人工已接受" }).waitFor();
         await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
         if (!liveMemo) await exerciseMemoRevisions(page, modelRun, fixture.scope);

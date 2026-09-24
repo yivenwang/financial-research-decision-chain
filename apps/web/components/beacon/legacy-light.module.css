@@ -1,0 +1,55 @@
+.surface {
+  color: #111827;
+  --background: #ffffff;
+  --foreground: #111827;
+  --card: #ffffff;
+  --card-foreground: #111827;
+  --popover: #ffffff;
+  --popover-foreground: #111827;
+  --primary: #1f6feb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
+  --secondary-foreground: #374151;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #eef4ff;
+  --accent-foreground: #1f6feb;
+  --destructive: #c23b3b;
+  --border: #d1d5db;
+  --input: #d1d5db;
+  --ring: #1f6feb;
+}
+
+.surface :global(.research-panel) {
+  border-color: #d1d5db !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(17,24,39,.05) !important;
+}
+
+.surface :global([class*="text-slate-100"]),
+.surface :global([class*="text-white"]) { color:#111827 !important; }
+
+.surface :global([class*="text-slate-200"]),
+.surface :global([class*="text-slate-300"]) { color:#374151 !important; }
+
+.surface :global([class*="text-slate-400"]) { color:#6b7280 !important; }
+.surface :global([class*="text-cyan-"]) { color:#1f6feb !important; }
+
+.surface :global([class*="bg-slate-950"]),
+.surface :global([class*="bg-slate-900"]),
+.surface :global([class*="bg-white/"]) { background:#ffffff !important; }
+
+.surface :global([class*="border-white/"]),
+.surface :global([class*="border-slate-"]) { border-color:#d1d5db !important; }
+
+.surface :global([class*="bg-cyan-"]) { background:#eef4ff !important; }
+.surface :global([class*="border-cyan-"]) { border-color:#9cc2f3 !important; }
+
+.surface :global([class*="bg-emerald-"]) { background:#eaf7f1 !important; }
+.surface :global([class*="text-emerald-"]) { color:#138a5b !important; }
+
+.surface :global([class*="bg-amber-"]) { background:#fff8e8 !important; }
+.surface :global([class*="text-amber-"]) { color:#a66500 !important; }
+
+.surface :global([class*="bg-rose-"]) { background:#fff1f1 !important; }
+.surface :global([class*="text-rose-"]) { color:#c23b3b !important; }
