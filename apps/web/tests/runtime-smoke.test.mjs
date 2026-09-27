@@ -39,7 +39,7 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
       assert.ok(html.includes(label), label);
     }
 
-    for (const route of ["/questions", "/changes", "/evidence", "/versions"]) {
+    for (const route of ["/workspace", "/questions", "/changes", "/evidence", "/versions"]) {
       const routeResponse = await fetch(`${origin}${route}`);
       assert.equal(routeResponse.status, 200, route);
       const routeHtml = await routeResponse.text();

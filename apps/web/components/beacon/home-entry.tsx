@@ -73,7 +73,7 @@ export function HomeEntry() {
 
         <nav className={styles.nav} aria-label="主导航">
           <Link href="/questions">Ask</Link>
-          <Link href="/changes">Workspace</Link>
+          <Link href="/workspace">Workspace</Link>
           <Link href="/evidence">Evidence</Link>
           <Link href="/versions">Versions</Link>
         </nav>
@@ -128,7 +128,7 @@ export function HomeEntry() {
           </form>
 
           <div className={styles.heroLinks}>
-            <Link href="/changes">
+            <Link href="/workspace">
               Open current workspace
               <ArrowRight />
             </Link>

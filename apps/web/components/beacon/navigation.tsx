@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleDot, FileSearch, GitCompareArrows, History, House } from "lucide-react";
+import { CircleDot, FileSearch, GitCompareArrows, History, House, PanelsTopLeft } from "lucide-react";
 
 const nav = [
   { href: "/", label: "首页", icon: House },
+  { href: "/workspace", label: "工作台", icon: PanelsTopLeft },
   { href: "/questions", label: "提问", icon: CircleDot },
   { href: "/changes", label: "变更", icon: GitCompareArrows },
   { href: "/evidence", label: "证据", icon: FileSearch },

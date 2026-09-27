@@ -274,6 +274,13 @@ for (const fixture of cases) {
       assert.deepEqual(snapshot.chain.graphDiff.unchangedNodeIds, ["C-01", "C-02", "C-03", "C-05", "C-06"]);
       assert.equal((await readLedger(page, fixture.scope === "research" ? "regression" : "research")).length, 0);
       if (fixture.scope === "research") {
+        await page.goto(`${origin}/workspace`, { waitUntil: "load" });
+        const dashboard = page.getByTestId("workspace-dashboard");
+        await dashboard.getByText(`Current research · ${snapshot.versionId}`).waitFor();
+        assert.ok((await dashboard.innerText()).includes("证据审核"));
+        assert.ok((await dashboard.innerText()).includes("规则影响节点"));
+        assert.ok((await dashboard.innerText()).includes("EG-01 / EG-02"));
+        await dashboard.screenshot({ path: new URL("S-05-workspace.png", artifacts).pathname });
         await page.goto(`${origin}/evidence`, { waitUntil: "load" });
         const contextBar = page.getByTestId("research-context");
         await contextBar.getByText(`当前版本 ${snapshot.versionId}`, { exact: true }).waitFor();
