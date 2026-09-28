@@ -56,6 +56,7 @@ import {
 } from "@/lib/research-engine";
 import { verifiedSampleItems } from "@/lib/sample-s05";
 import { ChainResultPanel } from "@/components/research/chain-result-panel";
+import light from "@/components/beacon/legacy-light.module.css";
 
 type Direction = CandidateEvidence["direction"];
 type WorkflowStep = "upload" | "review" | "diff" | "saved";
@@ -393,7 +394,7 @@ export function UpdateWorkflow() {
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
-              Slice 02 · Human-in-the-loop Update
+              MATERIAL INTAKE · HUMAN REVIEW
             </p>
             <h2 className="mt-2 text-xl font-semibold text-white sm:text-2xl">
               导入新材料，再由人决定哪些证据进入研究链
@@ -410,7 +411,7 @@ export function UpdateWorkflow() {
           <p className="text-sm text-slate-300">选择已登记材料</p>
           <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { resetWorkflow(); setSelectedSourceId(value); }}>
             <SelectTrigger aria-label="选择已登记材料" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
-            <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
+            <SelectContent className={light.portal}>
               {sourceRecords.map((record) => <SelectItem key={record.sourceId} value={record.sourceId}>{record.sourceId} · {record.period} · {record.useStatus === "regression-only" ? "回归演示" : "研究更新"}</SelectItem>)}
             </SelectContent>
           </Select>

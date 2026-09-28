@@ -35,11 +35,11 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
     const html = await response.text();
     assert.match(html, /BEACON/);
     assert.ok(html.includes("研灯"), "研灯");
-    for (const label of ["From change", "to conviction.", "Workspace", "Ask", "Evidence", "Versions", "你想弄清什么？"]) {
+    for (const label of ["看见变化", "照亮每一步判断", "研究方法", "案例解读", "能力边界", "开始研究", "进入工作台"]) {
       assert.ok(html.includes(label), label);
     }
 
-    for (const route of ["/workspace", "/questions", "/changes", "/evidence", "/versions"]) {
+    for (const route of ["/workspace", "/questions", "/changes", "/evidence", "/versions", "/help"]) {
       const routeResponse = await fetch(`${origin}${route}`);
       assert.equal(routeResponse.status, 200, route);
       const routeHtml = await routeResponse.text();

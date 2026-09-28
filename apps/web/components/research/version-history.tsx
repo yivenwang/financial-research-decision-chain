@@ -1,4 +1,5 @@
 "use client";
+import light from "@/components/beacon/legacy-light.module.css";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -51,6 +52,8 @@ function formatDate(value: string) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Shanghai",
+    hourCycle: "h23",
   }).format(new Date(value));
 }
 
@@ -169,7 +172,7 @@ export function VersionHistory() {
       <div className="max-w-lg">
         <Select value={workspace} onValueChange={(value) => { setWorkspace(value as WorkspaceScope); setNotice(null); }}>
           <SelectTrigger aria-label="选择版本库" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
-          <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
+          <SelectContent className={light.portal}>
             <SelectItem value="research">研究版本库</SelectItem>
             <SelectItem value="regression">回归演示版本库</SelectItem>
           </SelectContent>
@@ -259,7 +262,7 @@ export function VersionHistory() {
                     <RotateCcw /> 回滚到此版本
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="border-slate-700 bg-slate-950 text-slate-100">
+                <AlertDialogContent className={light.portal}>
                   <AlertDialogHeader>
                     <AlertDialogTitle>恢复 {selectedVersion.versionId} 的研究状态？</AlertDialogTitle>
                     <AlertDialogDescription className="leading-6 text-slate-400">

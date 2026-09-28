@@ -276,7 +276,7 @@ for (const fixture of cases) {
       if (fixture.scope === "research") {
         await page.goto(`${origin}/workspace`, { waitUntil: "load" });
         const dashboard = page.getByTestId("workspace-dashboard");
-        await dashboard.getByText(`Current research · ${snapshot.versionId}`).waitFor();
+        await dashboard.getByText(`CURRENT RESEARCH · ${snapshot.versionId}`).waitFor();
         assert.ok((await dashboard.innerText()).includes("证据审核"));
         assert.ok((await dashboard.innerText()).includes("规则影响节点"));
         assert.ok((await dashboard.innerText()).includes("EG-01 / EG-02"));

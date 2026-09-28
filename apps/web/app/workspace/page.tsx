@@ -8,7 +8,7 @@ export default function WorkspacePage() {
   return (
     <BeaconShell
       eyebrow="Research workspace"
-      title="把当前研究状态放在一处"
+      title="让下一步研究，清晰可见。"
       description="查看本机已保存的研究版本、证据审核和规则影响，再进入具体任务。安克创新是首个验证案例。"
     >
       <WorkspaceDashboard />

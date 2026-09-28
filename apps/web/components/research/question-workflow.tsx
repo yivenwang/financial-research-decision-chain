@@ -19,8 +19,8 @@ function download(name: string, content: string, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-export function QuestionWorkflow() {
-  const [question, setQuestion] = useState(examples[0]);
+export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQuestion?: string }) {
+  const [question, setQuestion] = useState(initialQuestion);
   const [token, setToken] = useState("");
   const [config, setConfig] = useState<{ configured: boolean; provider: string; model: string } | null>(null);
   const [snapshot, setSnapshot] = useState<ResearchVersion | null>(null);
@@ -77,7 +77,7 @@ export function QuestionWorkflow() {
   const selectQuestion = (value: string) => { setQuestion(value); setDraft(null); };
   return <div className="space-y-5" data-testid="question-workflow">
     <section className={panel}>
-      <div className="flex flex-wrap items-center justify-between gap-3"><h1 className="text-2xl font-semibold">研究问题</h1><Link className="text-cyan-300 underline" href="/">补充材料 / 研究版本</Link></div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">研究问题</h2><Link className="text-cyan-300 underline" href="/changes">补充材料</Link></div>
       <p className="text-sm text-slate-300">{QUESTION_CAPABILITY.company} · {questionSources().map(s => s.period).join("、")} · 变化解释、证据核验、决策影响</p>
       <p className="text-sm text-slate-400">当前材料：{snapshot ? `${snapshot.source?.sourceId} · ${snapshot.versionId}${snapshot.source?.mode === "sample" ? " · 教学合成样例" : ""}` : "尚无已审核材料，执行时会提示补充"}。每个事实附来源，关键证据不足时停止生成。</p>
       <label className="block space-y-2"><span>你想研究什么？</span><Textarea aria-label="研究问题" value={question} maxLength={1000} disabled={!!busy} onChange={e => selectQuestion(e.target.value)} className="min-h-24" /></label>
@@ -101,7 +101,7 @@ export function QuestionWorkflow() {
       </div></div>
       <p className="text-sm text-slate-300 break-words">{shown.queryRaw}</p>
       {shown.reasons.length > 0 && <p className="text-amber-200">{shown.reasons.join("；")}</p>}
-      {shown.status === "MATERIALS_REQUIRED" && <Link href="/" className="text-cyan-300 underline">去导入、审核并保存材料，再返回生成研究任务</Link>}
+      {shown.status === "MATERIALS_REQUIRED" && <Link href="/changes" className="text-cyan-300 underline">去导入、审核并保存材料，再返回生成研究任务</Link>}
       {answer && <>
         <p className="text-sm text-amber-200">证据校验通过；解释为待人工核对草稿，专业关卡仍待复核。{answer.evidence.context.source.mode === "sample" && "当前输入为教学合成样例。"}</p>
         {([["directAnswer", "直接回答"], ["inference", "推论"], ["counterEvidence", "反向证据"], ["uncertainty", "未知与限制"]] as const).map(([key, label]) => <div key={key}><h3 className="font-medium text-cyan-200">{label}</h3><p className="mt-1 leading-relaxed">{answer.explanation[key].text}</p><div className="mt-1 flex flex-wrap gap-2 text-xs">{answer.explanation[key].citations.map(id => <a key={id} href={`#ref-${id}`} className="text-cyan-300 underline">[{id}]</a>)}</div></div>)}

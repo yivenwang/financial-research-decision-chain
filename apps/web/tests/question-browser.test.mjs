@@ -52,8 +52,12 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await page.screenshot({ path: new URL("beacon-home-1440-full.png", artifacts).pathname, fullPage: true });
     await page.setViewportSize({ width: 1366, height: 768 });
     await page.screenshot({ path: new URL("beacon-home-1366x768.png", artifacts).pathname, fullPage: false });
-    await page.getByRole("button", { name: "Start research", exact: true }).click();
+    const homepageQuestion = "安克创新2026Q1归母净利润下降，但扣非净利润增长，应如何解释？";
+    await page.getByLabel("研究问题", { exact: true }).fill(homepageQuestion);
+    await page.getByRole("button", { name: "开始研究", exact: true }).click();
     await page.waitForURL("**/questions?q=*");
+    await page.waitForFunction(q => document.querySelector('textarea[aria-label="研究问题"]')?.value === q, homepageQuestion);
+    assert.equal(calls.length, 0, "Navigating with a question makes no model request");
     await page.getByLabel("问题研究访问码").fill(questionTestConfig.accessToken);
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();

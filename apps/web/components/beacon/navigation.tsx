@@ -2,35 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleDot, FileSearch, GitCompareArrows, History, House, PanelsTopLeft } from "lucide-react";
+import { CircleHelp, FileSearch, GitCompareArrows, History, House, MessageCircleQuestion, PanelsTopLeft } from "lucide-react";
+import styles from "./suite.module.css";
 
 const nav = [
-  { href: "/", label: "首页", icon: House },
-  { href: "/workspace", label: "工作台", icon: PanelsTopLeft },
-  { href: "/questions", label: "提问", icon: CircleDot },
-  { href: "/changes", label: "变更", icon: GitCompareArrows },
-  { href: "/evidence", label: "证据", icon: FileSearch },
-  { href: "/versions", label: "版本", icon: History },
+  { href: "/workspace", label: "研究概览", icon: PanelsTopLeft, n: "01" },
+  { href: "/questions", label: "研究提问", icon: MessageCircleQuestion, n: "02" },
+  { href: "/changes", label: "变更审核", icon: GitCompareArrows, n: "03" },
+  { href: "/evidence", label: "证据核验", icon: FileSearch, n: "04" },
+  { href: "/versions", label: "版本记录", icon: History, n: "05" },
+  { href: "/help", label: "使用说明", icon: CircleHelp, n: "06" },
+  { href: "/", label: "品牌首页", icon: House, n: "↗" },
 ];
-
 export function BeaconNavigation() {
   const pathname = usePathname();
-  return (
-    <nav aria-label="产品导航" className="flex items-center gap-1 overflow-x-auto whitespace-nowrap py-2 lg:py-0">
-      {nav.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href;
-        return (
-          <Link
-            key={href}
-            href={href}
-            aria-current={active ? "page" : undefined}
-            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1f6feb] ${active ? "bg-[#eaf2ff] text-[#175eb8]" : "text-[#4b5563] hover:bg-[#f3f4f6] hover:text-[#111827]"}`}
-          >
-            <Icon aria-hidden="true" className="size-4 shrink-0" />
-            {label}
-          </Link>
-        );
-      })}
-    </nav>
-  );
+  return <nav aria-label="产品导航" className={styles.nav}>{nav.map(({ href, label, icon: Icon, n }) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} className={styles.navLink}><Icon aria-hidden="true" />{label}<small>{n}</small></Link>)}</nav>;
 }
