@@ -72,7 +72,7 @@ export function WorkspaceDashboard() {
           </section>
 
           <section className={styles.panel}>
-            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT MATTERS</p><h2>这次更新影响了什么</h2></div><span>{impact ? impact.changedNodeIds.length + " 个节点" : "等待 Graph Diff"}</span></div>
+            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT MATTERS</p><h2>这次更新影响了什么</h2></div><span>{impact ? "规则影响节点 · " + impact.changedNodeIds.length : "等待 Graph Diff"}</span></div>
             {impact ? <ul className={styles.impactList}>{Object.entries(impact.reasons).slice(0, 5).map(([node, reason]) => <li key={node}><code>{node}</code><p>{reason}</p></li>)}</ul> : <p className={styles.subtle}>完成证据审核后，系统只沿已冻结的相关路径传播影响。</p>}
             <p className={styles.subtle}>规则影响说明不等于任意版本逐字段差分，也不替代最终研究判断。</p>
           </section>
@@ -80,7 +80,7 @@ export function WorkspaceDashboard() {
           <section className={styles.healthPanel}>
             <div><p className={styles.microLabel}>RESEARCH HEALTH</p><h2>研究完整性</h2></div>
             <Health label="Source Coverage" value={version.source ? "已登记" : "缺失"} ok={Boolean(version.source)} />
-            <Health label="Evidence Review" value={accepted + "/" + version.evidence.length} ok={accepted === version.evidence.length && version.evidence.length > 0} />
+            <Health label="证据审核 · Evidence Review" value={accepted + "/" + version.evidence.length} ok={accepted === version.evidence.length && version.evidence.length > 0} />
             <Health label="Calculation" value={version.formula?.consistent ? "F-02 闭合" : "待验证"} ok={Boolean(version.formula?.consistent)} />
             <Health label="Professional Gate" value={version.blockedGates.length ? version.blockedGates.length + " Pending" : "无记录"} ok={version.blockedGates.length === 0} />
           </section>
