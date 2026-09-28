@@ -64,4 +64,5 @@
 .portal :global([data-slot="alert-dialog-cancel"]) { color:#476472!important; background:#f2f6f7!important; border-color:#d5e0e5!important; }
 .portal :global([data-slot="alert-dialog-action"]) { background:#9b6b25!important; color:#fff!important; }
 .portal :global([data-slot="alert-dialog-title"]) { color:#193443!important; }
+@media(prefers-reduced-motion:reduce) { .portal,.portal * { animation:none!important; transition:none!important; } }
 @media(max-width:560px) { .surface :global(.research-panel),.surface :global([data-testid="question-workflow"] > section) { padding:17px; } .surface :global(h2) { font-size:17px!important; } .surface :global(h3) { font-size:15px!important; } .surface :global([data-slot="button"]) { min-height:40px; font-size:11px; padding:9px 12px; } }

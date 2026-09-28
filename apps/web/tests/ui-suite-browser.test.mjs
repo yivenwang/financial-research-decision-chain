@@ -13,6 +13,10 @@ assert.ok(process.env.PLAYWRIGHT_PACKAGE_PATH, "Set PLAYWRIGHT_PACKAGE_PATH.");
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "UI suite is exclusively offline / NOT-LIVE.");
 const { chromium } = await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_PACKAGE_PATH, "index.mjs")).href);
 const artifacts = new URL("../artifacts-web/ui-suite/", import.meta.url);
+async function capture(page, name, fullPage = true) {
+  if (fullPage) await page.evaluate(() => window.scrollTo(0, 0));
+  await page.screenshot({ path: new URL(name, artifacts).pathname, fullPage, animations: "disabled" });
+}
 
 test("complete Beacon UI: navigation, landing question, evidence inspector, responsive states and preserved local data (NOT-LIVE)", { timeout: 180000 }, async () => {
   const origin = "http://127.0.0.1:4325";
@@ -49,9 +53,9 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     assert.ok((await page.getByRole("tabpanel").innerText()).includes("EG-01 / EG-02"));
     await page.getByRole("tab", { name: /看见变化/ }).click();
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.screenshot({ path: new URL("home-1440-full.png", artifacts).pathname, fullPage: true });
+    await capture(page, "home-1440-full.png");
     await page.setViewportSize({ width: 1366, height: 768 });
-    await page.screenshot({ path: new URL("home-1366.png", artifacts).pathname });
+    await capture(page, "home-1366.png", false);
     const query = "安克创新2026Q1归母净利润同比下降，应该核对哪些证据？";
     await page.getByLabel("研究问题", { exact: true }).fill(query);
     await page.getByRole("button", { name: "开始研究", exact: true }).click();
@@ -71,50 +75,51 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
           assert.equal(await active.count(), 1); assert.equal(await active.getAttribute("href"), route);
           assert.ok(await page.getByTestId("research-context").isVisible());
         }
-        if (width === 1440 || width === 390) await page.screenshot({ path: new URL(`${route.slice(1) || "home"}-empty-${width}.png`, artifacts).pathname, fullPage: true });
+        if (width === 1440 || width === 390) await capture(page, `${route.slice(1) || "home"}-empty-${width}.png`);
       }
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + "/changes", { waitUntil: "networkidle" });
     await page.getByRole("combobox", { name: "选择已登记材料" }).click();
-    await page.screenshot({ path: new URL("source-menu-1440.png", artifacts).pathname });
+    await capture(page, "source-menu-1440.png", false);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "载入 S-05 已验证样例", exact: true }).click();
     for (const key of ["attributable_np", "adjusted_np", "non_recurring_total"]) await page.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
-    await page.screenshot({ path: new URL("changes-reviewed-1440.png", artifacts).pathname, fullPage: true });
+    await capture(page, "changes-reviewed-1440.png");
     await page.getByRole("button", { name: "生成 Graph Diff" }).click();
     await page.getByLabel("证据审核人（自行填写）").fill("UI test NOT-LIVE");
     await page.getByRole("button", { name: "保存为新版本", exact: true }).click();
     await page.getByRole("heading", { name: /V-02 已保存/ }).waitFor();
     await page.goto(origin + "/workspace", { waitUntil: "networkidle" });
     assert.ok((await page.getByTestId("workspace-dashboard").innerText()).includes("教学合成样例"));
-    await page.screenshot({ path: new URL("workspace-sample-1440.png", artifacts).pathname, fullPage: true });
+    await capture(page, "workspace-sample-1440.png");
     await page.goto(origin + "/evidence", { waitUntil: "networkidle" });
     const evidence = page.getByTestId("current-evidence");
     assert.ok((await evidence.innerText()).includes("-4.87%")); assert.ok((await evidence.innerText()).includes("24.39%"));
     await evidence.getByRole("button", { name: /扣非归母净利润/ }).click();
     await page.getByRole("complementary", { name: "所选证据详情" }).getByRole("heading", { name: "扣非归母净利润", exact: true }).waitFor();
     assert.equal(await evidence.locator('[aria-pressed="true"]').count(), 1);
-    await page.screenshot({ path: new URL("evidence-selected-1440.png", artifacts).pathname, fullPage: true });
+    await capture(page, "evidence-selected-1440.png");
     await page.setViewportSize({ width: 390, height: 844 });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
-    await page.screenshot({ path: new URL("evidence-selected-390.png", artifacts).pathname, fullPage: true });
+    await capture(page, "evidence-selected-390.png");
     await page.getByText("查看固定 S-05 案例 · 非当前研究数据", { exact: true }).click();
     assert.ok(await page.getByText("E-105 · S-05 · P2 · 反证", { exact: true }).isVisible());
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + "/versions", { waitUntil: "networkidle" });
-    await page.screenshot({ path: new URL("versions-sample-1440.png", artifacts).pathname, fullPage: true });
+    await capture(page, "versions-sample-1440.png");
     await page.getByRole("button").filter({ hasText: "V-01" }).click();
     await page.getByRole("button", { name: "回滚到此版本", exact: true }).click();
     await page.getByRole("alertdialog").waitFor();
-    await page.screenshot({ path: new URL("rollback-dialog-1440.png", artifacts).pathname });
+    assert.equal(await page.getByRole("alertdialog").evaluate(dialog => getComputedStyle(dialog).animationName), "none", "Portalled dialog respects reduced motion");
+    await capture(page, "rollback-dialog-1440.png", false);
     await page.keyboard.press("Escape");
     const keys = storageKeys("research");
     await page.evaluate(key => localStorage.setItem(key, "unreadable-ui-test"), keys.versions);
     await page.goto(origin + "/workspace", { waitUntil: "networkidle" });
     await page.getByTestId("workspace-dashboard").getByRole("alert").waitFor();
     assert.equal(await page.evaluate(key => localStorage.getItem(key), keys.versions), "unreadable-ui-test");
-    await page.screenshot({ path: new URL("workspace-unreadable-1440.png", artifacts).pathname, fullPage: true });
+    await capture(page, "workspace-unreadable-1440.png");
     assert.deepEqual(errors, []); assert.deepEqual(modelPosts, []);
     await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
   } finally {
