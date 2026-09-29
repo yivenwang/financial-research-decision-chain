@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { AlertTriangle, ArrowUpRight, CheckCircle2, CircleDot, FileSearch } from "lucide-react";
 import { getSourceRecord } from "@/lib/source-records";
 import { useCurrentResearch } from "./use-current-research";
@@ -19,7 +18,7 @@ export function CurrentEvidence() {
     <div className={styles.panelTitle}><h2>当前浏览器研究版本</h2>{version && <span className={styles.badge}>{version.versionId}</span>}</div>
     {current.kind === "loading" && <div className={styles.panel} role="status"><p className={styles.subtle}>正在读取本机研究记录…</p></div>}
     {current.kind === "unreadable" && <p role="alert" className={styles.warning}>本机版本记录无法完整读取。原数据没有被清除；请核对版本历史，暂勿将固定案例视为当前结果。</p>}
-    {current.kind === "empty" && <div className={`${styles.panel} ${styles.empty}`}><FileSearch aria-hidden="true" /><p className={styles.eyebrow}>EVIDENCE BEFORE CONCLUSION</p><h2>尚无已保存的材料更新版本</h2><p>先上传已登记的报告、核对候选证据，再由人确认保存。下方保留 S-05 固定案例供查看，不会作为当前版本的数据。</p><div className={styles.actions}><Link href="/changes" className={styles.primary}>进入变更审核 <ArrowUpRight size={14} /></Link></div></div>}
+    {current.kind === "empty" && <div className={`${styles.panel} ${styles.empty}`}><FileSearch aria-hidden="true" /><p className={styles.eyebrow}>EVIDENCE BEFORE CONCLUSION</p><h2>尚无已保存的材料更新版本</h2><p>先上传已登记的报告、核对候选证据，再由人确认保存。下方保留 S-05 固定案例供查看，不会作为当前版本的数据。</p><div className={styles.actions}><a href="/changes" className={styles.primary}>进入变更审核 <ArrowUpRight size={14} /></a></div></div>}
     {version && <>
       <div className={styles.evidenceInspector}>
         <div className={styles.evidenceList}>

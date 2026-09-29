@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CircleHelp, FileSearch, GitCompareArrows, History, House, MessageCircleQuestion, PanelsTopLeft } from "lucide-react";
 import styles from "./suite.module.css";
@@ -16,5 +15,5 @@ const nav = [
 ];
 export function BeaconNavigation() {
   const pathname = usePathname();
-  return <nav aria-label="产品导航" className={styles.nav}>{nav.map(({ href, label, icon: Icon, n }) => <Link key={href} href={href} aria-current={pathname === href ? "page" : undefined} className={styles.navLink}><Icon aria-hidden="true" />{label}<small>{n}</small></Link>)}</nav>;
+  return <nav aria-label="产品导航" className={styles.nav}>{nav.map(({ href, label, icon: Icon, n }) => <a key={href} href={href} aria-current={pathname === href ? "page" : undefined} className={styles.navLink}><Icon aria-hidden="true" />{label}<small>{n}</small></a>)}</nav>;
 }

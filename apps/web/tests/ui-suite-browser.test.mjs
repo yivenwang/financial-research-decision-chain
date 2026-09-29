@@ -47,6 +47,15 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     });
     await mkdir(artifacts, { recursive: true });
     await page.goto(origin, { waitUntil: "networkidle" });
+    await page.getByRole("link", { name: "进入工作台", exact: true }).click();
+    await page.waitForURL("**/workspace");
+    assert.ok(await page.getByTestId("workspace-dashboard").isVisible());
+    for (const [label, route] of [["研究提问", "/questions"], ["变更审核", "/changes"], ["证据核验", "/evidence"], ["版本记录", "/versions"], ["使用说明", "/help"]]) {
+      await page.getByRole("navigation", { name: "产品导航" }).getByRole("link", { name: label, exact: false }).click();
+      await page.waitForURL(`**${route}`);
+      assert.equal(new URL(page.url()).pathname, route);
+    }
+    await page.goto(origin, { waitUntil: "networkidle" });
     await page.getByRole("tab", { name: /理解影响/ }).click();
     assert.ok((await page.getByRole("tabpanel").innerText()).includes("F-02"));
     await page.getByRole("tab", { name: /理解影响/ }).press("ArrowRight");
@@ -134,7 +143,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     assert.equal(await page.evaluate(key => localStorage.getItem(key), keys.versions), "unreadable-ui-test");
     await capture(page, "workspace-unreadable-1440.png");
     assert.deepEqual(errors, []); assert.deepEqual(modelPosts, []);
-    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "version snapshot and ledger exports", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
+    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["native click navigation", "question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "version snapshot and ledger exports", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
   } finally {
     await browser?.close(); server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]);
     if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; }

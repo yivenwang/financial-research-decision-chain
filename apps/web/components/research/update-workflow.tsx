@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -793,9 +792,9 @@ export function UpdateWorkflow() {
                 >
                   <RotateCcw /> 开始下一次更新
                 </Button>
-                <Link href="/versions" className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200 transition-colors hover:bg-white/[0.07] hover:text-white">
+                <a href="/versions" className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200 transition-colors hover:bg-white/[0.07] hover:text-white">
                   查看版本与审核记录 <ArrowRight className="size-4" />
-                </Link>
+                </a>
               </div>
             ) : (
               <div className="mt-4">

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { AlertTriangle, ArrowRight, ArrowUpRight, Check, CheckCircle2, FileSearch, GitCompareArrows, History, MessageCircleQuestion, ShieldAlert, Telescope } from "lucide-react";
 import { getSourceRecord } from "@/lib/source-records";
 import type { StoredEvidence } from "@/lib/research-versions";
@@ -37,7 +36,7 @@ export function WorkspaceDashboard() {
 
     {current.kind === "empty" && <section className={styles.panel + " " + styles.empty + " " + styles.emptyWorkspace}>
       <div className={styles.emptyBeacon}><Telescope aria-hidden="true" /></div>
-      <div><p className={styles.eyebrow}>QUESTION FIRST · RESEARCH WORKSPACE</p><h2>从一个问题，建立持续更新的研究状态。</h2><p>当前浏览器只有 V-01 基线，尚无材料更新。先提出问题，或导入已登记材料；系统将在有证据后生成变化、影响和待审核项。</p><div className={styles.actions}><Link href="/questions" className={styles.primary}>提出研究问题 <ArrowRight size={14} /></Link><Link href="/changes" className={styles.secondary}>导入研究材料 <ArrowUpRight size={14} /></Link></div></div>
+      <div><p className={styles.eyebrow}>QUESTION FIRST · RESEARCH WORKSPACE</p><h2>从一个问题，建立持续更新的研究状态。</h2><p>当前浏览器只有 V-01 基线，尚无材料更新。先提出问题，或导入已登记材料；系统将在有证据后生成变化、影响和待审核项。</p><div className={styles.actions}><a href="/questions" className={styles.primary}>提出研究问题 <ArrowRight size={14} /></a><a href="/changes" className={styles.secondary}>导入研究材料 <ArrowUpRight size={14} /></a></div></div>
       <ol className={styles.emptyFlow}><li><span>01</span><div><strong>Ask</strong><small>明确问题</small></div></li><li><span>02</span><div><strong>Diff</strong><small>识别变化</small></div></li><li><span>03</span><div><strong>Impact</strong><small>传播影响</small></div></li><li><span>04</span><div><strong>Review</strong><small>人工提交</small></div></li></ol>
     </section>}
 
@@ -52,7 +51,7 @@ export function WorkspaceDashboard() {
             <span className={styles.microLabel}>DECISION SNAPSHOT</span>
             <h2>{version.claim.after === "成立" ? "核心盈利质量判断维持成立" : "当前判断：" + version.claim.after}</h2>
             <p>表观利润与扣非利润出现反向变化。确定性计算已完成，变化原因的专业定性仍需 EG-01 / EG-02 复核。</p>
-            <div className={styles.actions}><Link className={styles.primary} href="/changes">处理审核队列 <ArrowRight size={14} /></Link><Link className={styles.secondary} href="/evidence">核查证据 <FileSearch size={14} /></Link></div>
+            <div className={styles.actions}><a className={styles.primary} href="/changes">处理审核队列 <ArrowRight size={14} /></a><a className={styles.secondary} href="/evidence">核查证据 <FileSearch size={14} /></a></div>
           </div>
           <div className={styles.keyMetrics} aria-label="关键指标">
             <Metric label={attributable?.label ?? "归母净利润"} value={percent(attributable)} tone="down" meta={attributable?.location ?? "等待证据"} />
@@ -65,7 +64,7 @@ export function WorkspaceDashboard() {
       <div className={styles.workspaceGrid}>
         <div className={styles.workspaceMain}>
           <section className={styles.panel}>
-            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT CHANGED</p><h2>变化不是一个数字，而是一组相互约束的信号</h2></div><Link href="/changes">查看 Change Set <ArrowUpRight size={13} /></Link></div>
+            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT CHANGED</p><h2>变化不是一个数字，而是一组相互约束的信号</h2></div><a href="/changes">查看 Change Set <ArrowUpRight size={13} /></a></div>
             <div className={styles.changeList}>
               {[attributable, adjusted, nonRecurring].filter(Boolean).map(item => <div key={item!.id} className={styles.changeRow}><span className={item!.direction === "反证" ? styles.signalNegative : styles.signalPositive}>{item!.direction}</span><div><strong>{item!.label}</strong><small>{item!.location} · {item!.reviewStatus === "accepted" ? "人工已核对" : "待核对"}</small></div><b>{item!.changePct == null ? item!.valueMn.toFixed(2) + " mn" : percent(item!)}</b></div>)}
             </div>
@@ -88,7 +87,7 @@ export function WorkspaceDashboard() {
 
         <aside className={styles.workspaceAside}>
           <section className={styles.panel + " " + styles.inspectorCard} aria-label="Evidence Inspector">
-            <div className={styles.panelTitle}><div><p className={styles.microLabel}>EVIDENCE INSPECTOR</p><h2>关键证据</h2></div><Link href="/evidence">全部证据 <ArrowUpRight size={13} /></Link></div>
+            <div className={styles.panelTitle}><div><p className={styles.microLabel}>EVIDENCE INSPECTOR</p><h2>关键证据</h2></div><a href="/evidence">全部证据 <ArrowUpRight size={13} /></a></div>
             {selected ? <>
               <span className={styles.evidenceTag}>{selected.id} · {selected.reviewStatus === "accepted" ? "VERIFIED" : "REVIEW"}</span>
               <h3>{selected.label}</h3>
@@ -101,13 +100,13 @@ export function WorkspaceDashboard() {
           <section className={styles.reviewCard}>
             <div><p className={styles.microLabel}>REVIEW QUEUE</p><strong>{pending + version.blockedGates.length}</strong><span>项需要人处理</span></div>
             <ul><li><Check size={14} />证据已核对 {accepted}/{version.evidence.length}</li>{version.blockedGates.map(gate => <li key={gate}><ShieldAlert size={14} />{gate} · Pending</li>)}</ul>
-            <Link href="/changes">进入审核队列 <ArrowRight size={14} /></Link>
+            <a href="/changes">进入审核队列 <ArrowRight size={14} /></a>
           </section>
         </aside>
       </div>
     </>}
 
-    <section><div className={styles.panelTitle}><h2>继续你的研究</h2><span>四个任务，共享同一研究状态</span></div><div className={styles.tasks} aria-label="研究任务">{tasks.map(({ href, label, detail, icon: Icon }, i) => <Link key={href} href={href} className={styles.task}><div><Icon size={19} aria-hidden="true" /><span>0{i + 1}</span></div><h3>{label}</h3><p>{detail}</p><ArrowRight size={15} aria-hidden="true" /></Link>)}</div></section>
+    <section><div className={styles.panelTitle}><h2>继续你的研究</h2><span>四个任务，共享同一研究状态</span></div><div className={styles.tasks} aria-label="研究任务">{tasks.map(({ href, label, detail, icon: Icon }, i) => <a key={href} href={href} className={styles.task}><div><Icon size={19} aria-hidden="true" /><span>0{i + 1}</span></div><h3>{label}</h3><p>{detail}</p><ArrowRight size={15} aria-hidden="true" /></a>)}</div></section>
   </div>;
 }
 
