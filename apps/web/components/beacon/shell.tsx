@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-html-link-for-pages */
 import { ChevronRight, CircleHelp, HardDrive } from "lucide-react";
 import { BrandMark } from "./brand-mark";
 import { BeaconNavigation } from "./navigation";
