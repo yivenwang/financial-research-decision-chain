@@ -4,7 +4,7 @@
   --secondary:#eef4f5; --secondary-foreground:#3f6573; --muted:#f3f7f8; --muted-foreground:#708792;
   --accent:#e9f3f2; --accent-foreground:#176a73; --destructive:#b54954; --border:#d9e4e8; --input:#d2dfe4; --ring:#4b9298;
 }
-.surface { min-width:0; font-size:13px; }
+.surface { min-width:0; font-size:14px; }
 .surface :global(.research-panel),.surface :global([data-testid="question-workflow"] > section) { background:#fff!important; border:1px solid #dce5e9!important; border-radius:10px; box-shadow:0 2px 4px #1a384504!important; padding:23px; backdrop-filter:none; }
 .surface :global([class*="text-slate-100"]),.surface :global([class*="text-white"]),.portal :global([class*="text-slate-100"]) { color:#193443!important; }
 .surface :global([class*="text-slate-200"]),.surface :global([class*="text-slate-300"]) { color:#506e7d!important; }
@@ -26,40 +26,40 @@
 .surface :global([class*="border-rose-"]) { border-color:#e8ccd0!important; }
 .surface :global([class*="text-violet-"]),.surface :global([class*="text-purple-"]) { color:#74569b!important; }
 .surface :global([class*="bg-violet-"]),.surface :global([class*="bg-purple-"]) { background:#f3eff9!important; }
-.surface :global([class*="text-sm"]) { font-size:12px; }
-.surface :global([class*="text-[13px]"]) { font-size:11px; }
-.surface :global(h2) { font-size:19px!important; font-weight:550; line-height:1.5; letter-spacing:-.3px; }
-.surface :global(h3) { font-size:16px!important; font-weight:550; }
-.surface :global(.font-mono.uppercase) { font-size:9px!important; letter-spacing:1.4px!important; }
-.surface :global([data-slot="button"]) { height:auto; min-height:36px; border-radius:6px; padding:9px 13px; font-size:11px; line-height:1.6; white-space:normal; }
+.surface :global([class*="text-sm"]) { font-size:13px; }
+.surface :global([class*="text-[13px]"]) { font-size:12px; }
+.surface :global(h2) { font-size:20px!important; font-weight:600; line-height:1.45; letter-spacing:-.35px; }
+.surface :global(h3) { font-size:17px!important; font-weight:600; }
+.surface :global(.font-mono.uppercase) { font-size:10px!important; letter-spacing:1.45px!important; }
+.surface :global([data-slot="button"]) { height:auto; min-height:39px; border-radius:7px; padding:10px 14px; font-size:12px; line-height:1.6; white-space:normal; }
 .surface :global([data-slot="button"][data-variant="default"]) { color:#fff!important; background:#176a73!important; }
 .surface :global([data-slot="button"][data-variant="default"]:hover) { background:#105a63!important; }
 .surface :global([data-slot="button"][data-variant="outline"]:hover) { background:#e9f3f3!important; }
 .surface :global([data-slot="button"][data-variant="outline"]) { border-color:#d2e0e5!important; }
 .surface :global([data-slot="button"]:disabled) { cursor:not-allowed; opacity:.45; }
-.surface :global(input),.surface :global(textarea),.surface :global([data-slot="select-trigger"]) { border-color:#d2e0e5!important; background:#fbfdfe!important; color:#274b5c!important; font-size:12px; box-shadow:none; }
+.surface :global(input),.surface :global(textarea),.surface :global([data-slot="select-trigger"]) { border-color:#ccdbe1!important; background:#fbfdfe!important; color:#234858!important; font-size:13px; box-shadow:none; }
 .surface :global(input:focus-visible),.surface :global(textarea:focus-visible),.surface :global([data-slot="select-trigger"]:focus-visible) { outline:2px solid #86b2b5; outline-offset:1px; border-color:#579298!important; box-shadow:0 0 0 3px #e6f1f1; }
 .surface :global(textarea) { line-height:1.9; border-radius:7px; }
 .surface :global(input::placeholder),.surface :global(textarea::placeholder) { color:#8fa1ab; }
-.surface :global([data-slot="badge"]) { font-size:9px; font-weight:500; border-radius:4px; line-height:1.5; padding:4px 7px; }
+.surface :global([data-slot="badge"]) { font-size:10px; font-weight:550; border-radius:5px; line-height:1.5; padding:4px 8px; }
 .surface :global([data-slot="badge"] svg) { width:12px; height:12px; }
 .surface :global(table) { border-collapse:collapse; }
-.surface :global(th) { padding:12px 10px; font-size:10px; font-weight:500; color:#78909c; background:#f5f8f9; }
-.surface :global(td) { padding:13px 10px; font-size:11px; }
-.surface :global(pre) { padding:15px; border:1px solid #e0e9ec; background:#f5f8fa; border-radius:7px; color:#547584; font-size:10px; line-height:1.9; }
+.surface :global(th) { padding:12px 10px; font-size:11px; font-weight:600; color:#687f8b; background:#f5f8f9; }
+.surface :global(td) { padding:13px 10px; font-size:12px; }
+.surface :global(pre) { padding:15px; border:1px solid #e0e9ec; background:#f5f8fa; border-radius:7px; color:#547584; font-size:11px; line-height:1.9; }
 .surface :global(details) { border:1px solid #dce6e9; border-radius:7px; background:#fcfdfd; padding:13px 16px; }
-.surface :global(summary) { font-size:11px; font-weight:500; color:#3f6c7a; cursor:pointer; }
+.surface :global(summary) { font-size:12px; font-weight:600; color:#365f6d; cursor:pointer; }
 .surface :global([role="alert"]) { border:1px solid #ebd2d4; border-radius:6px; background:#fcf2f2; padding:12px; }
 .surface :global([role="status"]) { background:#edf6f5; padding:12px; border-radius:6px; }
 .surface :global([data-testid="question-workflow"] > section:first-child) { border-top:3px solid #508b92!important; }
-.surface :global([data-testid="question-workflow"] > section:first-child h2) { font-size:17px!important; }
+.surface :global([data-testid="question-workflow"] > section:first-child h2) { font-size:19px!important; }
 .surface :global([data-testid="question-contract"]) { border-left:3px solid #c5a567!important; }
 .surface :global([data-testid="question-result"]) { border-top:3px solid #6eac9b!important; }
 .surface :global([data-testid="question-review"]) { padding-top:20px; }
 .surface :global(button[aria-current="true"]) { box-shadow:inset 3px 0 #176a73; }
 .surface :global(.h-2 > .bg-cyan-300) { background:#488e96!important; }
 .portal { background:#fff!important; color:#274b5c!important; border-color:#d2e0e5!important; box-shadow:0 12px 45px #17354524; }
-.portal :global([data-slot="select-item"]) { font-size:12px; padding:10px 12px; }
+.portal :global([data-slot="select-item"]) { font-size:13px; padding:10px 12px; }
 .portal :global([data-highlighted]) { background:#eaf3f3!important; color:#176a73!important; }
 .portal :global([data-slot="alert-dialog-cancel"]) { color:#476472!important; background:#f2f6f7!important; border-color:#d5e0e5!important; }
 .portal :global([data-slot="alert-dialog-action"]) { background:#9b6b25!important; color:#fff!important; }

@@ -1,6 +1,7 @@
 "use client";
 
-import { type ChangeEvent, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -213,6 +214,7 @@ export function UpdateWorkflow() {
   const [parserResult, setParserResult] = useState<ParseResult | null>(null);
   const [selectedSourceId, setSelectedSourceId] = useState("S-05");
   const [reviewer, setReviewer] = useState("");
+  const [dragActive, setDragActive] = useState(false);
   const selectedRecord = getSourceRecord(selectedSourceId)!;
   const workspace = selectedRecord.useStatus === "regression-only" ? "regression" : "research";
 
@@ -258,11 +260,7 @@ export function UpdateWorkflow() {
     setSavedVersion(null);
   }
 
-  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
+  async function processFile(file: File) {
     if (/s[-_ ]?0?7(?:\b|[_.-])/i.test(file.name)) {
       setMessage("该文件不在当前允许的 S-05/S-06 导入范围内。");
       return;
@@ -322,6 +320,24 @@ export function UpdateWorkflow() {
     } finally {
       setIsParsing(false);
     }
+  }
+
+  async function handleFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) await processFile(file);
+  }
+
+  async function handleDrop(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setDragActive(false);
+    if (isParsing) return;
+    const files = Array.from(event.dataTransfer.files);
+    if (files.length !== 1) {
+      setMessage(files.length ? "每次只能导入一份 PDF，请重新选择。" : "未检测到可导入文件。");
+      return;
+    }
+    await processFile(files[0]);
   }
 
   function updateCandidate(id: string, patch: Partial<CandidateEvidence>) {
@@ -437,8 +453,18 @@ export function UpdateWorkflow() {
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
+              onDragEnter={(event) => { event.preventDefault(); if (!isParsing) setDragActive(true); }}
+              onDragOver={(event) => { event.preventDefault(); if (!isParsing) setDragActive(true); }}
+              onDragLeave={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDragActive(false); }}
+              onDrop={handleDrop}
               disabled={isParsing}
-              className="flex min-h-72 w-full flex-col items-center justify-center rounded-2xl border border-dashed border-cyan-300/30 bg-cyan-300/[0.04] px-6 text-center transition-colors hover:border-cyan-300/55 hover:bg-cyan-300/[0.07] disabled:cursor-wait"
+              aria-describedby="pdf-upload-help"
+              className={cn(
+                "flex min-h-72 w-full flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center transition-colors disabled:cursor-wait",
+                dragActive
+                  ? "border-cyan-300/70 bg-cyan-300/[0.12]"
+                  : "border-cyan-300/30 bg-cyan-300/[0.04] hover:border-cyan-300/55 hover:bg-cyan-300/[0.07]",
+              )}
             >
               {isParsing ? (
                 <Loader2 className="size-10 animate-spin text-cyan-300" />
@@ -446,9 +472,9 @@ export function UpdateWorkflow() {
                 <UploadCloud className="size-10 text-cyan-300" />
               )}
               <p className="mt-4 text-lg font-semibold text-white">
-                {isParsing ? "正在读取 PDF 文本" : "选择所选材料的 PDF"}
+                {isParsing ? "正在读取 PDF 文本" : dragActive ? "松开以导入这份 PDF" : "拖入或选择所选材料的 PDF"}
               </p>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
+              <p id="pdf-upload-help" className="mt-2 max-w-xl text-sm leading-6 text-slate-400">
                 当前支持可复制文字的 PDF，最大 25 MB；扫描件 OCR 将在后续版本加入。
               </p>
             </button>
@@ -767,6 +793,9 @@ export function UpdateWorkflow() {
                 >
                   <RotateCcw /> 开始下一次更新
                 </Button>
+                <Link href="/versions" className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200 transition-colors hover:bg-white/[0.07] hover:text-white">
+                  查看版本与审核记录 <ArrowRight className="size-4" />
+                </Link>
               </div>
             ) : (
               <div className="mt-4">

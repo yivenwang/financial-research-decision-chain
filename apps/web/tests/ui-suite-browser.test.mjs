@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
@@ -108,6 +108,19 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(origin + "/versions", { waitUntil: "networkidle" });
     await capture(page, "versions-sample-1440.png");
+    const [snapshotDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出当前快照", exact: true }).click()]);
+    const snapshotExportPath = new URL("version-current-export.json", artifacts).pathname;
+    await snapshotDownload.saveAs(snapshotExportPath);
+    const snapshotExport = JSON.parse(await readFile(snapshotExportPath, "utf8"));
+    assert.equal(snapshotExport.schema, "beacon.research-version.v1");
+    assert.equal(snapshotExport.version.versionId, "V-02");
+    const [ledgerDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整版本库", exact: true }).click()]);
+    const ledgerExportPath = new URL("version-ledger-export.json", artifacts).pathname;
+    await ledgerDownload.saveAs(ledgerExportPath);
+    const ledgerExport = JSON.parse(await readFile(ledgerExportPath, "utf8"));
+    assert.equal(ledgerExport.schema, "beacon.research-version-ledger.v1");
+    assert.equal(ledgerExport.activeVersionId, "V-02");
+    assert.equal(ledgerExport.versions.length, 2);
     await page.getByRole("button").filter({ hasText: "V-01" }).click();
     await page.getByRole("button", { name: "回滚到此版本", exact: true }).click();
     await page.getByRole("alertdialog").waitFor();
@@ -121,7 +134,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     assert.equal(await page.evaluate(key => localStorage.getItem(key), keys.versions), "unreadable-ui-test");
     await capture(page, "workspace-unreadable-1440.png");
     assert.deepEqual(errors, []); assert.deepEqual(modelPosts, []);
-    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
+    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "version snapshot and ledger exports", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
   } finally {
     await browser?.close(); server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]);
     if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; }

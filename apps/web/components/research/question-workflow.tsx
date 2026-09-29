@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { CheckCircle2, CircleAlert, Database, KeyRound, ServerCog } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,6 +18,12 @@ function download(name: string, content: string, type: string) {
   const url = URL.createObjectURL(new Blob([content], { type }));
   const a = document.createElement("a"); a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
+    timeZone: "Asia/Shanghai", hourCycle: "h23",
+  }).format(new Date(value));
 }
 
 export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQuestion?: string }) {
@@ -38,12 +45,14 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
     return next;
   };
   useEffect(() => {
-    try { const next = reload(); setShown(next.runs.at(-1) ?? null); } catch (e) { setError(plainError(e)); }
-    const refresh = () => { try { reload(); } catch (e) { setError(plainError(e)); } };
+    let active = true;
+    const initialize = () => { if (!active) return; try { const next = reload(); setShown(next.runs.at(-1) ?? null); } catch (e) { setError(plainError(e)); } };
+    const refresh = () => { if (!active) return; try { reload(); } catch (e) { setError(plainError(e)); } };
+    queueMicrotask(initialize);
     window.addEventListener(VERSION_UPDATED_EVENT, refresh); window.addEventListener("storage", refresh);
     const abort = new AbortController();
     fetch("/api/research-question", { signal: abort.signal }).then(async r => { if (!r.ok) throw new Error("无法读取模型配置状态。"); setConfig(await r.json()); }).catch(e => { if (e.name !== "AbortError") setError(plainError(e)); });
-    return () => { abort.abort(); window.removeEventListener(VERSION_UPDATED_EVENT, refresh); window.removeEventListener("storage", refresh); };
+    return () => { active = false; abort.abort(); window.removeEventListener(VERSION_UPDATED_EVENT, refresh); window.removeEventListener("storage", refresh); };
   }, []);
   async function request(phase: "plan" | "execute") {
     setBusy(phase); setError("");
@@ -75,16 +84,24 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   const lastReview = ledger.reviews.filter(r => r.runId === shown?.runId).at(-1);
   const contract = draft?.run.contract ?? shown?.contract;
   const selectQuestion = (value: string) => { setQuestion(value); setDraft(null); };
+  const questionReady = question.trim().length > 0;
+  const tokenReady = token.length > 0;
+  const modelReady = config?.configured === true;
   return <div className="space-y-5" data-testid="question-workflow">
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">研究问题</h2><Link className="text-cyan-300 underline" href="/changes">补充材料</Link></div>
       <p className="text-sm text-slate-300">{QUESTION_CAPABILITY.company} · {questionSources().map(s => s.period).join("、")} · 变化解释、证据核验、决策影响</p>
       <p className="text-sm text-slate-400">当前材料：{snapshot ? `${snapshot.source?.sourceId} · ${snapshot.versionId}${snapshot.source?.mode === "sample" ? " · 教学合成样例" : ""}` : "尚无已审核材料，执行时会提示补充"}。每个事实附来源，关键证据不足时停止生成。</p>
-      <label className="block space-y-2"><span>你想研究什么？</span><Textarea aria-label="研究问题" value={question} maxLength={1000} disabled={!!busy} onChange={e => selectQuestion(e.target.value)} className="min-h-24" /></label>
+      <label className="block space-y-2"><span>你想研究什么？</span><Textarea aria-label="研究问题" value={question} maxLength={1000} disabled={!!busy} onChange={e => selectQuestion(e.target.value)} className="min-h-24" /><span className="block text-right text-xs text-slate-400">{Array.from(question).length} / 1000</span></label>
       <div className="flex flex-wrap gap-2">{examples.map((q, i) => <Button key={q} variant="outline" disabled={!!busy} onClick={() => selectQuestion(q)}>示例 {i + 1}：{["核心盈利", "证据来源", "影响链"][i]}</Button>)}</div>
       <label className="block max-w-sm space-y-2"><span className="text-sm">演示访问码（仅本次页面使用）</span><Input aria-label="问题研究访问码" type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label>
       <p className="text-sm text-slate-400">{config ? config.configured ? `${config.provider} / ${config.model}；生成任务、确认执行各调用模型一次。` : "模型服务尚未配置，请按运行说明配置服务端环境。" : "正在读取服务状态…"}</p>
-      <Button onClick={() => request("plan")} disabled={!!busy || !config?.configured || !question.trim() || !token}>生成研究任务</Button>
+      <div className="grid gap-2 sm:grid-cols-3" aria-label="研究任务就绪状态">
+        <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${modelReady ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-amber-300/25 bg-amber-300/[0.055] text-amber-200"}`}>{modelReady ? <CheckCircle2 className="size-4" /> : <ServerCog className="size-4" />}<span>模型服务<br /><small>{modelReady ? "已连接" : "待配置"}</small></span></div>
+        <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${tokenReady ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-amber-300/25 bg-amber-300/[0.055] text-amber-200"}`}>{tokenReady ? <CheckCircle2 className="size-4" /> : <KeyRound className="size-4" />}<span>页面访问码<br /><small>{tokenReady ? "已填写" : "待填写"}</small></span></div>
+        <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${snapshot ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-slate-300/25 bg-slate-300/[0.04] text-slate-400"}`}>{snapshot ? <Database className="size-4" /> : <CircleAlert className="size-4" />}<span>研究材料<br /><small>{snapshot ? `${snapshot.versionId} 可用于执行` : "可先生成任务"}</small></span></div>
+      </div>
+      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady || !tokenReady}>生成研究任务</Button>
       {busy && <p role="status" className="text-cyan-200">{busy === "plan" ? "正在理解问题并检查范围…" : busy === "execute" ? "正在核验材料、复算并生成解释…" : "正在保存审核记录…"}</p>}
       {error && <p role="alert" className="text-rose-300">{error}</p>}
     </section>
@@ -111,6 +128,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         <details open><summary className="cursor-pointer">引用与适用边界</summary><ul className="mt-3 space-y-3 text-sm text-slate-300">{answer.evidence.context.references.map(r => <li id={`ref-${r.id}`} key={r.id}><strong>[{r.id}]</strong> {r.excerpt} {r.url && <a className="text-cyan-300 underline" href={r.url} target="_blank" rel="noreferrer">原文</a>}</li>)}</ul><ul className="mt-4 space-y-2 text-sm text-amber-200">{answer.evidence.context.limits.map(l => <li key={l}>{l}</li>)}</ul></details>
         <div className="space-y-3 border-t border-white/10 pt-4" data-testid="question-review">
           <p>{lastReview ? lastReview.status === "accepted" ? "人工已接受研究草稿" : "研究草稿已退回" : "研究草稿尚待人工审核"}</p>
+          {lastReview && <p className="text-sm text-slate-400">最近审核：{lastReview.reviewer} · {formatDate(lastReview.reviewedAt)}{lastReview.note ? ` · ${lastReview.note}` : ""}</p>}
           <p className="text-sm text-slate-400">{answer.recommendedHumanAction}</p>
           <Input aria-label="问题审核人" placeholder="审核人（自行填写）" value={reviewer} onChange={e => setReviewer(e.target.value)} maxLength={100} />
           <Textarea aria-label="问题审核意见" placeholder="审核意见" value={note} onChange={e => setNote(e.target.value)} maxLength={1000} />
@@ -119,6 +137,6 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       </>}
       <details><summary className="cursor-pointer">运行记录 · {shown.events.length} 项事件</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify({ requestId: shown.requestId, calls: shown.calls, events: shown.events }, null, 2)}</pre></details>
     </section>}
-    {ledger.runs.length > 0 && <section className={panel}><h2 className="font-semibold">本机研究问题历史</h2><div className="space-y-2">{ledger.runs.slice().reverse().map(r => <button className="block w-full rounded-lg border border-white/10 p-3 text-left text-sm hover:bg-white/5" key={r.runId} disabled={!!busy} onClick={() => { setShown(r); setDraft(null); }}>{statusLabel[r.status]} · {r.queryRaw}<span className="block text-xs text-slate-400">{r.createdAt}</span></button>)}</div></section>}
+    {ledger.runs.length > 0 && <section className={panel}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">本机研究问题历史</h2><span className="text-sm text-slate-400">{ledger.runs.length} 次运行</span></div><div className="space-y-2">{ledger.runs.slice().reverse().map(r => <button aria-current={shown?.runId === r.runId ? "true" : undefined} className="block w-full rounded-lg border border-white/10 p-3 text-left text-sm hover:bg-white/5" key={r.runId} disabled={!!busy} onClick={() => { setShown(r); setDraft(null); }}>{statusLabel[r.status]} · {r.queryRaw}<span className="block text-xs text-slate-400">{formatDate(r.createdAt)}</span></button>)}</div></section>}
   </div>;
 }
