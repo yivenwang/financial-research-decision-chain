@@ -24,7 +24,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
   const origin = "http://127.0.0.1:4325";
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4325", "-H", "127.0.0.1"], {
     cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: origin },
+    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: origin, REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z" },
   });
   let logs = ""; let spawnError; let browser;
   server.on("error", error => { spawnError = error; });
