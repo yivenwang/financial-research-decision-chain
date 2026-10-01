@@ -7,12 +7,14 @@ import { resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 import { storageKeys } from "../lib/research-versions.ts";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 const require = createRequire(import.meta.url);
 assert.ok(process.env.PLAYWRIGHT_PACKAGE_PATH, "Set PLAYWRIGHT_PACKAGE_PATH.");
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "UI suite is exclusively offline / NOT-LIVE.");
 const { chromium } = await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_PACKAGE_PATH, "index.mjs")).href);
 const artifacts = new URL("../artifacts-web/ui-suite/", import.meta.url);
+const accessCode = "ci-ui-access-code-not-a-real-secret";
 async function capture(page, name, fullPage = true) {
   if (fullPage) await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({ path: new URL(name, artifacts).pathname, fullPage, animations: "disabled" });
@@ -22,7 +24,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
   const origin = "http://127.0.0.1:4325";
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4325", "-H", "127.0.0.1"], {
     cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", RESEARCH_DEMO_TOKEN: "" },
+    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1", DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: origin },
   });
   let logs = ""; let spawnError; let browser;
   server.on("error", error => { spawnError = error; });
@@ -38,7 +40,9 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     }
     assert.ok(ready, logs);
     browser = await chromium.launch({ ...(process.env.PLAYWRIGHT_EXECUTABLE_PATH ? { executablePath: process.env.PLAYWRIGHT_EXECUTABLE_PATH, args: ["--no-sandbox"] } : {}) });
-    const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    await context.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(accessCode), url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
+    const page = await context.newPage();
     const errors = []; const modelPosts = [];
     page.on("pageerror", error => errors.push(error.message));
     await page.route("**/api/research-*", async route => {
