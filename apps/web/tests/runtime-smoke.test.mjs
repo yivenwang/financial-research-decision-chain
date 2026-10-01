@@ -19,6 +19,7 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
       NEXT_TELEMETRY_DISABLED: "1",
       RESEARCH_DEMO_TOKEN: accessCode,
       RESEARCH_APP_ORIGIN: origin,
+      REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z",
     },
   });
   let logs = "";
