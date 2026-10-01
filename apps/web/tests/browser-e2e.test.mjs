@@ -12,6 +12,7 @@ import { storageKeys } from "../lib/research-versions.ts";
 import { memoStorageKey } from "../lib/research-memo-storage.ts";
 import { createMemoRun } from "../lib/research-memo.server.ts";
 import { memoRevisionStorageKey } from "../lib/research-memo-revisions.ts";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 const require = createRequire(import.meta.url);
 const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
@@ -24,6 +25,17 @@ const liveProvider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deeps
 const liveApiKey = liveProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.DEEPSEEK_API_KEY;
 const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : process.env.DEEPSEEK_MODEL) || (liveProvider === "openai" ? "gpt-5.6-sol" : "deepseek-v4-pro");
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
+
+async function authorizeContext(context) {
+  await context.addCookies([{
+    name: REVIEW_ACCESS_COOKIE,
+    value: await reviewSessionValue(accessCode),
+    url: origin,
+    httpOnly: true,
+    secure: false,
+    sameSite: "Strict",
+  }]);
+}
 if (liveMemo) assert.ok(liveApiKey?.trim(), `Live ${liveProvider} acceptance requires its API key supplied by the runner.`);
 const cases = [
   {
@@ -228,6 +240,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
 for (const fixture of cases) {
   test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await authorizeContext(context);
     const page = await context.newPage();
     let modelRequests = 0;
     const errors = [];
@@ -405,6 +418,7 @@ for (const fixture of cases) {
 
 test("real upload rejects source mismatch and missing/rejected/invalid reviewed values", { timeout: 180000, skip: liveMemo }, async () => {
   const context = await browser.newContext();
+  await authorizeContext(context);
   const page = await context.newPage();
   try {
     await upload(page, "S-06", "S-05");
