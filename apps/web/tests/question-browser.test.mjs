@@ -24,7 +24,7 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
   assert.equal(prior.snapshot.source.mode, "pdf"); assert.equal(prior.snapshot.source.sha256, prior.pdfSha256);
   const snapshot = prior.snapshot;
   const origin = "http://127.0.0.1:4323";
-  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4323", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", NEXT_TELEMETRY_DISABLED: "1", RESEARCH_DEMO_TOKEN: questionTestConfig.accessToken, RESEARCH_APP_ORIGIN: origin } });
+  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4323", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", NEXT_TELEMETRY_DISABLED: "1", RESEARCH_DEMO_TOKEN: questionTestConfig.accessToken, RESEARCH_APP_ORIGIN: origin, REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z" } });
   let logs = ""; server.stdout.on("data", d => logs += d); server.stderr.on("data", d => logs += d);
   const exited = new Promise(r => server.once("close", r)); let browser;
   const calls = [];
