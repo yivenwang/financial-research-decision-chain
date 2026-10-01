@@ -6,14 +6,20 @@ import { setTimeout as delay } from "node:timers/promises";
 import test from "node:test";
 
 const require = createRequire(import.meta.url);
+const accessCode = "NOT_A_REAL_ACCESS_CODE_RUNTIME_TEST_ONLY";
 
-test("production app serves the Beacon workspace, CSS and matching PDF worker", { timeout: 60000 }, async () => {
+test("production app serves the access gate, Beacon workspace, CSS and matching PDF worker", { timeout: 60000 }, async () => {
   const port = 4321;
   const origin = `http://127.0.0.1:${port}`;
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", String(port), "-H", "127.0.0.1"], {
     cwd: new URL("..", import.meta.url),
     stdio: ["ignore", "pipe", "pipe"],
-    env: { ...process.env, NEXT_TELEMETRY_DISABLED: "1" },
+    env: {
+      ...process.env,
+      NEXT_TELEMETRY_DISABLED: "1",
+      RESEARCH_DEMO_TOKEN: accessCode,
+      RESEARCH_APP_ORIGIN: origin,
+    },
   });
   let logs = "";
   let spawnError;
@@ -23,15 +29,34 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
   const exited = new Promise((resolve) => server.once("close", resolve));
 
   try {
-    let response;
+    let accessResponse;
     for (let i = 0; i < 80; i++) {
       assert.ifError(spawnError);
       assert.equal(server.exitCode, null, logs);
-      try { response = await fetch(origin, { signal: AbortSignal.timeout(1000) }); } catch {}
-      if (response?.ok) break;
+      try { accessResponse = await fetch(`${origin}/access`, { signal: AbortSignal.timeout(1000) }); } catch {}
+      if (accessResponse?.ok) break;
       await delay(250);
     }
-    assert.ok(response?.ok, logs);
+    assert.ok(accessResponse?.ok, logs);
+    const accessHtml = await accessResponse.text();
+    assert.match(accessHtml, /内部审验入口/);
+
+    const loginResponse = await fetch(`${origin}/api/access`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body: JSON.stringify({ code: accessCode }),
+      redirect: "manual",
+    });
+    assert.equal(loginResponse.status, 200);
+    const setCookie = loginResponse.headers.get("set-cookie");
+    assert.ok(setCookie?.includes("beacon_review_access="));
+    assert.ok(!setCookie?.toLowerCase().includes("secure"), "HTTP runtime test must not force a Secure cookie");
+    const cookie = setCookie.split(";")[0];
+
+    const authedFetch = (path) => fetch(`${origin}${path}`, { headers: { Cookie: cookie } });
+
+    const response = await authedFetch("/");
+    assert.equal(response.status, 200);
     const html = await response.text();
     assert.match(html, /Beacon/);
     assert.ok(html.includes("研灯"), "研灯");
@@ -40,7 +65,7 @@ test("production app serves the Beacon workspace, CSS and matching PDF worker", 
     }
 
     for (const route of ["/workspace", "/questions", "/changes", "/evidence", "/versions", "/help"]) {
-      const routeResponse = await fetch(`${origin}${route}`);
+      const routeResponse = await authedFetch(route);
       assert.equal(routeResponse.status, 200, route);
       const routeHtml = await routeResponse.text();
       assert.match(routeHtml, /产品导航/, `${route} must expose the task navigation on narrow screens too`);
