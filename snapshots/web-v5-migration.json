@@ -3,7 +3,6 @@
   "target": "apps/web",
   "unchanged_files": {
     "app/globals.css": "b2da860887eb6534cde524f59f84f1eefd7b3ea9e740ee704360c121c0e2af2f",
-    "app/layout.tsx": "1e548bbed43458e3bba323e7b4a92dfa17e31cc21b95365503c12143e81444fe",
     "components.json": "31f4ca67a4a62572571003d3d5aac85ee6fbfca67a192924bac6b168d95e98fd",
     "components/research/blind-test-report.tsx": "616f7f572bdbfda09ee4bd438f6882190d4972672228661f08b34ff40571f531",
     "components/ui/accordion.tsx": "a4f153089ba886dfcf73fac26b5c01ca933fa12fbe88df6fb723912bfffdfbb0",
@@ -137,6 +136,10 @@
     "tsconfig.json": {
       "original_sha256": "be18523b23b78b6e1a876ddd107d330f0168bddf09d751b57e0b5edce69c66f3",
       "reason": "Allow canonical TypeScript module imports from repository root."
+    },
+    "app/layout.tsx": {
+      "original_sha256": "1e548bbed43458e3bba323e7b4a92dfa17e31cc21b95365503c12143e81444fe",
+      "reason": "Add review-only robots metadata and an internal-review watermark for the product UI; no research semantics or engine behavior changed."
     }
   }
 }
