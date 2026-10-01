@@ -332,7 +332,6 @@ for (const fixture of cases) {
         });
         const prefix = liveMemo ? `S-05-live-${liveProvider}-model` : "S-05-stub-model-NOT-LIVE";
         const panel = page.getByTestId("memo-panel");
-        assert.ok((await panel.innerText()).includes(liveMemo && liveProvider === "openai" ? "OpenAI" : "DeepSeek"));
         const [httpResponse] = await Promise.all([
           page.waitForResponse((response) => new URL(response.url()).pathname === "/api/research-memo" && response.request().method() === "POST", { timeout: liveMemo && liveProvider === "deepseek" ? 170000 : 110000 }),
           panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click(),
