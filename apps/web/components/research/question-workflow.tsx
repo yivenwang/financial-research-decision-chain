@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle2, CircleAlert, Database, KeyRound, ServerCog } from "lucide-react";
+import { CheckCircle2, CircleAlert, Database, ServerCog, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -27,7 +27,6 @@ function formatDate(value: string) {
 
 export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQuestion?: string }) {
   const [question, setQuestion] = useState(initialQuestion);
-  const [token, setToken] = useState("");
   const [config, setConfig] = useState<{ configured: boolean; provider: string; model: string } | null>(null);
   const [snapshot, setSnapshot] = useState<ResearchVersion | null>(null);
   const [ledger, setLedger] = useState<QuestionLedger>({ runs: [], reviews: [] });
@@ -60,7 +59,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       // Read the current snapshot at the confirmation action, not from a stale render.
       const versions = readStoredVersions("research");
       const current = versions.find(v => v.versionId === readActiveVersionId(versions, "research")) ?? null;
-      const response = await fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      const response = await fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json" },
         body: JSON.stringify(phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current }), signal: AbortSignal.timeout(175000) });
       const data = await response.json();
       if (!response.ok || !data.run) throw new Error(data.error ?? "研究请求未完成。");
@@ -84,7 +83,6 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   const contract = draft?.run.contract ?? shown?.contract;
   const selectQuestion = (value: string) => { setQuestion(value); setDraft(null); };
   const questionReady = question.trim().length > 0;
-  const tokenReady = token.length > 0;
   const modelReady = config?.configured === true;
   return <div className="space-y-5" data-testid="question-workflow">
     <section className={panel}>
@@ -93,14 +91,13 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       <p className="text-sm text-slate-400">当前材料：{snapshot ? `${snapshot.source?.sourceId} · ${snapshot.versionId}${snapshot.source?.mode === "sample" ? " · 教学合成样例" : ""}` : "尚无已审核材料，执行时会提示补充"}。每个事实附来源，关键证据不足时停止生成。</p>
       <label className="block space-y-2"><span>你想研究什么？</span><Textarea aria-label="研究问题" value={question} maxLength={1000} disabled={!!busy} onChange={e => selectQuestion(e.target.value)} className="min-h-24" /><span className="block text-right text-xs text-slate-400">{Array.from(question).length} / 1000</span></label>
       <div className="flex flex-wrap gap-2">{examples.map((q, i) => <Button key={q} variant="outline" disabled={!!busy} onClick={() => selectQuestion(q)}>示例 {i + 1}：{["核心盈利", "证据来源", "影响链"][i]}</Button>)}</div>
-      <label className="block max-w-sm space-y-2"><span className="text-sm">演示访问码（仅本次页面使用）</span><Input aria-label="问题研究访问码" type="password" autoComplete="off" value={token} onChange={e => setToken(e.target.value)} /></label>
       <p className="text-sm text-slate-400">{config ? config.configured ? `${config.provider} / ${config.model}；生成任务、确认执行各调用模型一次。` : "模型服务尚未配置，请按运行说明配置服务端环境。" : "正在读取服务状态…"}</p>
       <div className="grid gap-2 sm:grid-cols-3" aria-label="研究任务就绪状态">
         <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${modelReady ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-amber-300/25 bg-amber-300/[0.055] text-amber-200"}`}>{modelReady ? <CheckCircle2 className="size-4" /> : <ServerCog className="size-4" />}<span>模型服务<br /><small>{modelReady ? "已连接" : "待配置"}</small></span></div>
-        <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${tokenReady ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-amber-300/25 bg-amber-300/[0.055] text-amber-200"}`}>{tokenReady ? <CheckCircle2 className="size-4" /> : <KeyRound className="size-4" />}<span>页面访问码<br /><small>{tokenReady ? "已填写" : "待填写"}</small></span></div>
+        <div className="flex items-center gap-2 rounded-lg border border-emerald-300/25 bg-emerald-300/[0.055] p-3 text-sm text-emerald-200"><ShieldCheck className="size-4" /><span>审验访问<br /><small>已授权</small></span></div>
         <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${snapshot ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-slate-300/25 bg-slate-300/[0.04] text-slate-400"}`}>{snapshot ? <Database className="size-4" /> : <CircleAlert className="size-4" />}<span>研究材料<br /><small>{snapshot ? `${snapshot.versionId} 可用于执行` : "可先生成任务"}</small></span></div>
       </div>
-      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady || !tokenReady}>生成研究任务</Button>
+      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady}>生成研究任务</Button>
       {busy && <p role="status" className="text-cyan-200">{busy === "plan" ? "正在理解问题并检查范围…" : busy === "execute" ? "正在核验材料、复算并生成解释…" : "正在保存审核记录…"}</p>}
       {error && <p role="alert" className="text-rose-300">{error}</p>}
     </section>
@@ -108,7 +105,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       <h2 className="text-lg font-semibold">确认研究任务</h2>
       <dl className="grid gap-2 text-sm sm:grid-cols-2"><div>公司：{contract.company}</div><div>任务：{INTENT_LABELS[contract.intent]}</div><div>报告期：{contract.period}</div><div>同比期间：{contract.comparablePeriod ?? "未要求比较"}</div><div>所需材料：{contract.requiredSourceIds.join("、") || "范围外"}</div><div>研究快照：{snapshot?.versionId ?? "待补充"}（不作为同比期间）</div></dl>
       <p className="text-sm text-slate-300">{contract.reasons.join("；")}</p>
-      {draft && <Button disabled={!!busy || !token} onClick={() => request("execute")}>确认并执行</Button>}
+      {draft && <Button disabled={!!busy} onClick={() => request("execute")}>确认并执行</Button>}
     </section>}
     {shown && <section className={panel} data-testid="question-result">
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">

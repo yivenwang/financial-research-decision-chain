@@ -28,7 +28,6 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
   const [runs, setRuns] = useState<MemoRun[]>([]);
   const [reviews, setReviews] = useState<MemoReview[]>([]);
   const [selectedId, setSelectedId] = useState("");
-  const [accessCode, setAccessCode] = useState("");
   const [reviewer, setReviewer] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -68,7 +67,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     setBusy(true); setNotice(null);
     const request = new AbortController(); controller.current = request;
     try {
-      const response = await fetch("/api/research-memo", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessCode}` }, body: JSON.stringify(version), signal: request.signal });
+      const response = await fetch("/api/research-memo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(version), signal: request.signal });
       const data = await response.json();
       if (data.run) { await appendMemoRun(data.run, version, workspace); setSelectedId(data.run.runId); setReviewer(""); setNote(""); }
       if (!response.ok) setNotice(typeof data.error === "string" ? data.error : "此次模型调用未完成。");
@@ -90,9 +89,8 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     {configured === false && <p className="text-sm text-amber-200" data-testid="memo-unconfigured">模型服务尚未配置，当前无法生成 AI 备忘录。</p>}
     {configured && context && <div className="space-y-3 rounded-xl border border-white/10 bg-slate-950/30 p-4">
       <p className="text-sm leading-6 text-slate-300">点击后，将该版本的结构化证据和冻结计算发送至 {provider === "deepseek" ? "DeepSeek" : provider === "openai" ? "OpenAI" : "已配置模型"}{model ? `（${model}）` : ""}。PDF 文件和审核人姓名不进入模型请求。</p>
-      <label className="block max-w-md space-y-2 text-sm text-slate-300"><span>演示访问码</span><Input type="password" autoComplete="off" value={accessCode} onChange={(event) => setAccessCode(event.target.value)} className="border-white/10 bg-slate-950/50" /></label>
     </div>}
-    <Button onClick={generate} disabled={!configured || !context || busy || accessCode.length < 16} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
+    <Button onClick={generate} disabled={!configured || !context || busy} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
     {notice && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-6 text-amber-100">{notice}</p>}
     {runs.length > 1 && <label className="block space-y-2 text-sm text-slate-300"><span>本版本的模型调用</span><select aria-label="选择模型调用" value={run?.runId ?? ""} onChange={(event) => { setSelectedId(event.target.value); setReviewer(""); setNote(""); setNotice(null); }} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2">{runs.map((item, index) => <option key={item.runId} value={item.runId}>第 {index + 1} 次 · {item.audit.finishedAt} · {item.status === "completed" ? "已生成" : "未生成有效备忘录"}</option>)}</select></label>}
     {run && <div className="space-y-5" data-testid="memo-run">

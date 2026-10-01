@@ -1,4 +1,4 @@
-import { timingSafeEqual } from "node:crypto";
+import { authorizedReviewer } from "./reviewer-access.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
@@ -162,11 +162,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
 
 const failureMessage = (run: MemoRun) => run.status === "blocked" ? "模型输出未通过引用或内容校验，已保留调用记录，请复核后重试。" : "模型服务暂未完成此次请求，已保留调用记录；没有生成备忘录。";
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "Cache-Control": "no-store" } }); }
-export function authorized(request: Request, token: string) {
-  const supplied = Buffer.from(request.headers.get("authorization") ?? "");
-  const expected = Buffer.from(`Bearer ${token}`);
-  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
-}
+export async function authorized(request: Request, token: string) { return authorizedReviewer(request, token); }
 function serializedOrigin(value: string) {
   try {
     const url = new URL(value);
@@ -192,7 +188,7 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
     POST: async (request: Request) => {
       const config = getConfig();
       if (!configured(config)) return json({ error: "模型服务尚未配置。", code: "MODEL_NOT_CONFIGURED" }, 503);
-      if (!authorized(request, config.accessToken)) return json({ error: "演示访问码不正确。", code: "UNAUTHORIZED" }, 401);
+      if (!await authorized(request, config.accessToken)) return json({ error: "审验会话无效，请重新输入访问码。", code: "UNAUTHORIZED" }, 401);
       if (!sameOrigin(request, config.appOrigin)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ error: "请求格式错误。", code: "CONTENT_TYPE" }, 415);
       if (inFlight) return json({ error: "已有模型请求正在处理，请稍后重试。", code: "MODEL_BUSY" }, 429);
