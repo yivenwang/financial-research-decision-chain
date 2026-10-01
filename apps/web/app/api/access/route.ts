@@ -11,6 +11,21 @@ function sameOrigin(request: Request) {
   return origin === (configured || new URL(request.url).origin);
 }
 
+function secureCookie(request: Request) {
+  const configured = process.env.RESEARCH_APP_ORIGIN?.trim();
+  if (configured) {
+    try {
+      return new URL(configured).protocol === "https:";
+    } catch {
+      // Fall through to proxy/request metadata when the configured origin is malformed.
+    }
+  }
+
+  const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
+  if (forwardedProtocol) return forwardedProtocol === "https:";
+  return new URL(request.url).protocol === "https:";
+}
+
 function response(value: unknown, status = 200) {
   return NextResponse.json(value, { status, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow, noarchive, nosnippet" } });
 }
@@ -42,7 +57,7 @@ export async function POST(request: Request) {
   const result = response({ ok: true });
   result.cookies.set(REVIEW_ACCESS_COOKIE, await reviewSessionValue(accessCode), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: secureCookie(request),
     sameSite: "strict",
     path: "/",
     maxAge: REVIEW_SESSION_SECONDS,
@@ -53,6 +68,6 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   if (!sameOrigin(request)) return response({ error: "请求来源不匹配。" }, 403);
   const result = response({ ok: true });
-  result.cookies.set(REVIEW_ACCESS_COOKIE, "", { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "strict", path: "/", maxAge: 0 });
+  result.cookies.set(REVIEW_ACCESS_COOKIE, "", { httpOnly: true, secure: secureCookie(request), sameSite: "strict", path: "/", maxAge: 0 });
   return result;
 }
