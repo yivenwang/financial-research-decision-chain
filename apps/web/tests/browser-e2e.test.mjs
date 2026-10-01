@@ -12,6 +12,7 @@ import { storageKeys } from "../lib/research-versions.ts";
 import { memoStorageKey } from "../lib/research-memo-storage.ts";
 import { createMemoRun } from "../lib/research-memo.server.ts";
 import { memoRevisionStorageKey } from "../lib/research-memo-revisions.ts";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 const require = createRequire(import.meta.url);
 const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
@@ -24,6 +25,17 @@ const liveProvider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deeps
 const liveApiKey = liveProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.DEEPSEEK_API_KEY;
 const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : process.env.DEEPSEEK_MODEL) || (liveProvider === "openai" ? "gpt-5.6-sol" : "deepseek-v4-pro");
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
+
+async function authorizeContext(context) {
+  await context.addCookies([{
+    name: REVIEW_ACCESS_COOKIE,
+    value: await reviewSessionValue(accessCode),
+    url: origin,
+    httpOnly: true,
+    secure: false,
+    sameSite: "Strict",
+  }]);
+}
 if (liveMemo) assert.ok(liveApiKey?.trim(), `Live ${liveProvider} acceptance requires its API key supplied by the runner.`);
 const cases = [
   {
@@ -131,7 +143,7 @@ after(async () => {
 });
 
 async function upload(page, id, selected = id) {
-  await page.goto(origin, { waitUntil: "load" });
+  await page.goto(`${origin}/changes`, { waitUntil: "load" });
   if (selected === "S-06") {
     await page.getByRole("combobox", { name: "选择已登记材料" }).click();
     await page.getByRole("option", { name: "S-06 · 2026H1 · 回归演示", exact: true }).click();
@@ -174,7 +186,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   await revisions.getByRole("button", { name: "保存人工修订", exact: true }).click();
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
   await page.reload({ waitUntil: "load" });
-  await page.getByRole("tab", { name: "版本历史" }).click();
+  await page.goto(`${origin}/versions`, { waitUntil: "load" });
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿待复核" }).waitFor();
   assert.ok((await revisions.innerText()).includes(firstText));
   await revisions.getByLabel("修订稿审核人（自行填写）", { exact: true }).fill("CI synthetic revision reviewer");
@@ -216,7 +228,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   assert.equal(await revisions.getByRole("button", { name: "接受此修订稿", exact: true }).count(), 0);
   await revisions.getByLabel("选择人工修订版本", { exact: true }).selectOption(stored.revisions[1].id);
   await page.reload({ waitUntil: "load" });
-  await page.getByRole("tab", { name: "版本历史" }).click();
+  await page.goto(`${origin}/versions`, { waitUntil: "load" });
   await revisions.getByTestId("memo-revision-status").filter({ hasText: "修订稿已退回" }).waitFor();
   await revisions.screenshot({ path: new URL("S-05-human-revision-history-NOT-LIVE.png", artifacts).pathname });
   stored = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(scope));
@@ -228,6 +240,7 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
 for (const fixture of cases) {
   test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+    await authorizeContext(context);
     const page = await context.newPage();
     let modelRequests = 0;
     const errors = [];
@@ -273,8 +286,29 @@ for (const fixture of cases) {
       assert.equal(snapshot.chain.evidence.find((item) => item.metricKey === "attributable_np").direction, fixture.ay < 0 ? "反证" : "中性");
       assert.deepEqual(snapshot.chain.graphDiff.unchangedNodeIds, ["C-01", "C-02", "C-03", "C-05", "C-06"]);
       assert.equal((await readLedger(page, fixture.scope === "research" ? "regression" : "research")).length, 0);
+      if (fixture.scope === "research") {
+        await page.goto(`${origin}/workspace`, { waitUntil: "load" });
+        const dashboard = page.getByTestId("workspace-dashboard");
+        await dashboard.getByText(`CURRENT RESEARCH · ${snapshot.versionId}`).waitFor();
+        assert.ok((await dashboard.innerText()).includes("证据审核"));
+        assert.ok((await dashboard.innerText()).includes("规则影响节点"));
+        assert.ok((await dashboard.innerText()).includes("EG-01 / EG-02"));
+        await dashboard.screenshot({ path: new URL("S-05-workspace.png", artifacts).pathname });
+        await page.goto(`${origin}/evidence`, { waitUntil: "load" });
+        const contextBar = page.getByTestId("research-context");
+        await contextBar.getByText(`当前版本 ${snapshot.versionId}`, { exact: true }).waitFor();
+        assert.ok((await contextBar.innerText()).includes(`来源 ${fixture.id} · 2026Q1`));
+        assert.ok((await contextBar.innerText()).includes("仅此浏览器"));
+        const currentEvidence = page.getByTestId("current-evidence");
+        await currentEvidence.getByText(snapshot.versionId, { exact: true }).waitFor();
+        assert.ok((await currentEvidence.innerText()).includes(snapshot.evidence[0].label));
+        assert.ok((await currentEvidence.innerText()).includes("EG-01 / EG-02"));
+        assert.ok((await currentEvidence.innerText()).includes("同比：-4.87%"));
+        assert.ok((await currentEvidence.innerText()).includes("同比：+24.39%") || (await currentEvidence.innerText()).includes("同比：24.39%"));
+        await currentEvidence.screenshot({ path: new URL("S-05-current-evidence.png", artifacts).pathname });
+      }
       await page.reload({ waitUntil: "load" });
-      await page.getByRole("tab", { name: "版本历史" }).click();
+      await page.goto(`${origin}/versions`, { waitUntil: "load" });
       if (fixture.scope === "regression") {
         await page.getByRole("combobox", { name: "选择版本库" }).click();
         await page.getByRole("option", { name: "回归演示版本库", exact: true }).click();
@@ -287,7 +321,7 @@ for (const fixture of cases) {
         if (fixture.id === "S-05") {
           await stubMemoTransport(page);
           await page.reload({ waitUntil: "load" });
-          await page.getByRole("tab", { name: "版本历史" }).click();
+          await page.goto(`${origin}/versions`, { waitUntil: "load" });
         }
       }
       if (liveMemo || fixture.id === "S-05") {
@@ -298,8 +332,6 @@ for (const fixture of cases) {
         });
         const prefix = liveMemo ? `S-05-live-${liveProvider}-model` : "S-05-stub-model-NOT-LIVE";
         const panel = page.getByTestId("memo-panel");
-        await panel.getByLabel("演示访问码").fill(accessCode);
-        assert.ok((await panel.innerText()).includes(liveMemo && liveProvider === "openai" ? "OpenAI" : "DeepSeek"));
         const [httpResponse] = await Promise.all([
           page.waitForResponse((response) => new URL(response.url()).pathname === "/api/research-memo" && response.request().method() === "POST", { timeout: liveMemo && liveProvider === "deepseek" ? 170000 : 110000 }),
           panel.getByRole("button", { name: "生成 AI 备忘录", exact: true }).click(),
@@ -343,7 +375,7 @@ for (const fixture of cases) {
         await auditDownload.saveAs(new URL(`${prefix}-audit.json`, artifacts).pathname);
         assert.deepEqual((await readLedger(page, fixture.scope))[0], snapshot);
         await page.reload({ waitUntil: "load" });
-        await page.getByRole("tab", { name: "版本历史" }).click();
+        await page.goto(`${origin}/versions`, { waitUntil: "load" });
         await page.getByTestId("memo-status").filter({ hasText: "人工已接受" }).waitFor();
         await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
         if (!liveMemo) await exerciseMemoRevisions(page, modelRun, fixture.scope);
@@ -384,6 +416,7 @@ for (const fixture of cases) {
 
 test("real upload rejects source mismatch and missing/rejected/invalid reviewed values", { timeout: 180000, skip: liveMemo }, async () => {
   const context = await browser.newContext();
+  await authorizeContext(context);
   const page = await context.newPage();
   try {
     await upload(page, "S-06", "S-05");

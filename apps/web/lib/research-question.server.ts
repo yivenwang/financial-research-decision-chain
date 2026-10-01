@@ -81,7 +81,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
     POST: async (request: Request) => {
       const config = getConfig();
       if (!configured(config)) return json({ code: "MODEL_NOT_CONFIGURED", error: "模型服务尚未配置。" }, 503);
-      if (!authorized(request, config.accessToken)) return json({ code: "UNAUTHORIZED", error: "演示访问码不正确。" }, 401);
+      if (!await authorized(request, config.accessToken)) return json({ code: "UNAUTHORIZED", error: "审验会话无效，请重新输入访问码。" }, 401);
       if (!sameOrigin(request, config.appOrigin)) return json({ code: "ORIGIN_MISMATCH", error: "请求来源不匹配。" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ code: "CONTENT_TYPE", error: "需要 JSON 请求。" }, 415);
       if (inFlight) return json({ code: "MODEL_BUSY", error: "已有研究请求正在处理，请稍后手动重试。" }, 429);

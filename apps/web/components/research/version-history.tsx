@@ -1,4 +1,5 @@
 "use client";
+import light from "@/components/beacon/legacy-light.module.css";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -7,6 +8,8 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  Download,
+  ExternalLink,
   FileClock,
   GitCommitHorizontal,
   HardDrive,
@@ -51,6 +54,8 @@ function formatDate(value: string) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Asia/Shanghai",
+    hourCycle: "h23",
   }).format(new Date(value));
 }
 
@@ -58,6 +63,15 @@ function versionKind(version: ResearchVersion) {
   if (version.kind === "baseline") return "基线";
   if (version.kind === "rollback") return "回滚";
   return "材料更新";
+}
+
+function downloadJson(name: string, value: unknown) {
+  const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 function VersionBadge({ version }: { version: ResearchVersion }) {
@@ -131,6 +145,28 @@ export function VersionHistory() {
     }
   }
 
+  function exportSelectedVersion() {
+    downloadJson(`beacon-${workspace}-${selectedVersion.versionId}.json`, {
+      schema: "beacon.research-version.v1",
+      exportedAt: new Date().toISOString(),
+      workspace,
+      activeVersionId,
+      version: selectedVersion,
+    });
+    setNotice(`${selectedVersion.versionId} 快照已导出；文件包含该版本的来源、证据、审核、计算与阻塞关卡。`);
+  }
+
+  function exportVersionLedger() {
+    downloadJson(`beacon-${workspace}-version-ledger.json`, {
+      schema: "beacon.research-version-ledger.v1",
+      exportedAt: new Date().toISOString(),
+      workspace,
+      activeVersionId,
+      versions: allVersions,
+    });
+    setNotice(`已导出${workspace === "research" ? "研究" : "回归演示"}版本库，共 ${allVersions.length} 个版本；本机记录未被修改。`);
+  }
+
   const readiness = [
     { label: "已保存决策链结果", pass: storedVersions.some((version) => Boolean(version.chain)) },
     { label: "真实 PDF 更新记录", pass: storedVersions.some((version) => version.source?.mode === "pdf") },
@@ -166,14 +202,24 @@ export function VersionHistory() {
         </div>
       </div>
 
-      <div className="max-w-lg">
-        <Select value={workspace} onValueChange={(value) => { setWorkspace(value as WorkspaceScope); setNotice(null); }}>
-          <SelectTrigger aria-label="选择版本库" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
-          <SelectContent className="border-slate-700 bg-slate-900 text-slate-100">
-            <SelectItem value="research">研究版本库</SelectItem>
-            <SelectItem value="regression">回归演示版本库</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="w-full max-w-lg">
+          <Select value={workspace} onValueChange={(value) => { setWorkspace(value as WorkspaceScope); setNotice(null); }}>
+            <SelectTrigger aria-label="选择版本库" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
+            <SelectContent className={light.portal}>
+              <SelectItem value="research">研究版本库</SelectItem>
+              <SelectItem value="regression">回归演示版本库</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={exportSelectedVersion} className="border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.07] hover:text-white">
+            <Download /> 导出当前快照
+          </Button>
+          <Button type="button" variant="outline" onClick={exportVersionLedger} className="border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.07] hover:text-white">
+            <Download /> 导出完整版本库
+          </Button>
+        </div>
       </div>
       <div className="grid gap-4 xl:grid-cols-[0.42fr_1fr]">
         <aside className="research-panel h-fit">
@@ -259,7 +305,7 @@ export function VersionHistory() {
                     <RotateCcw /> 回滚到此版本
                   </Button>
                 </AlertDialogTrigger>
-                <AlertDialogContent className="border-slate-700 bg-slate-950 text-slate-100">
+                <AlertDialogContent className={light.portal}>
                   <AlertDialogHeader>
                     <AlertDialogTitle>恢复 {selectedVersion.versionId} 的研究状态？</AlertDialogTitle>
                     <AlertDialogDescription className="leading-6 text-slate-400">
@@ -288,6 +334,7 @@ export function VersionHistory() {
                 <p className="mt-1 text-sm font-medium leading-6 text-slate-100">
                   {selectedVersion.source?.name ?? "无来源记录"}
                 </p>
+                {selectedVersion.source?.url && <a href={selectedVersion.source.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-[13px] text-cyan-200 underline underline-offset-4">核查登记原文 <ExternalLink className="size-3.5" /></a>}
               </div>
               <div className="rounded-xl border border-white/8 bg-white/[0.03] p-4">
                 <History className="size-4 text-cyan-300" />
