@@ -108,7 +108,7 @@ before(async () => {
       expectedSha256: fixture.expectedPdfSha256,
     }));
   }
-  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: "", ...(!liveMemo ? { MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", OPENAI_API_KEY: "", DEEPSEEK_API_KEY: "" } : {}) } });
+  server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4322", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, RESEARCH_DEMO_TOKEN: accessCode, RESEARCH_APP_ORIGIN: "", REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z", ...(!liveMemo ? { MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", OPENAI_API_KEY: "", DEEPSEEK_API_KEY: "" } : {}) } });
   let spawnError;
   server.on("error", (error) => { spawnError = error; });
   server.stdout.on("data", (data) => { logs += data; });

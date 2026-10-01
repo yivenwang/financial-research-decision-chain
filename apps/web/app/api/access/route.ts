@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { REVIEW_ACCESS_COOKIE, REVIEW_SESSION_SECONDS, hasReviewBearer, hasReviewSession, reviewSessionValue } from "@/lib/reviewer-access";
+import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_ISO, hasReviewBearer, hasReviewSession, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionSeconds, reviewSessionValue } from "@/lib/reviewer-access";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,13 +14,8 @@ function sameOrigin(request: Request) {
 function secureCookie(request: Request) {
   const configured = process.env.RESEARCH_APP_ORIGIN?.trim();
   if (configured) {
-    try {
-      return new URL(configured).protocol === "https:";
-    } catch {
-      // Fall through to proxy/request metadata when the configured origin is malformed.
-    }
+    try { return new URL(configured).protocol === "https:"; } catch {}
   }
-
   const forwardedProtocol = request.headers.get("x-forwarded-proto")?.split(",")[0]?.trim();
   if (forwardedProtocol) return forwardedProtocol === "https:";
   return new URL(request.url).protocol === "https:";
@@ -32,12 +27,18 @@ function response(value: unknown, status = 200) {
 
 export async function GET(request: Request) {
   const accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "";
-  return response({ configured: accessCode.length >= 16, session: await hasReviewSession(request, accessCode) });
+  return response({
+    configured: accessCode.length >= 16,
+    session: await hasReviewSession(request, accessCode),
+    deadline: REVIEW_ACCESS_DEADLINE_ISO,
+    expired: !reviewAccessOpen(),
+  });
 }
 
 export async function POST(request: Request) {
   const accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "";
   if (accessCode.length < 16) return response({ error: "审验访问服务尚未配置。" }, 503);
+  if (!reviewAccessOpen()) return response({ error: "本轮审验访问已于 2026 年 10 月 8 日 23:59（北京时间）截止。" }, 410);
   if (!sameOrigin(request)) return response({ error: "请求来源不匹配。" }, 403);
   if (!request.headers.get("content-type")?.startsWith("application/json")) return response({ error: "请求格式错误。" }, 415);
 
@@ -50,17 +51,20 @@ export async function POST(request: Request) {
     const body = JSON.parse(raw) as { code?: unknown };
     if (typeof body.code === "string" && Object.keys(body).length === 1) code = body.code;
   } catch { return response({ error: "请求内容无效。" }, 400); }
+
   if (!hasReviewBearer(new Request(request.url, { headers: { authorization: `Bearer ${code}` } }), accessCode)) {
     return response({ error: "访问码不正确。" }, 401);
   }
 
-  const result = response({ ok: true });
+  const deadlineMs = reviewAccessDeadlineMs();
+  const result = response({ ok: true, deadline: REVIEW_ACCESS_DEADLINE_ISO });
   result.cookies.set(REVIEW_ACCESS_COOKIE, await reviewSessionValue(accessCode), {
     httpOnly: true,
     secure: secureCookie(request),
     sameSite: "strict",
     path: "/",
-    maxAge: REVIEW_SESSION_SECONDS,
+    maxAge: reviewSessionSeconds(Date.now(), deadlineMs),
+    expires: new Date(deadlineMs),
   });
   return result;
 }
