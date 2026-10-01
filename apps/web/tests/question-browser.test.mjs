@@ -10,6 +10,7 @@ import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { storageKeys } from "../lib/research-versions.ts";
 import { questionTestConfig, planOutput, answerOutput, providerResponse } from "./question-test-helpers.mjs";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 const require = createRequire(import.meta.url);
 assert.ok(process.env.PLAYWRIGHT_PACKAGE_PATH, "Set PLAYWRIGHT_PACKAGE_PATH.");
@@ -23,7 +24,7 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
   assert.equal(prior.snapshot.source.mode, "pdf"); assert.equal(prior.snapshot.source.sha256, prior.pdfSha256);
   const snapshot = prior.snapshot;
   const origin = "http://127.0.0.1:4323";
-  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4323", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", NEXT_TELEMETRY_DISABLED: "1" } });
+  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4323", "-H", "127.0.0.1"], { cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", NEXT_TELEMETRY_DISABLED: "1", RESEARCH_DEMO_TOKEN: questionTestConfig.accessToken, RESEARCH_APP_ORIGIN: origin } });
   let logs = ""; server.stdout.on("data", d => logs += d); server.stderr.on("data", d => logs += d);
   const exited = new Promise(r => server.once("close", r)); let browser;
   const calls = [];
@@ -39,7 +40,10 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
       try { if ((await fetch(origin)).ok) break; } catch {}
       await delay(250);
     }
-    browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    browser = await chromium.launch();
+    const context = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await context.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(questionTestConfig.accessToken), url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
+    const page = await context.newPage();
     const errors = []; page.on("pageerror", e => errors.push(e.message));
     await page.route("**/api/research-question", async route => {
       const request = route.request();
@@ -58,7 +62,6 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await page.waitForURL("**/questions?q=*");
     await page.waitForFunction(q => document.querySelector('textarea[aria-label="研究问题"]')?.value === q, homepageQuestion);
     assert.equal(calls.length, 0, "Navigating with a question makes no model request");
-    await page.getByLabel("问题研究访问码").fill(questionTestConfig.accessToken);
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();
     const result = page.getByTestId("question-result");
@@ -89,7 +92,6 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await page.screenshot({ path: new URL("question-mobile-NOT-LIVE.png", artifacts).pathname, fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     await page.reload(); await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
-    await page.getByLabel("问题研究访问码").fill(questionTestConfig.accessToken);
     for (const [question, intent] of [["归母净利润下降的来源在哪里？", "EVIDENCE_AUDIT"], ["本期更新影响了哪些节点？", "DECISION_IMPACT"]]) {
       await page.getByLabel("研究问题", { exact: true }).fill(question);
       await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
