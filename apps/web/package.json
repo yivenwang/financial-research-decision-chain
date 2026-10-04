@@ -21,7 +21,7 @@
     "test:question": "node --experimental-strip-types --test tests/research-question.test.mjs tests/question-batch.test.mjs tests/adversarial-review.test.mjs",
     "eval:review": "NODE_OPTIONS=--experimental-strip-types PROMPTFOO_DISABLE_TELEMETRY=1 npx --yes promptfoo@0.123.1 eval -c evals/reviewer-offline.yaml --no-cache --no-progress-bar",
     "test:question-browser": "node --experimental-strip-types --test tests/question-browser.test.mjs",
-    "test:memo": "node --experimental-strip-types --test tests/research-memo.test.mjs tests/memo-batch.test.mjs tests/memo-revisions.test.mjs",
+    "test:memo": "node --experimental-strip-types --test tests/research-memo.test.mjs tests/memo-storage-concurrency.test.mjs tests/memo-batch.test.mjs tests/memo-revisions.test.mjs",
     "test:runtime": "node --test tests/runtime-smoke.test.mjs",
     "test:browser": "node --experimental-strip-types --test tests/browser-e2e.test.mjs",
     "lint": "eslint . --ignore-pattern .next --ignore-pattern public/vendor"

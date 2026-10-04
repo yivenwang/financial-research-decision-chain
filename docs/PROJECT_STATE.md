@@ -6,9 +6,11 @@
 
 当前 GitHub 事实：
 - `main` = `fe9af2b9450c069fc979cb539cd43454783a95fa`。
-- 第一轮审计修复 PR #30 / `fix/audit-round-1` 仍开放；修复提交 `cde81409e22642930e868afa27c13d62604f18f3` 的五套普通 CI 全部成功。
+- 第一轮审计修复 PR #30 / `fix/audit-round-1` 仍开放；审计时 head `2c2d34e4ba42a168dfb261dda02b9bdfe52cbaa8` 的 Web CI 实际执行并成功。四个金融引擎 workflow 的 scope job 成功，regression job 因本 head 未修改其范围文件而按设计跳过；不能表述为“五套回归全部执行成功”。
 - PR #30 处理会话签名、请求边界、生产门禁、Next 依赖、登录跳转、安全响应头、手动验收认证和本地保存失败等；跨端点额度、幂等、服务端恢复、账号/角色、完整 CSP 等仍未关闭。
-- 所有者在 2026-10-04 按既定方案完成了公开 IP 的 HTTPS 安排。此项目前属于**运营者已完成报告**；下一位执行者应通过线上 TLS、HTTP→HTTPS、Secure Cookie、secure context、Web Locks、Nginx upstream / 端口、证书续期与当前 release SHA 做独立复核后，才能把“已部署并验证”写成机器可核查结论。
+- **运营者报告：**所有者在 2026-10-04 按既定方案完成了公开 IP 的 HTTPS 安排。
+- **机器已验证：**`http://192.144.168.226` 返回 HTTPS 308；公网证书为有效 Let's Encrypt IP 证书且 SAN 包含 `192.144.168.226`；Next 仅监听 `127.0.0.1:3000`；生产仓库仍为旧 `main` `fe9af2b9450c069fc979cb539cd43454783a95fa`，运行 Next 16.2.6，因此 PR #30 尚未部署。
+- **机器尚未验证：**Certbot timer、short-lived renewal 配置和成功后的 Nginx reload hook 已存在，但最近一次 timer 运行早于本证书 renewal 配置和 hook 创建，尚无一次成功续期周期的证据；Secure Cookie、secure context、Web Locks 和完整外网登录回跳仍待 PR 部署后的验收。
 - 内部审验访问窗口保持至 **2026-10-08 23:59:59（北京时间）**。
 
 Codex 首个接管任务不是继续堆功能，而是先独立审查 PR #30：对照 `docs/AUDIT_REPAIR_ROUND_1.md`、现有测试与实际线上部署，找出遗漏、回归和未验证假设；确认无阻断问题后再给出合并 / 后续修复建议。金融公式、阈值、K-07、Prompt 判断标准、专业关卡、历史记录和 S-07 排除继续冻结。
@@ -17,7 +19,7 @@ Codex 首个接管任务不是继续堆功能，而是先独立审查 PR #30：�
 
 基于实际 main `fe9af2b9450c069fc979cb539cd43454783a95fa`。此前桌面 UI 与访问门禁已进入 main；main 已将默认审验截止改为 **2026-10-08 23:59:59（北京时间）**，本轮保留该决定。下面较早日期的“尚未合并 / 未部署”是历史状态，不作为当前结论。
 
-`fix/audit-round-1` 处理技术安全与调用可靠性，见 [修复记录和 HTTPS 发布准备](AUDIT_REPAIR_ROUND_1.md)。该分支在 2026-10-04 完成代码与普通 CI 验证；公开 IP HTTPS 随后由所有者在目标服务器完成操作，但尚未由 Codex / CI 对 live server 做独立机器复核。因此“HTTPS 已安排”和“第一轮审计代码已经合并/生产部署”必须继续区分。财务核心、Prompt、专业关卡、原始历史和 S-07 排除继续保留。
+`fix/audit-round-1` 处理技术安全与调用可靠性，见 [修复记录和 HTTPS 发布准备](AUDIT_REPAIR_ROUND_1.md)。该分支在 2026-10-04 完成 Web CI；公开 IP HTTPS 随后由所有者在目标服务器操作并由 Codex 做了上述只读机器复核。HTTPS 已存在不等于第一轮审计代码已经合并或部署。财务核心、Prompt、专业关卡、原始历史和 S-07 排除继续保留。
 
 ## 2026-09-28 整套桌面 UI（PR #28）
 
@@ -47,8 +49,8 @@ Codex 首个接管任务不是继续堆功能，而是先独立审查 PR #30：�
 | 三份 run-10 建议正文 | 用户已确认 18 段（16 改、2 留）；追加绑定记录已合并 | PR #24 |
 | 问题入口 | 已进入 main；普通 CI 通过 | PR #25 |
 | 桌面 UI / 访问门禁 | 已进入 main；当前线上服务基于其后续部署演进 | 以 main 与生产 SHA 复核为准 |
-| 第一轮审计修复 | PR #30 开放；五套普通 CI 全绿；尚未合并 | `fix/audit-round-1` / `cde81409e22642930e868afa27c13d62604f18f3` |
-| HTTPS | 所有者报告 2026-10-04 已在公开 IP 完成；待机器独立复核 | live TLS / Nginx / renewal / release SHA |
+| 第一轮审计修复 | PR #30 开放；Web CI 实际执行成功；四个金融引擎 regression job 经 scope 判定跳过；尚未合并 | `fix/audit-round-1` / 以 PR 当前 head 为准 |
+| HTTPS | 运营者报告已完成；308、可信 IP 证书、loopback upstream、旧生产 SHA / Next 16.2.6 已机器复核；成功续期周期未验证 | live TLS / Nginx / release SHA；renewal 仍 pending |
 | 新问题 Prompt 的真实验收 | 待运行与内容复核；已准备手动固定提交的批次工具 | [验收规范](QUESTION_LIVE_ACCEPTANCE_V0.1.md) |
 | 多公司 | 尚未验证端到端适用性 | [有限验证协议](CROSS_COMPANY_VALIDATION_V0.1.md)；#20 仍开放 |
 | 专业复核 | EG-01 / EG-02 均 pending | [专业材料](PROFESSIONAL_REVIEW_PACKET_V0.1.md) |
@@ -60,8 +62,8 @@ Codex 首个接管任务不是继续堆功能，而是先独立审查 PR #30：�
 
 | 来源 | 已确认 | 差异处理 |
 | --- | --- | --- |
-| 当前聊天与可检索历史 | Codex 接管、HTTPS 已由所有者完成操作、访问窗口至 10/08 | 写入本页与 AGENTS；live 状态由执行 Agent 再核验 |
-| GitHub 当前代码、分支、PR、CI | main、PR #30 与五套 CI | 后续始终以实时 GitHub 为准 |
+| 当前聊天与可检索历史 | Codex 接管、所有者报告 HTTPS 操作完成、访问窗口至 10/08 | 运营者报告与机器事实分列，不把部署操作等同于代码已上线 |
+| GitHub 当前代码、分支、PR、CI | main、PR #30；Web CI 成功；四个金融回归 job scoped-out | 后续始终以实时 GitHub 为准 |
 | 队员 UI 文档 | UI 方向已落地主线 | 早期“AI 自动决策、偏好学习、万能聊天”等设想不作为已实现需求 |
 | “追踪几家公司直到决赛” | 讨论设想 | 不是无人值守交易或无限模型调用授权 |
 

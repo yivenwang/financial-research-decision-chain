@@ -6,33 +6,35 @@
 
 | 原审计项 | 本轮处理 | 尚需验证或后续处理 |
 | --- | --- | --- |
-| C-01 HTTP / 安全浏览器 API | 问题和 Memo 在调用前检查 secure context、hash、UUID 和 Web Locks；不满足则明确阻断 | 现有线上 HTTP 尚未切到 HTTPS；准备 IP 证书配置，必须外网操作验收 |
+| C-01 HTTP / 安全浏览器 API | 问题和 Memo 在调用前检查 secure context、hash、UUID 和 Web Locks；Memo run/review 台账读改写也由同 origin Web Lock 跨标签页串行；不满足则明确阻断 | 公网 308 与可信 IP 证书已机器验证；PR 部署后的 secure context、Web Locks 和完整操作仍待外网验收 |
 | C-02 会话 | 随机 nonce、签发和到期时间、独立服务端 HMAC 密钥；拒绝旧派生哈希、篡改、未来签发及过期票据；轮换访问码或签名密钥使全部会话失效 | 保留到 Oct 8 的既定访问窗口，不偷偷恢复 8 小时；尚无账号、单会话撤销和角色体系。注销仍仅清除当前浏览器 cookie |
-| C-03 依赖 | Next / eslint-config-next 固定 16.3.8，更新兼容传递依赖；关闭当前产品不需要的公开图片优化服务 | 本地生产依赖审计 0 个已知漏洞，不证明未知漏洞或所有开发依赖已清理；CI 在合并前重扫 |
+| C-03 依赖 | Next / eslint-config-next 固定 16.3.8，更新兼容传递依赖；关闭当前产品不需要的公开图片优化服务 | 生产依赖审计 0；20 个 high 均为 dev/build/lint 工具链且不在 Next 生产运行依赖图，分类见 [开发依赖审计](DEVELOPMENT_DEPENDENCY_AUDIT_2026-10-04.md) |
 | H-09 请求体 | 登录 / Memo / Question 共用流式字节限制、总读取时限、断连取消；模型响应读取共用原调用 deadline，保留既定单次预算与无重试 | Nginx 请求缓冲、超时与连接数配置仍是未安装模板 |
 | H-10 手动验收脚本 | Proxy 仅对两个已授权模型 API 支持原有 Bearer 认证；脚本 readiness GET 带认证；其他页面和 API 不被 Bearer 放开 | 本轮没有 dispatch 手动付费验收，不宣称新真实问题内容通过 |
 | H-11 保存失败（部分） | Question 先保留返回结果和任务票据再保存；Memo 先显示结果再追加台账；保存失败提示立即导出，不引导重复生成 | 页面关闭、导航、网络响应丢失的服务端持久任务和幂等恢复尚未实现 |
 | H-13 登录限制（部分） | 单进程固定窗口，最多 20 次 / 分钟；429 + Retry-After；不信任客户端 IP 标头 | 独立进程不共享；Nginx 的真实来源 IP 限速待安装。跨端点预算、重复执行幂等及跨进程并发是第二轮，不标记整个 H-13 关闭 |
 | H-14 门禁和响应头（部分） | 静态文件明确列举，只开放 `_next/static`；拒绝任意扩展名和 `_next/data` 豁免；加 nosniff、DENY、frame-ancestors、object-src、base-uri、form-action | CSP 本轮不包含 script-src / nonce，不能当作完整 XSS 防护；还需严格脚本策略设计及验证 |
 | L-04 登录跳转 | URL 同 origin 校验，拒绝反斜杠、协议相对路径与控制字符 | 外网登录后回到各工作台路由仍待人工操作验收 |
-| L-05 状态文件 | 更新修复基线、实际部署阻塞和发布条件；CI 加 lint、类型及生产依赖扫描 | 远程发布 SHA、监控、备份恢复仍待服务器验证 |
+| L-05 状态文件 | 更新修复基线、实际部署阻塞和发布条件；CI 加 lint、类型及生产依赖扫描 | 生产 SHA / Next / TLS / upstream 已只读复核；监控、备份恢复和成功续期周期仍待验证 |
 
 冻结引擎、金融公式、阈值、K-07、Prompt、模型每次 token / timeout 预算、EG-01 / EG-02 和原始历史均保留。没有读取或测试 S-07，没有真实模型请求。数值容错、K-07 口径、数据真实性、台账全量 schema / 多标签一致性、服务端恢复和预算幂等继续按审计台账处理。本轮不是整体审计问题全部关闭。
 
 ## 本地验证
 
-- `npm test`：70 项通过，含 12 项门禁和请求安全测试。
+- `npm test`：72 项通过，包含新增 Memo 基础台账跨标签页并发、配额失败、无丢失、无重复和追加顺序回归。
 - `npm run lint`：0 错误，4 个原有未使用变量警告。生成的 PDF.js worker 从应用 lint 范围排除；它的字节一致性由生产 runtime 检查。
 - `npx tsc --noEmit`、`npm run build`：通过。
 - `npm audit --omit=dev`：生产依赖 0 个已知漏洞（该次数据库快照）。
 - 生产 runtime：通过；覆盖实际生产 Proxy、两个 API 的受限 Bearer readiness、签名登录 cookie、响应头、静态 worker、超大登录体和真实登录限速。冻结 V5 迁移校验通过，冻结财务源文件无变更。
-- 浏览器回归由普通 Web CI 的现有 S-05 / 隔离 S-06、问题和整套 UI 测试执行；离线传输标注 NOT-LIVE，真实内容和生产人工验收保持 pending。
+- 浏览器回归由普通 Web CI 的现有 S-05 / 隔离 S-06、问题和整套 UI 测试执行；离线传输标注 NOT-LIVE，真实内容和生产人工验收保持 pending。四个金融引擎 workflow 仅通过 scope job，regression job 在该 Web-only head 上按设计跳过；不能表述为五套回归均执行。
 
 ## 无域名的 HTTPS 发布准备
 
 用户确认暂无域名。无需把购买域名作为前置条件，可先使用现有 `192.144.168.226` 的公开 IP 证书。官方依据：[Let's Encrypt / Certbot IP certificates](https://letsencrypt.org/2026/03/11/shorter-certs-certbot)。截至该官方说明，webroot 需要 Certbot 5.4+；IP 证书约 6 天有效，需自动续期和 deploy hook 让 Nginx 读取新证书。不要使用不被浏览器信任的 staging 证书作为正式 HTTPS 验收。
 
-本环境只尝试 SSH 的 `node --version` 只读检查，连接 `vect@192.144.168.226:22` 返回 `Network is unreachable`。没有读取服务器 env、部署、改防火墙、重启服务或修改 Nginx。GitHub 授权与服务器可达性是两件事。
+**运营者报告：**所有者称 2026-10-04 已完成公开 IP HTTPS 安排。
+
+**后续只读机器复核：**HTTP→HTTPS 返回 308；Let's Encrypt 证书有效且 SAN 为 `192.144.168.226`；Nginx 将流量转发到仅监听 `127.0.0.1:3000` 的 Next；生产仓库为 `fe9af2b9450c069fc979cb539cd43454783a95fa`，运行 Next 16.2.6，尚未包含 PR #30。Certbot timer、short-lived renewal 配置和 `nginx -t && systemctl reload nginx` deploy hook 已存在；但 timer 最近一次成功发生在当前 renewal 配置和 hook 创建之前，所以尚不能声称续期周期成功。复核没有读取或输出密钥，没有部署、改防火墙、重启服务或修改 Nginx。
 
 实施顺序（连接恢复后由操作者执行，必须先核对现有服务目录 / 启动方式，不直接覆盖）：
 

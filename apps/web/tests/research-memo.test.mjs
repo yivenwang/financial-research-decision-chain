@@ -135,7 +135,7 @@ test("invalid compact output is blocked without fixing missing slots, citations 
 
 test("legacy drafts keep their original lengths, arrays, audit bytes and labels when read and reviewed", async () => {
   // A synthetic historical record, not an archived provider response.
-  const data = new Map(); globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {} };
+  const data = new Map(); globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {}, navigator: { locks: { request: (_key, operation) => operation() } } };
   try {
     const version = snapshot(); appendVersion(version); const versionBytes = data.get(storageKeys().versions);
     const historical = memo(); historical.summary.text = "研".repeat(201);
@@ -429,7 +429,7 @@ test("concurrent HTTP requests do not duplicate an in-flight model call", async 
 });
 
 test("memo and review ledgers append independently, preserve version bytes, and bind rollback and storage scope", async () => {
-  const data = new Map(); globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {} };
+  const data = new Map(); globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {}, navigator: { locks: { request: (_key, operation) => operation() } } };
   try {
     const version = snapshot(); appendVersion(version);
     const bytes = data.get(storageKeys().versions);

@@ -11,8 +11,8 @@ Before doing substantial work, read only the files relevant to the task. Use `do
 Current handoff:
 - Repository: `yivenwang/financial-research-decision-chain`; GitHub is the source of truth.
 - `main` is currently `fe9af2b9450c069fc979cb539cd43454783a95fa`.
-- PR #30 / branch `fix/audit-round-1` is the active first-round audit repair. Head before this handoff update was `cde81409e22642930e868afa27c13d62604f18f3`; all five ordinary CI workflows on that commit completed successfully.
-- The owner reports that the public-IP HTTPS arrangement was completed manually on 2026-10-04 after the audit branch prepared the deployment guidance. Treat this as operator-reported state until independently verified against the live server; do not silently overwrite server configuration.
+- PR #30 / branch `fix/audit-round-1` is the active first-round audit repair. On audited head `2c2d34e4ba42a168dfb261dda02b9bdfe52cbaa8`, Web CI executed successfully; the four financial-engine workflows passed their scope jobs and intentionally skipped their regression jobs because this head did not change their scoped files. Do not describe that result as five regression suites executing.
+- The owner reported that the public-IP HTTPS arrangement was completed manually on 2026-10-04 after the audit branch prepared the deployment guidance. A later read-only machine check independently verified HTTP→HTTPS 308, a valid Let's Encrypt IP certificate, loopback Next upstream, and production still at old `main` `fe9af2b9450c069fc979cb539cd43454783a95fa` / Next 16.2.6. Renewal configuration exists, but no successful renewal cycle has yet been observed. Do not silently overwrite server configuration.
 - Internal review access remains intentionally time-bounded through 2026-10-08 23:59:59 Beijing time unless the owner changes it.
 - First task for Codex takeover: independently review PR #30 against the audit findings and the live deployment assumptions, identify any regression/security gaps, and only then recommend merge/deploy follow-up. Do not claim a server-side fix is verified without observing the relevant live configuration or behavior.
 
