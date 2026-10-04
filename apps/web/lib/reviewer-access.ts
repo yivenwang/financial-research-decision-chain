@@ -30,8 +30,22 @@ export function reviewSessionSeconds(now = Date.now(), deadlineMs = reviewAccess
   return Math.max(0, Math.floor((deadlineMs - now) / 1000));
 }
 
-export async function reviewSessionValue(accessCode: string) {
-  return hex(await crypto.subtle.digest("SHA-256", encoder.encode(`beacon-review-session.v1\n${accessCode}`)));
+export function reviewSessionConfigured(secret = process.env.REVIEW_SESSION_SECRET ?? "") {
+  return secret.length >= 32;
+}
+
+async function sessionSignature(payload: string, accessCode: string, secret: string) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(`beacon-review-session.v2\n${accessCode}\n${payload}`)));
+}
+
+export async function reviewSessionValue(accessCode: string, now = Date.now()) {
+  const secret = process.env.REVIEW_SESSION_SECRET ?? "";
+  const deadline = reviewAccessDeadlineMs();
+  if (!reviewSessionConfigured(secret) || accessCode.length < 16 || !reviewAccessOpen(now, deadline)) throw new Error("REVIEW_SESSION_NOT_CONFIGURED_OR_EXPIRED");
+  // Preserve the owner's Oct 8 access window; expiry is also verified on the server.
+  const payload = `v2.${now}.${deadline}.${hex(crypto.getRandomValues(new Uint8Array(24)).buffer)}`;
+  return `${payload}.${await sessionSignature(payload, accessCode, secret)}`;
 }
 
 function cookieValue(request: Request, name: string) {
@@ -41,8 +55,14 @@ function cookieValue(request: Request, name: string) {
 }
 
 export async function hasReviewSession(request: Request, accessCode: string, now = Date.now()) {
-  if (!reviewAccessOpen(now) || accessCode.length < 16) return false;
-  return secureEqual(cookieValue(request, REVIEW_ACCESS_COOKIE), await reviewSessionValue(accessCode));
+  const secret = process.env.REVIEW_SESSION_SECRET ?? "";
+  if (!reviewAccessOpen(now) || accessCode.length < 16 || !reviewSessionConfigured(secret)) return false;
+  const value = cookieValue(request, REVIEW_ACCESS_COOKIE);
+  if (!/^v2\.[0-9]{13}\.[0-9]{13}\.[a-f0-9]{48}\.[a-f0-9]{64}$/.test(value)) return false;
+  const [version, issued, expires, nonce, signature] = value.split(".");
+  const iat = Number(issued), exp = Number(expires);
+  if (iat > now || exp < now || exp <= iat || exp > reviewAccessDeadlineMs()) return false;
+  return secureEqual(signature, await sessionSignature(`${version}.${issued}.${expires}.${nonce}`, accessCode, secret));
 }
 
 export function hasReviewBearer(request: Request, accessCode: string, now = Date.now()) {
