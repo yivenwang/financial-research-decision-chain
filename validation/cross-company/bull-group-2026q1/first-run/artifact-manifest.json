@@ -1,0 +1,22 @@
+{
+  "schemaVersion": "cross-company-first-run-artifacts.v1",
+  "result": "FAIL",
+  "classification": "test infrastructure failure",
+  "attemptStartedAt": "2026-10-04T09:20:15.941Z",
+  "attemptFinishedAt": "2026-10-04T09:20:17.007Z",
+  "codeSha": "21f48d3e91fd9531ce88f25f053d64aa3c00ddd4",
+  "workingTreeClean": true,
+  "modelRequests": 0,
+  "parserInvoked": false,
+  "files": {
+    "registration.json": "5cdd6d8f6f5311aa93da1890087f56f307de84023e6ea8304ce40da51c565fd4",
+    "execution-failure.json": "cd9715c8b98c8989f8c401cf2f95728a651429c563c4f06c5076e18c92171978",
+    "source.pdf": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6"
+  },
+  "failure": {
+    "name": "TypeError",
+    "message": "doc.destroy is not a function",
+    "cause": "The probe discarded the PDFDocumentLoadingTask and called destroy() on PDFDocumentProxy. In locked pdfjs-dist 6.3.289, destroy() is exposed by the loading task while the document proxy exposes cleanup().",
+    "effect": "The finally block threw after text extraction and before coordinates were serialized or the parser was invoked. No parser or financial result exists for this attempt."
+  }
+}

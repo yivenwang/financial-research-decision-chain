@@ -1,6 +1,6 @@
 # 公牛集团 2026Q1 跨公司盲测记录
 
-状态：**基线已冻结，首次运行尚未执行**。
+状态：**基线已冻结；首次运行 FAIL（测试基础设施失败，parser 未执行）**。
 
 ## 选例
 
@@ -25,3 +25,16 @@
 4. 首跑不调用模型、不注册公司、不形成投资判断、不修改冻结规则，也不读取或测试 S-07。
 
 首次输出将单独追加保存；本段和机器基线不因后续修复或复跑而改写。
+
+## 首次运行结果（永久保留）
+
+- 结果：**FAIL**。
+- 时间：2026-10-04T09:20:15.941Z 至 2026-10-04T09:20:17.007Z。
+- 锁定执行提交：`21f48d3e91fd9531ce88f25f053d64aa3c00ddd4`；运行前工作树 clean；模型请求 0。
+- 分类：**test infrastructure failure**。
+- 现象：`run-transfer-probe.mjs` 抛出 `TypeError: doc.destroy is not a function`。
+- 原因：脚本丢弃了 `PDFDocumentLoadingTask`，却在 `PDFDocumentProxy` 上调用 `destroy()`。锁定的 `pdfjs-dist` 6.3.289 在 loading task 上提供 `destroy()`，document proxy 只提供 `cleanup()`。
+- 影响：异常发生在文本提取后的 `finally`，coordinates 尚未写盘，`parseFinancialReportV06Strict` 尚未调用；因此本次没有 parser 兼容性结论，也不得改记为材料或财务失败。
+- 定性：这是 probe 生命周期管理 bug，不是缺配置、缺财务能力或有意 scope boundary。将销毁调用绑定到 loading task 不改变任何 parser、公式、阈值、Claim、Assumption、Kill Criteria、估值、Decision 或 Prompt，属于现有批准范围内的常规测试基础设施修复，不需要额外所有者批准。
+
+原始字节见 `validation/cross-company/bull-group-2026q1/first-run/`；摘要见其中 `artifact-manifest.json`。后续修复后的运行只能称为第二次运行，不能改称盲测首跑。
