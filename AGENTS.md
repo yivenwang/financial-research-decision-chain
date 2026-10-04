@@ -2,6 +2,38 @@
 
 Recorded from the project owner's instructions on 2026-09-07.
 
+## Codex takeover baseline (2026-10-04)
+
+Codex is now the primary engineering executor for Beacon. The owner should not be used as a manual terminal relay. For ordinary engineering work, inspect the repository and environment directly, make changes on a branch, run the relevant tests, review the diff, and report the result. Ask the owner only when a decision is genuinely product-level, financially semantic, paid/external, secret-bearing, destructive, or otherwise irreversible.
+
+Before doing substantial work, read only the files relevant to the task. Use `docs/PROJECT_STATE.md` for current project status, `docs/AUDIT_REPAIR_ROUND_1.md` for the current security-audit repair branch, and narrower design/runbooks when the task touches those areas. Always check actual GitHub HEAD / PR / CI state instead of trusting stale prose.
+
+Current handoff:
+- Repository: `yivenwang/financial-research-decision-chain`; GitHub is the source of truth.
+- `main` is currently `fe9af2b9450c069fc979cb539cd43454783a95fa`.
+- PR #30 / branch `fix/audit-round-1` is the active first-round audit repair. Head before this handoff update was `cde81409e22642930e868afa27c13d62604f18f3`; all five ordinary CI workflows on that commit completed successfully.
+- The owner reports that the public-IP HTTPS arrangement was completed manually on 2026-10-04 after the audit branch prepared the deployment guidance. Treat this as operator-reported state until independently verified against the live server; do not silently overwrite server configuration.
+- Internal review access remains intentionally time-bounded through 2026-10-08 23:59:59 Beijing time unless the owner changes it.
+- First task for Codex takeover: independently review PR #30 against the audit findings and the live deployment assumptions, identify any regression/security gaps, and only then recommend merge/deploy follow-up. Do not claim a server-side fix is verified without observing the relevant live configuration or behavior.
+
+Default engineering workflow:
+1. Inspect the current branch/HEAD, open PRs, dirty worktree if local, and relevant CI.
+2. State the intended change and acceptance criteria briefly.
+3. Implement the smallest coherent change without weakening frozen rules.
+4. Run targeted tests plus required regression/build/lint/type/security checks.
+5. Review the diff for secrets, scope creep, migration risk, and financial-semantic changes.
+6. Commit to a task branch and open/update a PR with evidence.
+7. For deployment tasks, verify the live release SHA, process manager, Nginx/TLS state, environment-variable loading and smoke tests. Preserve rollback.
+8. Report: changed / not changed, tests run, live calls made, PR/commit, residual risks, and next smallest high-value task.
+
+Owner approval is still required before:
+- changing target users, core workflow, claims, assumptions, Kill Criteria, formulas, thresholds, valuation/decision rules, AI/human boundary, professional gates, or prompts that change judgement criteria;
+- destructive data/schema migrations or deletion of historical evidence;
+- exposing secrets, changing paid-provider budgets, making unapproved real model calls, purchasing services, changing repository visibility/licensing, or opening the product beyond the approved access boundary;
+- making an investment decision on the owner's behalf.
+
+Routine implementation, debugging, tests, CI fixes, documentation, dependency maintenance, security hardening within the approved product boundary, and reversible deployment diagnostics do not require the owner to copy commands between tools.
+
 ## Current cross-chat baseline (2026-09-20)
 
 Read `docs/PROJECT_STATE.md` and check the actual GitHub HEAD / PR status before continuing. The owner confirmed the brand **Beacon｜研灯**, Question First, Workspace, Diff → Impact → Review → Commit, a light theme, five desktop task screens and a Mobile Companion. Final visual designs are still pending; implement their approved design when supplied, preserving the existing financial and review semantics. Older dated approval entries below are historical scope, not a reason to ask again for actions authorized later.
