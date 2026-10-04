@@ -1,0 +1,50 @@
+{
+  "schemaVersion": "cross-company-blind-baseline.v1",
+  "status": "BASELINE_FROZEN_BEFORE_FIRST_RUN",
+  "frozenAt": "2026-10-04T09:17:49Z",
+  "mainSha": "3499889da8227fc5b5f8b148a286fc1c0c9d70d9",
+  "branch": "codex/cross-company-bull-2026q1",
+  "source": {
+    "sourceId": "XFER-BULL-2026Q1",
+    "company": "公牛集团股份有限公司",
+    "ticker": "603195.SH",
+    "period": "2026Q1",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225265153.PDF",
+    "pdfSha256": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6",
+    "byteLength": 155979,
+    "pdfVersion": "1.7",
+    "pageCount": 12,
+    "previouslyUsedForTuning": false,
+    "unseenBasis": "Repository search found only the unexecuted protocol nomination; no Bull Group or 603195 parser fixture, mapping, source registration, expected values, or prior run artifact exists on the frozen main SHA."
+  },
+  "versions": {
+    "parser": "V0.6-strict",
+    "chain": "V0.1",
+    "memoPrompt": "research-update-v3-compact-1",
+    "memoOutputContract": "research-memo-output.v2-compact",
+    "questionCapability": "anker-c04.v1"
+  },
+  "fileSha256": {
+    "lib/parser-v04.ts": "de463a8b54be1782d966c7da9ee51a31d7a57f953d8e81cb6c5247b597ad4d82",
+    "lib/parser-v05.ts": "cabd92cd2ca1e30035ec9523c777a6df9bdcbf7a6ac83ecb884d3326ad3e866b",
+    "lib/parser-v05-strict.ts": "3d894c80a1d39e3c27accfb7f1a3ac6016badd5dc93d79b6e57083ac7d4a442e",
+    "lib/parser-v06.ts": "7a8d924659ac1c0ab636ca3cfa9afa670b04e92721c9ccfab7bf1028c3868ae6",
+    "lib/parser-v06-strict.ts": "b79c5bb9bf6fad335ede127902e9c86758c764a6e286c8197e5bd15dd9f3393a",
+    "lib/chain-v01.ts": "1763bc82f5b0c625343d3ca96a2ac1a8d8a7e31be92a0b5ea89d326070f65722",
+    "apps/web/lib/parser-v04.ts": "5cda943d9d6ad9bf0e5902ccf2d4166f6a23007e9072ab99c7fa2605b4577f06",
+    "apps/web/lib/source-records.ts": "029b8fe47f53773b56d79570adde35eec8ca393e6c9068f0310bb77cfc253893",
+    "apps/web/lib/research-engine.ts": "a99d89446c44332211fcdbb907e370fa6abed6523b70dc4aa563aa2f4dc8a322",
+    "apps/web/lib/research-memo-contract.ts": "876a16d168d57ea53fe820a4a62925c48b9c5fb465e94b0a152785c85245bd64",
+    "apps/web/lib/research-question.ts": "41160c2c346b548c9ad97c0b8b49bf31317093559d84650af4807807f5806686",
+    "apps/web/scripts/run-transfer-probe.mjs": "45689b8a30c03d0de77e1f8eafa0170cdfe26d54e551084c07427e6ff22f0cf2",
+    "apps/web/package-lock.json": "a5bce1a672693714481f08296353575cb6312c15869082c04397e2006eba91e7"
+  },
+  "expectedBoundaries": [
+    "The first attempt may execute only the existing parser-only transfer probe with injected Source metadata.",
+    "The registered browser Source resolver contains only Anker sources, so Bull Group cannot enter the product workspace without a later explicit change.",
+    "C-04, A-03, K-07, F-02, Valuation-B5 and Decision are Anker research semantics and must not be transferred to Bull Group.",
+    "Memo and Question paths require the registered Anker C-04 snapshot and are out of scope for the untouched first attempt.",
+    "A parser PASS means only parsed-review-pending until independent page, unit, column, sign, YoY and F-02 reconciliation is complete.",
+    "No model request, investment decision, product registration, professional approval or production deployment is authorized."
+  ]
+}
