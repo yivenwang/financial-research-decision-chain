@@ -25,14 +25,9 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          if [ "$EVENT_NAME" != "pull_request" ]; then
-            echo "engine=true" >> "$GITHUB_OUTPUT"
-          elif git diff --quiet "$BASE_SHA" "$HEAD_SHA" -- lib tests package.json package-lock.json docs/CHAIN_V0.1_SPEC.md; then
-            echo "engine=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "engine=true" >> "$GITHUB_OUTPUT"
-          fi
+        # Layout-only parser PRs run parser-layout.yml's explicit allowed corpus.
+        # Other engine changes retain the original broad regression jobs.
+        run: node scripts/parser-layout-ci-scope.mjs
 
   v06-regression:
     needs: scope

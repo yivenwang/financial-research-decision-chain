@@ -1,0 +1,256 @@
+{
+  "schemaVersion": "parser-layout-rerun.v1",
+  "executedAt": "2026-10-04T11:30:12.942Z",
+  "classification": "PASS",
+  "blind": false,
+  "baselineCodeSha": "c4a4dc2f028927144fa03ab0c3eb0166fa0ba4a5",
+  "implementationFileSha256": {
+    "lib/parser-primary-layout.ts": "85a28df52579fab8b177be0780d074d0da803c926697bbf3749707059c5ceecc",
+    "lib/parser-v06.ts": "672df51539225c0a3deb2f4b11f0e5f34ee6ce383715a535dbd61b5de172ab16",
+    "lib/parser-v06-strict.ts": "b79c5bb9bf6fad335ede127902e9c86758c764a6e286c8197e5bd15dd9f3393a",
+    "lib/parser-v04.ts": "de463a8b54be1782d966c7da9ee51a31d7a57f953d8e81cb6c5247b597ad4d82",
+    "lib/parser-v05-strict.ts": "3d894c80a1d39e3c27accfb7f1a3ac6016badd5dc93d79b6e57083ac7d4a442e"
+  },
+  "sourcePdfSha256": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6",
+  "frozenCoordinatesSha256": "95b3b44f0470126c81e1d9c8be7e51072bc7ce0f896aef09169b769d838ecd0a",
+  "freshCoordinatesSha256": "95b3b44f0470126c81e1d9c8be7e51072bc7ce0f896aef09169b769d838ecd0a",
+  "reviewSha256": "debbf96cbfefbcfbb511391e5cd487aeb2a28fddf7512dfaf577a59518cf020c",
+  "originalEvidenceRoot": "validation/cross-company/bull-group-2026q1/second-run/",
+  "modelRequests": 0,
+  "financialSemanticsChanged": false,
+  "professionalApproval": false,
+  "s07Accessed": false,
+  "checks": [
+    {
+      "metric": "revenue",
+      "page": 1,
+      "sourceCurrent": 4060221001.34,
+      "parsedCurrent": 4060221001.34,
+      "sourceComparison": 3922292893.48,
+      "parsedComparison": 3922292893.48,
+      "sourceChange": 3.52,
+      "parsedChange": 3.52,
+      "pass": true
+    },
+    {
+      "metric": "attributable_np",
+      "page": 1,
+      "sourceCurrent": 1058244024.62,
+      "parsedCurrent": 1058244024.6200001,
+      "sourceComparison": 974916307.5,
+      "parsedComparison": 974916307.5,
+      "sourceChange": 8.55,
+      "parsedChange": 8.55,
+      "pass": true
+    },
+    {
+      "metric": "adjusted_np",
+      "page": 1,
+      "sourceCurrent": 983604877.44,
+      "parsedCurrent": 983604877.44,
+      "sourceComparison": 855232293.27,
+      "parsedComparison": 855232293.27,
+      "sourceChange": 15.01,
+      "parsedChange": 15.010000000000002,
+      "pass": true
+    },
+    {
+      "metric": "operating_cash_flow",
+      "page": 1,
+      "sourceCurrent": 1699187932.26,
+      "parsedCurrent": 1699187932.26,
+      "sourceComparison": 1412435516.57,
+      "parsedComparison": 1412435516.57,
+      "sourceChange": 20.3,
+      "parsedChange": 20.3,
+      "pass": true
+    },
+    {
+      "metric": "basic_eps",
+      "page": 1,
+      "sourceCurrent": 0.59,
+      "parsedCurrent": 0.59,
+      "sourceComparison": 0.54,
+      "parsedComparison": 0.54,
+      "sourceChange": 9.26,
+      "parsedChange": 9.26,
+      "pass": true
+    },
+    {
+      "metric": "diluted_eps",
+      "page": 1,
+      "sourceCurrent": 0.59,
+      "parsedCurrent": 0.59,
+      "sourceComparison": 0.54,
+      "parsedComparison": 0.54,
+      "sourceChange": 9.26,
+      "parsedChange": 9.26,
+      "pass": true
+    },
+    {
+      "metric": "roe",
+      "page": 2,
+      "sourceCurrent": 6.1,
+      "parsedCurrent": 6.1,
+      "sourceComparison": 5.95,
+      "parsedComparison": 5.95,
+      "sourceChange": 0.15,
+      "parsedChange": 0.15,
+      "pass": true
+    },
+    {
+      "metric": "total_assets",
+      "page": 2,
+      "sourceCurrent": 24376116627.48,
+      "parsedCurrent": 24376116627.48,
+      "sourceComparison": 22556242542.63,
+      "parsedComparison": 22556242542.63,
+      "sourceChange": 8.07,
+      "parsedChange": 8.07,
+      "pass": true
+    },
+    {
+      "metric": "attributable_equity",
+      "page": 2,
+      "sourceCurrent": 17816277778.3,
+      "parsedCurrent": 17816277778.3,
+      "sourceComparison": 16797615200.75,
+      "parsedComparison": 16797615200.749998,
+      "sourceChange": 6.06,
+      "parsedChange": 6.06,
+      "pass": true
+    },
+    {
+      "metric": "non_recurring_total",
+      "page": 3,
+      "sourceCurrent": 74639147.18,
+      "parsedCurrent": 74639147.18,
+      "pass": true
+    }
+  ],
+  "formulaReview": {
+    "id": "F-02",
+    "difference": 0,
+    "formulaChanged": false
+  },
+  "result": {
+    "source": {
+      "sourceId": "XFER-BULL-2026Q1",
+      "period": "2026Q1",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225265153.PDF"
+    },
+    "metrics": {
+      "revenue": {
+        "key": "revenue",
+        "label": "营业收入",
+        "current": 4060.22100134,
+        "comparison": 3922.29289348,
+        "disclosedChange": 0.0352,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "attributable_np": {
+        "key": "attributable_np",
+        "label": "归属于上市公司股东的净利润",
+        "current": 1058.2440246200001,
+        "comparison": 974.9163075,
+        "disclosedChange": 0.0855,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "adjusted_np": {
+        "key": "adjusted_np",
+        "label": "归属于上市公司股东的扣除非经常性损益的净利润",
+        "current": 983.6048774400001,
+        "comparison": 855.23229327,
+        "disclosedChange": 0.1501,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "operating_cash_flow": {
+        "key": "operating_cash_flow",
+        "label": "经营活动产生的现金流量净额",
+        "current": 1699.18793226,
+        "comparison": 1412.43551657,
+        "disclosedChange": 0.203,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "basic_eps": {
+        "key": "basic_eps",
+        "label": "基本每股收益",
+        "current": 0.59,
+        "comparison": 0.54,
+        "disclosedChange": 0.0926,
+        "unit": "CNY_share",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "diluted_eps": {
+        "key": "diluted_eps",
+        "label": "稀释每股收益",
+        "current": 0.59,
+        "comparison": 0.54,
+        "disclosedChange": 0.0926,
+        "unit": "CNY_share",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "roe": {
+        "key": "roe",
+        "label": "加权平均净资产收益率",
+        "current": 0.061,
+        "comparison": 0.059500000000000004,
+        "disclosedChange": 0.0015,
+        "unit": "ratio",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 2,
+        "confidence": 1
+      },
+      "total_assets": {
+        "key": "total_assets",
+        "label": "总资产",
+        "current": 24376.116627479998,
+        "comparison": 22556.24254263,
+        "disclosedChange": 0.08070000000000001,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 2,
+        "confidence": 1
+      },
+      "attributable_equity": {
+        "key": "attributable_equity",
+        "label": "归属于上市公司股东的权益",
+        "current": 17816.2777783,
+        "comparison": 16797.61520075,
+        "disclosedChange": 0.060599999999999994,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 2,
+        "confidence": 1
+      },
+      "non_recurring_total": {
+        "key": "non_recurring_total",
+        "label": "非经常性损益合计",
+        "current": 74.63914718000001,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 3,
+        "confidence": 1
+      }
+    },
+    "issues": [],
+    "blockers": [],
+    "canPromoteToEvidence": true
+  }
+}
