@@ -1,0 +1,52 @@
+name: Parser layout allowed corpus
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  scope:
+    runs-on: ubuntu-latest
+    outputs:
+      parser_layout: ${{ steps.changes.outputs.parser_layout }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - id: changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/parser-layout-ci-scope.mjs
+  allowed-parser-regression:
+    needs: scope
+    if: needs.scope.outputs.parser_layout == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Install locked extraction dependencies (no model calls)
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Layout, allowed legacy parser and deterministic chain unit tests
+        run: node --experimental-strip-types --test tests/parser-layout-generalization.test.mjs tests/parser-layout-ci-scope.test.mjs tests/parser-v04-regression.test.mjs tests/chain-v01.test.mjs
+      - name: Frozen S-05 / S-06 PDF regression and Bull source rerun (not blind)
+        run: node --experimental-strip-types --test tests/parser-layout-pdf.test.mjs
+      - name: Preserve financial engine and historical holdout bytes
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: git diff --exit-code "$BASE_SHA" -- lib/chain-v01.ts lib/parser-v04.ts lib/parser-v05.ts lib/parser-v05-strict.ts lib/parser-v06-strict.ts docs/CHAIN_V0.1_SPEC.md validation/cross-company/bull-group-2026q1

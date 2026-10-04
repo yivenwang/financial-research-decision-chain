@@ -1,5 +1,23 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-04 — Parser layout generalization (new stage)
+
+PR #31 merged with owner approval, without deployment, at
+`c4a4dc2f028927144fa03ab0c3eb0166fa0ba4a5`. Its Bull first/second-run artifacts
+and validation report remain immutable. Parser-only follow-up is on
+`codex/parser-layout-generalization` from that main; see
+[parser layout report](PARSER_LAYOUT_GENERALIZATION.md) for architecture,
+allowed regression corpus, non-blind Bull rerun and actual CI evidence.
+No financial research semantics, product company registry, model budget or
+professional gate changes are authorized here. S-07 remains excluded; no model
+calls, merge of the new PR or deployment.
+Local implementation/tests are complete at `c171288`. The initial workflow
+credential blocker recorded at `5f0eb51` was resolved by owner-configured GitHub
+CLI authentication. The branch is pushed and [PR #32](https://github.com/yivenwang/financial-research-decision-chain/pull/32)
+is open; remote CI is being tracked. Final job evidence is recorded on the PR;
+successful scope detection must not be counted as an executed regression.
+PR #32 remains unmerged and undeployed.
+
 ## 2026-10-04 公牛集团跨公司隔离验证（开发分支）
 
 最新 `main` 为 `3499889da8227fc5b5f8b148a286fc1c0c9d70d9`（PR #30 已合并）。分支 `codex/cross-company-bull-2026q1` 从该提交冻结公牛集团 2026Q1 官方原件与实现摘要。首次 untouched probe 因测试 harness 的 PDF.js 销毁对象错误而 `EXECUTION_FAILED`，原始字节已保留；仅修复 harness 后的第二次运行是 `PARTIAL / UNSUPPORTED_FORMAT`，不是盲测 PASS。
