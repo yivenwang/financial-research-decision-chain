@@ -142,7 +142,7 @@ async function main() {
     for (let i = 0; i < 60; i++) {
       check(!spawnFailed && server.exitCode === null, "SERVER_START_FAILED");
       try {
-        const response = await fetch(`${origin}/api/research-question`, { signal: AbortSignal.timeout(1000) });
+        const response = await fetch(`${origin}/api/research-question`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(1000) });
         const config = await response.json();
         ready = response.ok && config.configured && config.provider === "deepseek" && config.model === "deepseek-v4-pro";
         if (ready) break;

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { INTENT_LABELS, QUESTION_CAPABILITY, questionSources, questionMarkdown, type QuestionRun, type SignedQuestionDraft } from "@/lib/research-question";
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, type QuestionLedger } from "@/lib/research-question-storage";
 import { readStoredVersions, readActiveVersionId, VERSION_UPDATED_EVENT, type ResearchVersion } from "@/lib/research-versions";
+import { researchBrowserIssue } from "@/lib/research-browser";
 
 const examples = ["安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？", "归母净利润同比下降的来源在哪里？", "这次更新影响了哪些Claim和Assumption？"];
 const statusLabel = { CONTRACT_DRAFTED: "待确认研究任务", MATERIALS_REQUIRED: "需要补充材料", OUT_OF_SCOPE: "超出当前范围", BLOCKED: "已阻断", ANSWER_READY: "研究草稿待审核", PARTIAL: "部分回答待审核" };
@@ -34,6 +35,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   const [shown, setShown] = useState<QuestionRun | null>(null);
   const [busy, setBusy] = useState<"plan" | "execute" | "review" | null>(null);
   const [error, setError] = useState("");
+  const [browserIssue, setBrowserIssue] = useState<string | null>("正在检查浏览器环境…");
   const [reviewer, setReviewer] = useState("");
   const [note, setNote] = useState("");
   const reload = () => {
@@ -46,13 +48,15 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
     let active = true;
     const initialize = () => { if (!active) return; try { const next = reload(); setShown(next.runs.at(-1) ?? null); } catch (e) { setError(plainError(e)); } };
     const refresh = () => { if (!active) return; try { reload(); } catch (e) { setError(plainError(e)); } };
-    queueMicrotask(initialize);
+    queueMicrotask(() => { if (active) setBrowserIssue(researchBrowserIssue()); initialize(); });
     window.addEventListener(VERSION_UPDATED_EVENT, refresh); window.addEventListener("storage", refresh);
     const abort = new AbortController();
     fetch("/api/research-question", { signal: abort.signal }).then(async r => { if (!r.ok) throw new Error("无法读取模型配置状态。"); setConfig(await r.json()); }).catch(e => { if (e.name !== "AbortError") setError(plainError(e)); });
     return () => { active = false; abort.abort(); window.removeEventListener(VERSION_UPDATED_EVENT, refresh); window.removeEventListener("storage", refresh); };
   }, []);
   async function request(phase: "plan" | "execute") {
+    const issue = researchBrowserIssue();
+    if (issue) { setBrowserIssue(issue); setError(issue); return; }
     setBusy(phase); setError("");
     if (phase === "plan") setDraft(null);
     try {
@@ -64,10 +68,11 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       const data = await response.json();
       if (!response.ok || !data.run) throw new Error(data.error ?? "研究请求未完成。");
       setShown(data.run);
-      // Keep result visible and downloadable even if local persistence fails.
-      await appendQuestionRun(data.run); reload();
       if (phase === "plan" && data.ticket) setDraft({ run: data.run, ticket: data.ticket });
       if (phase === "execute" && data.run.status !== "MATERIALS_REQUIRED") setDraft(null);
+      // Keep result visible and downloadable even if local persistence fails.
+      try { await appendQuestionRun(data.run); reload(); }
+      catch { setError("结果已返回，但本机保存失败。请立即导出完整记录；无需再次调用模型。"); }
     } catch (e) { setError(plainError(e)); }
     finally { setBusy(null); }
   }
@@ -97,7 +102,8 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         <div className="flex items-center gap-2 rounded-lg border border-emerald-300/25 bg-emerald-300/[0.055] p-3 text-sm text-emerald-200"><ShieldCheck className="size-4" /><span>审验访问<br /><small>已授权</small></span></div>
         <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${snapshot ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-slate-300/25 bg-slate-300/[0.04] text-slate-400"}`}>{snapshot ? <Database className="size-4" /> : <CircleAlert className="size-4" />}<span>研究材料<br /><small>{snapshot ? `${snapshot.versionId} 可用于执行` : "可先生成任务"}</small></span></div>
       </div>
-      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady}>生成研究任务</Button>
+      {browserIssue && <p role="alert" className="text-amber-200">{browserIssue}</p>}
+      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady || !!browserIssue}>生成研究任务</Button>
       {busy && <p role="status" className="text-cyan-200">{busy === "plan" ? "正在理解问题并检查范围…" : busy === "execute" ? "正在核验材料、复算并生成解释…" : "正在保存审核记录…"}</p>}
       {error && <p role="alert" className="text-rose-300">{error}</p>}
     </section>
@@ -105,7 +111,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       <h2 className="text-lg font-semibold">确认研究任务</h2>
       <dl className="grid gap-2 text-sm sm:grid-cols-2"><div>公司：{contract.company}</div><div>任务：{INTENT_LABELS[contract.intent]}</div><div>报告期：{contract.period}</div><div>同比期间：{contract.comparablePeriod ?? "未要求比较"}</div><div>所需材料：{contract.requiredSourceIds.join("、") || "范围外"}</div><div>研究快照：{snapshot?.versionId ?? "待补充"}（不作为同比期间）</div></dl>
       <p className="text-sm text-slate-300">{contract.reasons.join("；")}</p>
-      {draft && <Button disabled={!!busy} onClick={() => request("execute")}>确认并执行</Button>}
+      {draft && <Button disabled={!!busy || !!browserIssue} onClick={() => request("execute")}>确认并执行</Button>}
     </section>}
     {shown && <section className={panel} data-testid="question-result">
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">

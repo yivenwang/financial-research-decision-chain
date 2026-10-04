@@ -1,20 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
-import { hasReviewSession } from "@/lib/reviewer-access";
+import { hasReviewBearer, hasReviewSession } from "@/lib/reviewer-access";
+import { publicReviewPath, reviewBearerPath } from "@/lib/review-security";
 
 function protect(response: NextResponse) {
   response.headers.set("Cache-Control", "private, no-store");
   response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive, nosnippet");
   response.headers.set("Referrer-Policy", "same-origin");
+  response.headers.set("X-Content-Type-Options", "nosniff");
+  response.headers.set("X-Frame-Options", "DENY");
+  // Compatible with Next hydration; strict script nonces remain a follow-up.
+  response.headers.set("Content-Security-Policy", "frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'");
   return response;
 }
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const publicPath = pathname === "/access" || pathname === "/api/access" || pathname.startsWith("/_next/") || /\.[a-z0-9]+$/i.test(pathname);
-  if (publicPath) return protect(NextResponse.next());
+  // Current product uses fixed static images and no next/image transformation.
+  if (pathname === "/_next/image") return protect(new NextResponse(null, { status: 404 }));
+  if (publicReviewPath(pathname)) return protect(NextResponse.next());
 
   const accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "";
-  if (await hasReviewSession(request, accessCode)) return protect(NextResponse.next());
+  if ((reviewBearerPath(pathname) && hasReviewBearer(request, accessCode)) || await hasReviewSession(request, accessCode)) return protect(NextResponse.next());
 
   if (pathname.startsWith("/api/")) {
     return protect(NextResponse.json({ code: "REVIEW_ACCESS_REQUIRED", error: "请先使用审验访问码进入系统。" }, { status: 401 }));

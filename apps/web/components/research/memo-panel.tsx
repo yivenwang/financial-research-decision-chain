@@ -9,6 +9,7 @@ import { appendMemoReview, appendMemoRun, MEMO_UPDATED_EVENT, readMemoLedger } f
 import type { ResearchVersion, WorkspaceScope } from "@/lib/research-versions";
 import { MEMO_PROMPT_VERSION } from "@/lib/research-memo";
 import { MemoRevisionPanel } from "@/components/research/memo-revision-panel";
+import { researchBrowserIssue } from "@/lib/research-browser";
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -32,10 +33,12 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [browserIssue, setBrowserIssue] = useState<string | null>("正在检查浏览器环境…");
   const controller = useRef<AbortController | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    queueMicrotask(() => { if (!cancelled) setBrowserIssue(researchBrowserIssue()); });
     let boundContext: MemoContext | null = null;
     const sync = () => {
       if (cancelled || !boundContext) return;
@@ -64,12 +67,20 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
 
   async function generate() {
     if (!context || busy) return;
+    const issue = researchBrowserIssue();
+    if (issue) { setBrowserIssue(issue); setNotice(issue); return; }
     setBusy(true); setNotice(null);
     const request = new AbortController(); controller.current = request;
     try {
       const response = await fetch("/api/research-memo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(version), signal: request.signal });
       const data = await response.json();
-      if (data.run) { await appendMemoRun(data.run, version, workspace); setSelectedId(data.run.runId); setReviewer(""); setNote(""); }
+      if (data.run) {
+        // Keep the returned audit/result exportable when storage quota is exhausted.
+        setRuns((prior) => [...prior.filter((item) => item.runId !== data.run.runId), data.run]);
+        setSelectedId(data.run.runId); setReviewer(""); setNote("");
+        try { await appendMemoRun(data.run, version, workspace); }
+        catch { setNotice("结果已返回，但本机保存失败。请立即导出审计记录；无需再次调用模型。"); return; }
+      }
       if (!response.ok) setNotice(typeof data.error === "string" ? data.error : "此次模型调用未完成。");
     } catch (error) {
       if (!request.signal.aborted) setNotice(error instanceof Error ? error.message : "模型请求或保存失败，请检查网络和本机存储。");
@@ -90,7 +101,8 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     {configured && context && <div className="space-y-3 rounded-xl border border-white/10 bg-slate-950/30 p-4">
       <p className="text-sm leading-6 text-slate-300">点击后，将该版本的结构化证据和冻结计算发送至 {provider === "deepseek" ? "DeepSeek" : provider === "openai" ? "OpenAI" : "已配置模型"}{model ? `（${model}）` : ""}。PDF 文件和审核人姓名不进入模型请求。</p>
     </div>}
-    <Button onClick={generate} disabled={!configured || !context || busy} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
+    {browserIssue && <p role="alert" className="text-sm text-amber-200">{browserIssue}</p>}
+    <Button onClick={generate} disabled={!configured || !context || busy || !!browserIssue} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
     {notice && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-6 text-amber-100">{notice}</p>}
     {runs.length > 1 && <label className="block space-y-2 text-sm text-slate-300"><span>本版本的模型调用</span><select aria-label="选择模型调用" value={run?.runId ?? ""} onChange={(event) => { setSelectedId(event.target.value); setReviewer(""); setNote(""); setNotice(null); }} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2">{runs.map((item, index) => <option key={item.runId} value={item.runId}>第 {index + 1} 次 · {item.audit.finishedAt} · {item.status === "completed" ? "已生成" : "未生成有效备忘录"}</option>)}</select></label>}
     {run && <div className="space-y-5" data-testid="memo-run">

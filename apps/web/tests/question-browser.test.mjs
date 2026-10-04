@@ -12,6 +12,10 @@ import { storageKeys } from "../lib/research-versions.ts";
 import { questionTestConfig, planOutput, answerOutput, providerResponse } from "./question-test-helpers.mjs";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
+// Public synthetic signing secret, never a runtime credential.
+process.env.REVIEW_SESSION_SECRET = "NOT_A_REAL_SESSION_SECRET_BROWSER_TEST_ONLY";
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+
 const require = createRequire(import.meta.url);
 assert.ok(process.env.PLAYWRIGHT_PACKAGE_PATH, "Set PLAYWRIGHT_PACKAGE_PATH.");
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "This test is exclusively NOT-LIVE acceptance.");

@@ -18,6 +18,8 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
       ...process.env,
       NEXT_TELEMETRY_DISABLED: "1",
       RESEARCH_DEMO_TOKEN: accessCode,
+      REVIEW_SESSION_SECRET: "NOT_A_REAL_SESSION_SECRET_RUNTIME_TEST_ONLY",
+      DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "",
       RESEARCH_APP_ORIGIN: origin,
       REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z",
     },
@@ -41,6 +43,22 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
     assert.ok(accessResponse?.ok, logs);
     const accessHtml = await accessResponse.text();
     assert.match(accessHtml, /内部审验入口/);
+    assert.equal(accessResponse.headers.get("x-content-type-options"), "nosniff");
+    assert.equal(accessResponse.headers.get("x-frame-options"), "DENY");
+    assert.match(accessResponse.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+    for (const path of ["/api/private.json", "/_next/data/private.json", "/_next/image"]) {
+      const guarded = await fetch(`${origin}${path}`, { redirect: "manual" });
+      assert.equal(guarded.status, path === "/_next/image" ? 404 : path.startsWith("/api/") ? 401 : 307, `${path} must not bypass access`);
+      // Next's data requests encode redirects differently from HTML navigation.
+      if (guarded.status === 307 && !path.startsWith("/_next/data/")) assert.match(guarded.headers.get("location") ?? "", /\/access\?/);
+    }
+    for (const path of ["/api/research-question", "/api/research-memo"]) {
+      assert.equal((await fetch(`${origin}${path}`)).status, 401);
+      const status = await fetch(`${origin}${path}`, { headers: { Authorization: `Bearer ${accessCode}` } });
+      assert.equal(status.status, 200, "manual batch readiness must pass the production proxy");
+      assert.equal((await status.json()).configured, false, "runtime smoke never configures a provider key");
+    }
+    assert.equal((await fetch(`${origin}/workspace`, { headers: { Authorization: `Bearer ${accessCode}` }, redirect: "manual" })).status, 307);
 
     const loginResponse = await fetch(`${origin}/api/access`, {
       method: "POST",
@@ -51,6 +69,9 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
     assert.equal(loginResponse.status, 200);
     const setCookie = loginResponse.headers.get("set-cookie");
     assert.ok(setCookie?.includes("beacon_review_access="));
+    assert.match(setCookie, /beacon_review_access=v2\./);
+    assert.match(setCookie, /HttpOnly/i);
+    assert.match(setCookie, /SameSite=strict/i);
     assert.ok(!setCookie?.toLowerCase().includes("secure"), "HTTP runtime test must not force a Secure cookie");
     const cookie = setCookie.split(";")[0];
 
@@ -84,6 +105,18 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
     assert.equal(worker.status, 200);
     assert.match(worker.headers.get("content-type") ?? "", /javascript/);
     assert.deepEqual(Buffer.from(await worker.arrayBuffer()), await readFile(require.resolve("pdfjs-dist/build/pdf.worker.min.mjs")));
+    const badOrigin = await fetch(`${origin}/api/access`, { method: "POST", headers: { "Content-Type": "application/json", Origin: "http://untrusted.test" }, body: JSON.stringify({ code: accessCode }) });
+    assert.equal(badOrigin.status, 403);
+    const oversized = await fetch(`${origin}/api/access`, { method: "POST", headers: { "Content-Type": "application/json", Origin: origin }, body: JSON.stringify({ code: "x".repeat(4096) }) });
+    assert.equal(oversized.status, 413);
+    let limited;
+    for (let i = 0; i < 25; i++) {
+      limited = await fetch(`${origin}/api/access`, { method: "POST", headers: { "Content-Type": "application/json", Origin: origin }, body: JSON.stringify({ code: "wrong" }) });
+      if (limited.status === 429) break;
+      assert.equal(limited.status, 401);
+    }
+    assert.equal(limited.status, 429, "actual login route must limit attempts");
+    assert.equal(limited.headers.get("retry-after"), "60");
   } finally {
     server.kill("SIGTERM");
     await Promise.race([exited, delay(3000)]);

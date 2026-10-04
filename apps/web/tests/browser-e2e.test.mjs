@@ -14,6 +14,10 @@ import { createMemoRun } from "../lib/research-memo.server.ts";
 import { memoRevisionStorageKey } from "../lib/research-memo-revisions.ts";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
+// Public synthetic signing secret, never a runtime credential.
+process.env.REVIEW_SESSION_SECRET = "NOT_A_REAL_SESSION_SECRET_BROWSER_TEST_ONLY";
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+
 const require = createRequire(import.meta.url);
 const browserPackage = process.env.PLAYWRIGHT_PACKAGE_PATH;
 assert.ok(browserPackage, "Set PLAYWRIGHT_PACKAGE_PATH to the installed playwright package directory.");

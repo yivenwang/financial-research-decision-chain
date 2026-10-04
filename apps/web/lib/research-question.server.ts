@@ -8,7 +8,7 @@ import {
   validateQuestionExplanation, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
 
-type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number };
+type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number };
 export const MAX_QUESTION_REQUEST_BYTES = 512 * 1024;
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "Cache-Control": "no-store" } }); }
 function sign(run: QuestionRun, config: MemoConfig) {
@@ -43,12 +43,13 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
   run.calls.push(audit);
   await addQuestionEvent(run, "model_requested", { phase, promptVersion: audit.promptVersion, requestSha256: audit.requestSha256, requestLimits: limits });
   try {
+    const providerSignal = AbortSignal.timeout(limits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(deepseek ? "https://api.deepseek.com/responses" : "https://api.openai.com/v1/responses", {
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body,
-      signal: AbortSignal.timeout(limits.timeoutMs), redirect: "error",
+      signal: providerSignal, redirect: "error",
     });
     if (!response.ok) throw new Error(`PROVIDER_HTTP_${response.status}`);
-    const data = await readBoundedJson(response, 256 * 1024) as Record<string, unknown>;
+    const data = await readBoundedJson(response, 256 * 1024, { signal: providerSignal, timeoutMs: Math.max(1, limits.timeoutMs - (Date.now() - started)) }) as Record<string, unknown>;
     audit.responseSha256 = await sha256Text(canonicalJson(data));
     audit.responseId = typeof data.id === "string" ? data.id.slice(0,200) : null;
     audit.returnedModel = typeof data.model === "string" ? data.model.slice(0,100) : null;
@@ -89,7 +90,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       try {
         let input: Record<string, unknown>;
         try {
-          const value = await readBoundedJson(request, MAX_QUESTION_REQUEST_BYTES);
+          const value = await readBoundedJson(request, MAX_QUESTION_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs });
           if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
           input = value as Record<string, unknown>;
         } catch { return json({ code: "INVALID_BODY", error: "请求内容无效或超出大小限制。" }, 400); }

@@ -23,10 +23,10 @@
 | drizzle-orm | 0.45.2 | Apache-2.0 | [npm 包](https://www.npmjs.com/package/drizzle-orm) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | embla-carousel-react | 8.6.0 | MIT | [npm 包](https://www.npmjs.com/package/embla-carousel-react) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | eslint | 9.39.4 | MIT | [npm 包](https://www.npmjs.com/package/eslint) | 开发/构建声明；不表示部署启用 |
-| eslint-config-next | 16.2.6 | MIT | [npm 包](https://www.npmjs.com/package/eslint-config-next) | 开发/构建声明；不表示部署启用 |
+| eslint-config-next | 16.3.8 | MIT | [npm 包](https://www.npmjs.com/package/eslint-config-next) | 开发/构建声明；不表示部署启用 |
 | input-otp | 1.4.2 | MIT | [npm 包](https://www.npmjs.com/package/input-otp) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | lucide-react | 1.31.0 | ISC | [npm 包](https://www.npmjs.com/package/lucide-react) | 应用/继承 UI 依赖；实际调用以源码为准 |
-| next | 16.2.6 | MIT | [npm 包](https://www.npmjs.com/package/next) | 应用/继承 UI 依赖；实际调用以源码为准 |
+| next | 16.3.8 | MIT | [npm 包](https://www.npmjs.com/package/next) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | next-themes | 0.4.6 | MIT | [npm 包](https://www.npmjs.com/package/next-themes) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | pdfjs-dist | 6.3.289 | Apache-2.0 | [npm 包](https://www.npmjs.com/package/pdfjs-dist) | 应用/继承 UI 依赖；实际调用以源码为准 |
 | radix-ui | 1.6.7 | MIT | [npm 包](https://www.npmjs.com/package/radix-ui) | 应用/继承 UI 依赖；实际调用以源码为准 |
@@ -43,7 +43,7 @@
 | tw-animate-css | 1.4.0 | MIT | [npm 包](https://www.npmjs.com/package/tw-animate-css) | 开发/构建声明；不表示部署启用 |
 | typescript | 5.9.3 | Apache-2.0 | [npm 包](https://www.npmjs.com/package/typescript) | 开发/构建声明；不表示部署启用 |
 | vaul | 1.1.2 | MIT | [npm 包](https://www.npmjs.com/package/vaul) | 应用/继承 UI 依赖；实际调用以源码为准 |
-| vinext | 0.0.50 | MIT | [npm 包](https://www.npmjs.com/package/vinext) | 开发/构建声明；不表示部署启用 |
+| vinext | 1.0.0-beta.5 | MIT | [npm 包](https://www.npmjs.com/package/vinext) | 开发/构建声明；不表示部署启用 |
 | vite | 8.0.13 | MIT | [npm 包](https://www.npmjs.com/package/vite) | 开发/构建声明；不表示部署启用 |
 | wrangler | 4.92.0 | MIT OR Apache-2.0 | [npm 包](https://www.npmjs.com/package/wrangler) | 开发/构建声明；不表示部署启用 |
 | zod | 3.25.76 | MIT | [npm 包](https://www.npmjs.com/package/zod) | 应用/继承 UI 依赖；实际调用以源码为准 |

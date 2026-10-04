@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { safeReviewReturnPath } from "@/lib/review-security";
 
 export function AccessForm() {
   const [code, setCode] = useState("");
@@ -18,7 +19,7 @@ export function AccessForm() {
       const data = await result.json();
       if (!result.ok) throw new Error(data.error ?? "暂时无法进入系统。");
       const next = new URLSearchParams(window.location.search).get("next");
-      window.location.assign(next?.startsWith("/") && !next.startsWith("//") ? next : "/");
+      window.location.assign(safeReviewReturnPath(next, window.location.origin));
     } catch (reason) { setError(reason instanceof Error ? reason.message : "暂时无法进入系统。"); }
     finally { setBusy(false); }
   }

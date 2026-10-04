@@ -1,8 +1,10 @@
+import { readBoundedJson } from "./request-body.ts";
+export { readBoundedJson } from "./request-body.ts";
 import { authorizedReviewer } from "./reviewer-access.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
-type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number };
+type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number };
 export const MAX_MEMO_REQUEST_BYTES = 128 * 1024;
 const PROVIDERS: Record<MemoProvider, { endpoint: string; defaultModel: string; maxOutputTokens: number; timeoutMs: number; accepts: (model: string) => boolean }> = {
   deepseek: { endpoint: "https://api.deepseek.com/responses", defaultModel: "deepseek-v4-pro", maxOutputTokens: 6000, timeoutMs: 150000, accepts: (model) => ["deepseek-v4-pro", "deepseek-v4-flash"].includes(model) },
@@ -25,27 +27,6 @@ export function memoConfig(env: NodeJS.ProcessEnv = process.env): MemoConfig {
 export function configured(config: MemoConfig) {
   const definition = providerDefinition(config.provider);
   return Boolean(definition && config.apiKey.trim() && config.accessToken.length >= 16 && definition.accepts(config.model) && (!config.appOrigin || serializedOrigin(config.appOrigin)));
-}
-export async function readBoundedJson(source: Request | Response, maxBytes: number): Promise<unknown> {
-  const declared = source.headers.get("content-length");
-  if (declared && Number(declared) > maxBytes) throw new Error("BODY_TOO_LARGE");
-  const reader = source.body?.getReader();
-  if (!reader) throw new Error("BODY_EMPTY");
-  let size = 0;
-  const chunks: Uint8Array[] = [];
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (size > maxBytes) { await reader.cancel(); throw new Error("BODY_TOO_LARGE"); }
-      chunks.push(value);
-    }
-  } finally { reader.releaseLock(); }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
-  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes));
 }
 
 class DuplicateJsonKeyError extends SyntaxError {}
@@ -110,10 +91,11 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
       api: "responses", promptVersion: MEMO_PROMPT_VERSION, promptSha256: await sha256Text(MEMO_INSTRUCTIONS), requestSha256: await sha256Text(requestBody), responseSha256: null, requestedModel: config.model, returnedModel: null, responseId: null, requestId: null, startedAt, finishedAt: startedAt, durationMs: 0, usage: null, rawOutput: null, failureCode: null, validation: [] },
   };
   try {
-    const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: AbortSignal.timeout(requestLimits.timeoutMs), redirect: "error" });
+    const providerSignal = AbortSignal.timeout(requestLimits.timeoutMs);
+    const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: providerSignal, redirect: "error" });
     run.audit.requestId = response.headers.get("x-request-id")?.slice(0,200) ?? null;
     if (!response.ok) { run.audit.failureCode = `PROVIDER_HTTP_${response.status}`; return run; }
-    const data = await readBoundedJson(response, 256 * 1024) as Record<string, unknown>;
+    const data = await readBoundedJson(response, 256 * 1024, { signal: providerSignal, timeoutMs: Math.max(1, requestLimits.timeoutMs - (Date.now() - started)) }) as Record<string, unknown>;
     run.audit.responseSha256 = await sha256Text(canonicalJson(data));
     run.audit.responseId = typeof data.id === "string" ? data.id.slice(0,200) : null;
     run.audit.returnedModel = typeof data.model === "string" ? data.model.slice(0,100) : null;
@@ -195,7 +177,7 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
       inFlight = true;
       try {
         let input: unknown;
-        try { input = await readBoundedJson(request, MAX_MEMO_REQUEST_BYTES); } catch { return json({ error: "请求内容无效或超出大小限制。", code: "INVALID_BODY" }, 400); }
+        try { input = await readBoundedJson(request, MAX_MEMO_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs }); } catch { return json({ error: "请求内容无效或超出大小限制。", code: "INVALID_BODY" }, 400); }
         let run: MemoRun;
         try { run = await createMemoRun(input, config, dependencies); } catch { return json({ error: "该版本的来源、证据或冻结计算不一致，请重新导入并审核。", code: "SNAPSHOT_INVALID" }, 422); }
         // Do not log request bodies, names, access codes, keys, or raw model text.
