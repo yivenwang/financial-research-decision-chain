@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "transfer-probe.v1",
+  "startedAt": "2026-10-04T09:29:35.430Z",
+  "source": {
+    "sourceId": "XFER-BULL-2026Q1",
+    "company": "公牛集团股份有限公司",
+    "ticker": "603195.SH",
+    "period": "2026Q1",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225265153.PDF",
+    "pdfSha256": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6"
+  },
+  "codeSha": "a37c3097cb7650ec7cdc481876add26991bcfbf0",
+  "workingTreeClean": true,
+  "parser": "V0.6-strict",
+  "modelRequests": 0,
+  "financialRulesChanged": false,
+  "humanReview": "pending"
+}

@@ -25,9 +25,10 @@ await writeFile(resolve(out, "registration.json"), JSON.stringify(record, null, 
 await writeFile(resolve(out, "source.pdf"), bytes, { flag: "wx" });
 try {
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false }).promise;
+  const loadingTask = pdfjs.getDocument({ data: new Uint8Array(bytes), isEvalSupported: false });
   const items = [];
   try {
+    const doc = await loadingTask.promise;
     for (let page = 1; page <= doc.numPages; page++) {
       const content = await (await doc.getPage(page)).getTextContent();
       for (const raw of content.items) if (typeof raw.str === "string" && Array.isArray(raw.transform)) {
@@ -35,7 +36,7 @@ try {
         if (Number.isFinite(x) && Number.isFinite(y)) items.push({ str: raw.str, x, y, page, width: raw.width });
       }
     }
-  } finally { await doc.destroy(); }
+  } finally { await loadingTask.destroy(); }
   const serializedItems = JSON.stringify(items);
   await writeFile(resolve(out, "coordinates.json"), serializedItems, { flag: "wx" });
   const result = parseFinancialReportV06Strict(items, { sourceId: source.sourceId, period: source.period, url: source.url });

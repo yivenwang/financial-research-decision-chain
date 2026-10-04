@@ -1,0 +1,132 @@
+{
+  "schemaVersion": "cross-company-assistant-review.v1",
+  "reviewedAt": "2026-10-04T09:31:43Z",
+  "reviewer": "Codex assistant initial review",
+  "professionalReview": false,
+  "sourceSha256": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6",
+  "result": "PARTIAL",
+  "protocolStatus": "UNSUPPORTED_FORMAT",
+  "unit": "CNY yuan unless the row states percent or CNY/share",
+  "checks": [
+    {
+      "metric": "revenue",
+      "page": 1,
+      "sourceCurrent": 4060221001.34,
+      "sourceComparison": 3922292893.48,
+      "sourceDisclosedChangePercent": 3.52,
+      "recalculatedChangePercent": 3.51651729,
+      "parserCurrentMn": 4060.22100134,
+      "parserDisclosedChange": 3.52,
+      "expectedParserDisclosedChange": 0.0352,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "attributable_np",
+      "page": 1,
+      "sourceCurrent": 1058244024.62,
+      "sourceComparison": 974916307.50,
+      "sourceDisclosedChangePercent": 8.55,
+      "recalculatedChangePercent": 8.54716620,
+      "parserCurrentMn": 1058.24402462,
+      "parserDisclosedChange": 8.55,
+      "expectedParserDisclosedChange": 0.0855,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "adjusted_np",
+      "page": 1,
+      "sourceCurrent": 983604877.44,
+      "sourceComparison": 855232293.27,
+      "sourceDisclosedChangePercent": 15.01,
+      "recalculatedChangePercent": 15.01025922,
+      "parserCurrentMn": 983.60487744,
+      "parserDisclosedChange": 15.01,
+      "expectedParserDisclosedChange": 0.1501,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "operating_cash_flow",
+      "page": 1,
+      "sourceCurrent": 1699187932.26,
+      "sourceComparison": 1412435516.57,
+      "sourceDisclosedChangePercent": 20.30,
+      "recalculatedChangePercent": 20.30198280,
+      "parserCurrentMn": 1699.18793226,
+      "parserDisclosedChange": 20.3,
+      "expectedParserDisclosedChange": 0.203,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "basic_eps",
+      "page": 1,
+      "sourceCurrent": 0.59,
+      "sourceComparison": 0.54,
+      "sourceDisclosedChangePercent": 9.26,
+      "recalculatedChangePercent": 9.25925926,
+      "parserDisclosedChange": 9.26,
+      "expectedParserDisclosedChange": 0.0926,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "diluted_eps",
+      "page": 1,
+      "sourceCurrent": 0.59,
+      "sourceComparison": 0.54,
+      "sourceDisclosedChangePercent": 9.26,
+      "recalculatedChangePercent": 9.25925926,
+      "parserDisclosedChange": 9.26,
+      "expectedParserDisclosedChange": 0.0926,
+      "assessment": "VALUE_AND_COLUMNS_CORRECT_CHANGE_UNIT_WRONG"
+    },
+    {
+      "metric": "roe",
+      "page": 2,
+      "sourceCurrentPercent": 6.10,
+      "sourceComparisonPercent": 5.95,
+      "sourceDisclosedChangePercentagePoints": 0.15,
+      "parserValue": null,
+      "assessment": "ROW_PRESENT_PARSER_MISSED_CROSS_PAGE_CONTINUATION"
+    },
+    {
+      "metric": "total_assets",
+      "page": 2,
+      "sourceCurrent": 24376116627.48,
+      "sourceComparison": 22556242542.63,
+      "sourceDisclosedChangePercent": 8.07,
+      "recalculatedChangePercent": 8.06816154,
+      "parserValue": null,
+      "assessment": "ROW_PRESENT_PARSER_MISSED_SECOND_HEADER"
+    },
+    {
+      "metric": "attributable_equity",
+      "page": 2,
+      "sourceCurrent": 17816277778.30,
+      "sourceComparison": 16797615200.75,
+      "sourceDisclosedChangePercent": 6.06,
+      "recalculatedChangePercent": 6.06432857,
+      "parserValue": null,
+      "assessment": "ROW_PRESENT_PARSER_MISSED_SECOND_HEADER"
+    },
+    {
+      "metric": "non_recurring_total",
+      "page": 3,
+      "sourceCurrent": 74639147.18,
+      "parserCurrentMn": 74.63914718,
+      "assessment": "PASS"
+    }
+  ],
+  "formulaReview": {
+    "id": "F-02",
+    "attributableNp": 1058244024.62,
+    "nonRecurringTotal": 74639147.18,
+    "calculatedAdjustedNp": 983604877.44,
+    "reportedAdjustedNp": 983604877.44,
+    "difference": 0,
+    "assessment": "RECONCILES"
+  },
+  "limits": [
+    "This is assistant source review, not professional approval.",
+    "No Bull Group Claim, Assumption, Kill Criteria, valuation or investment decision was evaluated.",
+    "No model request was made."
+  ]
+}
