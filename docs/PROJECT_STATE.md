@@ -11,9 +11,12 @@ allowed regression corpus, non-blind Bull rerun and actual CI evidence.
 No financial research semantics, product company registry, model budget or
 professional gate changes are authorized here. S-07 remains excluded; no model
 calls, merge of the new PR or deployment.
-Local implementation/tests are complete at `c171288`; publication is blocked by
-the current Git HTTPS credential lacking `workflow` write scope. No new PR or
-GitHub workflow has been triggered; CI/merge readiness remains unverified.
+Local implementation/tests are complete at `c171288`. The initial workflow
+credential blocker recorded at `5f0eb51` was resolved by owner-configured GitHub
+CLI authentication. The branch is pushed and [PR #32](https://github.com/yivenwang/financial-research-decision-chain/pull/32)
+is open; remote CI is being tracked. Final job evidence is recorded on the PR;
+successful scope detection must not be counted as an executed regression.
+PR #32 remains unmerged and undeployed.
 
 ## 2026-10-04 公牛集团跨公司隔离验证（开发分支）
 

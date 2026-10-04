@@ -140,18 +140,23 @@ broad financial jobs. For this parser-only HEAD:
   mixed-corpus regression jobs are intentionally scope-skipped to exclude S-07.
   A successful scope job is not a successfully executed financial regression.
 
-Actual GitHub state at handoff: **no new PR and no new CI run yet**. The local
+Historical initial handoff: **no new PR and no new CI run yet**. The local
 implementation commit is `c171288ad290dd4244ae1a551c58679ce5d2810b`. GitHub rejected
 the branch push because the existing HTTPS Personal Access Token lacks the
 `workflow` scope required for the necessary S-07-free CI routing changes. The
 existing SSH endpoint was also unavailable (connection closed). No credential
 was printed or changed, and the exclusion protection was not removed.
 
-All GitHub jobs are therefore **not triggered**, not successfully executed or
-scope-skipped on this commit. Once an owner-authorized Git credential can write
-workflows, push this existing branch, open the new PR, and inspect each actual
-job conclusion before recommending merge. The routing above is tested locally
-but is still an expectation, not remote CI evidence.
+At that handoff all GitHub jobs were **not triggered**, not successfully executed
+or scope-skipped. This is retained as the original publication failure record.
+
+Publication resumed on 2026-10-04 after the owner configured GitHub CLI login
+and `gh auth setup-git`. The branch push succeeded and
+[PR #32](https://github.com/yivenwang/financial-research-decision-chain/pull/32)
+is open. Remote CI is being followed through completion; final run IDs and
+actual executed/skipped job conclusions are recorded in the PR validation
+follow-up. The routing above is a requirement until those runs are observed,
+not a claim that a skipped legacy regression executed. No merge or deployment.
 
 ## Remaining boundaries and safe claim
 
