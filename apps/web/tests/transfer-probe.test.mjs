@@ -6,7 +6,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 const appRoot = resolve(import.meta.dirname, "..");
-const validationRoot = resolve(appRoot, "../../../validation/cross-company/bull-group-2026q1");
+const validationRoot = resolve(appRoot, "../../validation/cross-company/bull-group-2026q1");
 
 test("transfer probe owns and destroys the PDF loading task without converting parser blockers into execution failure", async t => {
   const parent = await mkdtemp(resolve(tmpdir(), "beacon-transfer-probe-"));

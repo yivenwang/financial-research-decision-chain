@@ -1,0 +1,27 @@
+{
+  "schemaVersion": "cross-company-second-run-artifacts.v1",
+  "result": "PARTIAL",
+  "protocolStatus": "UNSUPPORTED_FORMAT",
+  "attemptStartedAt": "2026-10-04T09:29:35.430Z",
+  "attemptFinishedAt": "2026-10-04T09:29:35.732Z",
+  "codeSha": "a37c3097cb7650ec7cdc481876add26991bcfbf0",
+  "workingTreeClean": true,
+  "modelRequests": 0,
+  "financialRulesChanged": false,
+  "files": {
+    "registration.json": "89555207965ff5b894fc2c5421b9eef33a719266d41f5866f289e86f2b1caa5a",
+    "coordinates.json": "95b3b44f0470126c81e1d9c8be7e51072bc7ce0f896aef09169b769d838ecd0a",
+    "first-output.json": "6d7fbcb95ed2ff835a01351690faaf2484c42ae6e87907d58802690bcdc19d08",
+    "source.pdf": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6",
+    "manual-review.json": "debbf96cbfefbcfbb511391e5cd487aeb2a28fddf7512dfaf577a59518cf020c"
+  },
+  "parserSummary": {
+    "status": "BLOCKED_REVIEW_REQUIRED",
+    "metricsParsed": 7,
+    "strictMetricsExpected": 10,
+    "blockers": 9,
+    "warnings": 5,
+    "requiredProfitMetricsPresent": true,
+    "f02ReconcilesAfterIndependentSourceReview": true
+  }
+}

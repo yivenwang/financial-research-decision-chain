@@ -1,5 +1,11 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-04 公牛集团跨公司隔离验证（开发分支）
+
+最新 `main` 为 `3499889da8227fc5b5f8b148a286fc1c0c9d70d9`（PR #30 已合并）。分支 `codex/cross-company-bull-2026q1` 从该提交冻结公牛集团 2026Q1 官方原件与实现摘要。首次 untouched probe 因测试 harness 的 PDF.js 销毁对象错误而 `EXECUTION_FAILED`，原始字节已保留；仅修复 harness 后的第二次运行是 `PARTIAL / UNSUPPORTED_FORMAT`，不是盲测 PASS。
+
+第二次运行确认坐标提取、来源留痕、必要利润原值及 F-02 算术桥具有有限复用性；同时暴露表头百分比单位继承和跨页多表段解析缺口。Source registry、C-04、A-03、K-07、估值、Decision、Memo 与 Question 仍是安克案例语义，没有注册公牛为产品能力，没有模型调用或投资判断。详见[公牛集团验证记录](CROSS_COMPANY_VALIDATION_BULL_2026Q1.md)。
+
 ## 2026-10-04 Codex 接管与线上 HTTPS 状态
 
 项目工程执行自 2026-10-04 起转为 **Codex 主执行、所有者做目标/权限/金融语义决策**。不再默认要求所有者充当 Terminal 与模型之间的人工中转。Codex 的仓库级操作规范见根目录 `AGENTS.md`。

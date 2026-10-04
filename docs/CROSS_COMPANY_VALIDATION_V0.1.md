@@ -14,9 +14,9 @@
 
 ## 当前执行情况
 
-已完成隔离首跑工具 `apps/web/scripts/run-transfer-probe.mjs` 与上述协议。公开检索尚未核实候选报告的官方原件；未拿搜索摘要或别家报告替代。**实际首次跨公司解析未运行**。因此状态为材料获取待完成，不能写成迁移成功或失败。
+2026-10-04 已锁定并下载候选公牛集团 2026Q1 官方原件，见[完整验证记录](CROSS_COMPANY_VALIDATION_BULL_2026Q1.md)。首次 untouched probe 因 PDF.js loading-task 生命周期 bug 得到 `EXECUTION_FAILED`，原始失败永久保留。仅修复该 harness 后，同一材料第二次运行得到 `BLOCKED_REVIEW_REQUIRED`：三个必要利润原值与 F-02 可核对，但表头百分比单位未继承，ROE / 总资产 / 归母权益的跨页多表段未解析，因此状态为 `UNSUPPORTED_FORMAT`，不能写成迁移 PASS。
 
-收到公开原件并核实来源后，以已登记 metadata JSON（`sourceId` 必须以 `XFER-` 开头；`company`、`period`、`url`、`pdfSha256`）运行：
+后续新材料仍须以已登记 metadata JSON（`sourceId` 必须以 `XFER-` 开头；`company`、`period`、`url`、`pdfSha256`）运行：
 
 ```bash
 cd apps/web

@@ -1,0 +1,266 @@
+{
+  "schemaVersion": "transfer-probe.v1",
+  "startedAt": "2026-10-04T09:29:35.430Z",
+  "source": {
+    "sourceId": "XFER-BULL-2026Q1",
+    "company": "公牛集团股份有限公司",
+    "ticker": "603195.SH",
+    "period": "2026Q1",
+    "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225265153.PDF",
+    "pdfSha256": "38a09fe6b0c81e26a04207f9e0396f8e20c2d1d2e94b852946f67bf4b4a099e6"
+  },
+  "codeSha": "a37c3097cb7650ec7cdc481876add26991bcfbf0",
+  "workingTreeClean": true,
+  "parser": "V0.6-strict",
+  "modelRequests": 0,
+  "financialRulesChanged": false,
+  "humanReview": "pending",
+  "finishedAt": "2026-10-04T09:29:35.732Z",
+  "coordinatesSha256": "95b3b44f0470126c81e1d9c8be7e51072bc7ce0f896aef09169b769d838ecd0a",
+  "result": {
+    "source": {
+      "sourceId": "XFER-BULL-2026Q1",
+      "period": "2026Q1",
+      "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225265153.PDF"
+    },
+    "metrics": {
+      "revenue": {
+        "key": "revenue",
+        "label": "营业收入",
+        "current": 4060.22100134,
+        "comparison": 3922.29289348,
+        "disclosedChange": 3.52,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "attributable_np": {
+        "key": "attributable_np",
+        "label": "归属于上市公司股东的净利润",
+        "current": 1058.2440246200001,
+        "comparison": 974.9163075,
+        "disclosedChange": 8.55,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "adjusted_np": {
+        "key": "adjusted_np",
+        "label": "归属于上市公司股东的扣除非经常性损益的净利润",
+        "current": 983.6048774400001,
+        "comparison": 855.23229327,
+        "disclosedChange": 15.01,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "operating_cash_flow": {
+        "key": "operating_cash_flow",
+        "label": "经营活动产生的现金流量净额",
+        "current": 1699.18793226,
+        "comparison": 1412.43551657,
+        "disclosedChange": 20.3,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "basic_eps": {
+        "key": "basic_eps",
+        "label": "基本每股收益",
+        "current": 0.59,
+        "comparison": 0.54,
+        "disclosedChange": 9.26,
+        "unit": "CNY_share",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "diluted_eps": {
+        "key": "diluted_eps",
+        "label": "稀释每股收益",
+        "current": 0.59,
+        "comparison": 0.54,
+        "disclosedChange": 9.26,
+        "unit": "CNY_share",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 1,
+        "confidence": 1
+      },
+      "non_recurring_total": {
+        "key": "non_recurring_total",
+        "label": "非经常性损益合计",
+        "current": 74.63914718000001,
+        "unit": "CNY_mn",
+        "sourceId": "XFER-BULL-2026Q1",
+        "page": 3,
+        "confidence": 1
+      }
+    },
+    "issues": [
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "revenue",
+        "page": 1,
+        "message": "revenue: recalculated change 3.52% != disclosed 352.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "attributable_np",
+        "page": 1,
+        "message": "attributable_np: recalculated change 8.55% != disclosed 855.00%."
+      },
+      {
+        "code": "EXTREME_DISCLOSED_CHANGE",
+        "severity": "WARN",
+        "field": "attributable_np",
+        "page": 1,
+        "message": "attributable_np: disclosed change exceeds 500%; require explicit review even if arithmetic reconciles."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "adjusted_np",
+        "page": 1,
+        "message": "adjusted_np: recalculated change 15.01% != disclosed 1501.00%."
+      },
+      {
+        "code": "EXTREME_DISCLOSED_CHANGE",
+        "severity": "WARN",
+        "field": "adjusted_np",
+        "page": 1,
+        "message": "adjusted_np: disclosed change exceeds 500%; require explicit review even if arithmetic reconciles."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "operating_cash_flow",
+        "page": 1,
+        "message": "operating_cash_flow: recalculated change 20.30% != disclosed 2030.00%."
+      },
+      {
+        "code": "EXTREME_DISCLOSED_CHANGE",
+        "severity": "WARN",
+        "field": "operating_cash_flow",
+        "page": 1,
+        "message": "operating_cash_flow: disclosed change exceeds 500%; require explicit review even if arithmetic reconciles."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "basic_eps",
+        "page": 1,
+        "message": "basic_eps: recalculated change 9.26% != disclosed 926.00%."
+      },
+      {
+        "code": "EXTREME_DISCLOSED_CHANGE",
+        "severity": "WARN",
+        "field": "basic_eps",
+        "page": 1,
+        "message": "basic_eps: disclosed change exceeds 500%; require explicit review even if arithmetic reconciles."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "diluted_eps",
+        "page": 1,
+        "message": "diluted_eps: recalculated change 9.26% != disclosed 926.00%."
+      },
+      {
+        "code": "EXTREME_DISCLOSED_CHANGE",
+        "severity": "WARN",
+        "field": "diluted_eps",
+        "page": 1,
+        "message": "diluted_eps: disclosed change exceeds 500%; require explicit review even if arithmetic reconciles."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "roe",
+        "message": "roe: expected primary-table row was not parsed; promotion must be blocked."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "total_assets",
+        "message": "total_assets: expected primary-table row was not parsed; promotion must be blocked."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "attributable_equity",
+        "message": "attributable_equity: expected primary-table row was not parsed; promotion must be blocked."
+      }
+    ],
+    "blockers": [
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "revenue",
+        "page": 1,
+        "message": "revenue: recalculated change 3.52% != disclosed 352.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "attributable_np",
+        "page": 1,
+        "message": "attributable_np: recalculated change 8.55% != disclosed 855.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "adjusted_np",
+        "page": 1,
+        "message": "adjusted_np: recalculated change 15.01% != disclosed 1501.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "operating_cash_flow",
+        "page": 1,
+        "message": "operating_cash_flow: recalculated change 20.30% != disclosed 2030.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "basic_eps",
+        "page": 1,
+        "message": "basic_eps: recalculated change 9.26% != disclosed 926.00%."
+      },
+      {
+        "code": "YOY_RECONCILIATION_FAIL",
+        "severity": "FAIL",
+        "field": "diluted_eps",
+        "page": 1,
+        "message": "diluted_eps: recalculated change 9.26% != disclosed 926.00%."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "roe",
+        "message": "roe: expected primary-table row was not parsed; promotion must be blocked."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "total_assets",
+        "message": "total_assets: expected primary-table row was not parsed; promotion must be blocked."
+      },
+      {
+        "code": "PRIMARY_ROW_INCOMPLETE",
+        "severity": "FAIL",
+        "field": "attributable_equity",
+        "message": "attributable_equity: expected primary-table row was not parsed; promotion must be blocked."
+      }
+    ],
+    "canPromoteToEvidence": false
+  },
+  "status": "BLOCKED_REVIEW_REQUIRED",
+  "limitation": "Parser-only probe. Company, period, original values and error classification require independent review; no Anker decision chain was run."
+}
