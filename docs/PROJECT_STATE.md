@@ -11,6 +11,9 @@ allowed regression corpus, non-blind Bull rerun and actual CI evidence.
 No financial research semantics, product company registry, model budget or
 professional gate changes are authorized here. S-07 remains excluded; no model
 calls, merge of the new PR or deployment.
+Local implementation/tests are complete at `c171288`; publication is blocked by
+the current Git HTTPS credential lacking `workflow` write scope. No new PR or
+GitHub workflow has been triggered; CI/merge readiness remains unverified.
 
 ## 2026-10-04 公牛集团跨公司隔离验证（开发分支）
 
