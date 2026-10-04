@@ -37,6 +37,10 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Verify parser, reviewed chain and model boundary tests
         run: npm test
+      - name: Check application lint and TypeScript
+        run: npm run lint && npx tsc --noEmit
+      - name: Reject known high or critical production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
       - name: Verify unchanged V5 source files
         run: node scripts/verify-migration.mjs
       - name: Build standalone Next.js app

@@ -17,6 +17,11 @@ function writeLedger(ledger: MemoLedger, scope: WorkspaceScope) {
   window.localStorage.setItem(memoStorageKey(scope), JSON.stringify(ledger));
   window.dispatchEvent(new Event(MEMO_UPDATED_EVENT));
 }
+async function withWriteLock<T>(scope: WorkspaceScope, operation: () => Promise<T>): Promise<T> {
+  if (typeof window === "undefined" || !window.navigator?.locks) throw new Error("当前浏览器不支持可靠追加保存，请使用 HTTPS 或 localhost 下的现代浏览器。");
+  // Serialize the complete ledger read-modify-write across tabs. There is no unsafe fallback.
+  return window.navigator.locks.request(memoStorageKey(scope), operation);
+}
 export async function appendMemoRun(run: MemoRun, version: ResearchVersion, scope: WorkspaceScope) {
   if (!validProviderAudit(run)) throw new Error("备忘录提供方记录无效，已停止写入。");
   const stored = readStoredVersions(scope).find((item) => item.versionId === version.versionId);
@@ -24,19 +29,22 @@ export async function appendMemoRun(run: MemoRun, version: ResearchVersion, scop
   const context = await buildMemoContext(stored);
   if (scope !== context.workspace || canonicalJson(run.context) !== canonicalJson(context) || run.schemaVersion !== "research-memo-run.v1") throw new Error("备忘录与研究版本不匹配。");
   if (run.status === "completed" && (!run.audit.responseId || !run.audit.responseSha256 || !validateMemo(run.memo, context, run.audit.promptVersion).memo)) throw new Error("备忘录输出未通过本地校验。");
-  const ledger = readMemoLedger(scope);
-  if (ledger.runs.some((item) => item.runId === run.runId)) throw new Error("该调用记录已存在。");
-  writeLedger({ ...ledger, runs: [...ledger.runs, structuredClone(run)] }, scope);
+  return withWriteLock(scope, async () => {
+    const ledger = readMemoLedger(scope);
+    if (ledger.runs.some((item) => item.runId === run.runId)) throw new Error("该调用记录已存在。");
+    writeLedger({ ...ledger, runs: [...ledger.runs, structuredClone(run)] }, scope);
+  });
 }
 export async function appendMemoReview(runId: string, status: MemoReview["status"], reviewer: string, note: string, scope: WorkspaceScope) {
   if (!reviewer.trim() || reviewer.length > 100 || note.length > 1000) throw new Error("请填写有效的备忘录审核人和意见。");
-  const ledger = readMemoLedger(scope);
-  const run = ledger.runs.find((item) => item.runId === runId);
-  if (!run || run.status !== "completed" || !run.memo) throw new Error("只能审核已经通过校验的备忘录。");
-  const version = readStoredVersions(scope).find((item) => item.versionId === run.context.versionId);
-  if (!version || canonicalJson(await buildMemoContext(version)) !== canonicalJson(run.context) || !validateMemo(run.memo, run.context, run.audit.promptVersion).memo) throw new Error("版本或备忘录已发生变化，已停止审核写入。");
-  const review: MemoReview = { id: crypto.randomUUID(), runId, snapshotSha256: run.context.snapshotSha256, status, reviewer: reviewer.trim(), note: note.trim(), reviewedAt: new Date().toISOString(), scope: "memo-only", identityVerified: false };
-  const latest = readMemoLedger(scope);
-  writeLedger({ ...latest, reviews: [...latest.reviews, review] }, scope);
-  return review;
+  return withWriteLock(scope, async () => {
+    const ledger = readMemoLedger(scope);
+    const run = ledger.runs.find((item) => item.runId === runId);
+    if (!run || run.status !== "completed" || !run.memo) throw new Error("只能审核已经通过校验的备忘录。");
+    const version = readStoredVersions(scope).find((item) => item.versionId === run.context.versionId);
+    if (!version || canonicalJson(await buildMemoContext(version)) !== canonicalJson(run.context) || !validateMemo(run.memo, run.context, run.audit.promptVersion).memo) throw new Error("版本或备忘录已发生变化，已停止审核写入。");
+    const review: MemoReview = { id: crypto.randomUUID(), runId, snapshotSha256: run.context.snapshotSha256, status, reviewer: reviewer.trim(), note: note.trim(), reviewedAt: new Date().toISOString(), scope: "memo-only", identityVerified: false };
+    writeLedger({ ...ledger, reviews: [...ledger.reviews, review] }, scope);
+    return review;
+  });
 }
