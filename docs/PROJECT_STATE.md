@@ -20,8 +20,9 @@ Question and Lighthouse UI browser suites pass using labelled non-live model
 transport. The homepage and Lighthouse visual system were not changed. No paid
 model call was made and S-07 was not accessed or executed.
 
-C-01 is **not yet complete**. The code change still requires PR review and
-merge, deployment of the resulting main SHA, and the Issue #33 manual target-
+C-01 is **not yet complete**. [PR #34](https://github.com/yivenwang/financial-research-decision-chain/pull/34)
+is open and unmerged. The code change still requires PR review and merge,
+deployment of the resulting main SHA, and the Issue #33 manual target-
 environment chain (upload → review → save → task → execute → review → revision
 → export). Automated code evidence and that remaining production acceptance
 must continue to be reported separately.
