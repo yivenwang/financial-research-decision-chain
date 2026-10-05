@@ -73,7 +73,7 @@ test("company and period are resolved from PDF text, not a renamed filename", ()
 
 test("append and rollback preserve prior snapshots, isolate regression, and protect unreadable history", () => {
   const data = new Map();
-  globalThis.window = { localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {} };
+  globalThis.window = { isSecureContext: true, crypto: globalThis.crypto, navigator: { locks: { request: (_key, operation) => operation() } }, localStorage: { getItem: (key) => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {} };
   try {
     const result = parsed();
     const snapshot = create(result, accepted(result));

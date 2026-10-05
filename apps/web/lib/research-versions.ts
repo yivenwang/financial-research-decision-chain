@@ -1,6 +1,7 @@
 import type { MetricKey } from "../../../lib/parser-v04.ts";
 import type { ParseIssueV06 as ParseIssue, ParseResultV06 } from "../../../lib/parser-v06.ts";
 import type { C04ChainResult } from "../../../lib/chain-v01.ts";
+import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { getSourceRecord } from "./source-records.ts";
 
 export const VERSION_STORAGE_KEY = "anker-research-mvp-versions";
@@ -125,6 +126,7 @@ export function readStoredVersions(scope: WorkspaceScope = "research") {
 }
 
 export function writeStoredVersions(versions: ResearchVersion[], scope: WorkspaceScope = "research") {
+  requireResearchBrowserCapabilities();
   window.localStorage.setItem(storageKeys(scope).versions, JSON.stringify(versions));
   window.dispatchEvent(new Event(VERSION_UPDATED_EVENT));
 }
@@ -147,11 +149,13 @@ export function readActiveVersionId(versions: ResearchVersion[], scope: Workspac
 }
 
 export function setActiveVersionId(versionId: string, scope: WorkspaceScope = "research") {
+  requireResearchBrowserCapabilities();
   window.localStorage.setItem(storageKeys(scope).active, versionId);
   window.dispatchEvent(new Event(VERSION_UPDATED_EVENT));
 }
 
 export function appendVersion(version: ResearchVersion, scope: WorkspaceScope = "research") {
+  requireResearchBrowserCapabilities();
   const raw = JSON.parse(window.localStorage.getItem(storageKeys(scope).versions) ?? "[]") as unknown;
   if (!Array.isArray(raw) || !raw.every(isResearchVersion)) throw new Error("版本库存在无法读取的记录，已停止写入以保留原数据。");
   if (raw.some((item) => item.versionId === version.versionId)) throw new Error("版本编号已被使用，请刷新后重试。");

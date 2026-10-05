@@ -22,6 +22,7 @@ async function fixture(t) {
   const data = new Map();
   let queued = Promise.resolve();
   globalThis.window = {
+    isSecureContext: true, crypto: globalThis.crypto,
     localStorage: { getItem: key => data.get(key) ?? null, setItem: (key, value) => data.set(key, value) }, dispatchEvent() {},
     navigator: { locks: { request: (_key, operation) => { const result = queued.then(operation); queued = result.catch(() => {}); return result; } } },
   };

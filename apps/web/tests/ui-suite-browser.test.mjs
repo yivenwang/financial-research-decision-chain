@@ -150,8 +150,37 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     await page.getByTestId("workspace-dashboard").getByRole("alert").waitFor();
     assert.equal(await page.evaluate(key => localStorage.getItem(key), keys.versions), "unreadable-ui-test");
     await capture(page, "workspace-unreadable-1440.png");
+
+    const blockedContext = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+    await blockedContext.addInitScript(() => {
+      Object.defineProperty(window, "isSecureContext", { configurable: true, value: false });
+    });
+    await blockedContext.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(accessCode), url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
+    const blockedPage = await blockedContext.newPage();
+    let blockedModelPosts = 0;
+    await blockedPage.route("**/api/research-question", async route => {
+      if (route.request().method() === "POST") { blockedModelPosts += 1; await route.abort(); }
+      else await route.fulfill({ json: { configured: true, provider: "deepseek", model: "test-transport-not-live" } });
+    });
+    await blockedPage.goto(origin + "/questions", { waitUntil: "networkidle" });
+    const capabilityAlert = blockedPage.getByRole("alert").filter({ hasText: "window.isSecureContext" });
+    await capabilityAlert.waitFor();
+    assert.match(await capabilityAlert.innerText(), /未写入研究记录，也未调用模型/);
+    assert.equal(await blockedPage.getByRole("button", { name: "生成研究任务", exact: true }).isDisabled(), true);
+    assert.equal(blockedModelPosts, 0);
+
+    await blockedPage.goto(origin + "/changes", { waitUntil: "networkidle" });
+    await blockedPage.getByRole("button", { name: "载入 S-05 已验证样例", exact: true }).click();
+    for (const key of ["attributable_np", "adjusted_np", "non_recurring_total"]) await blockedPage.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
+    await blockedPage.getByRole("button", { name: "生成 Graph Diff" }).click();
+    await blockedPage.getByLabel("证据审核人（自行填写）").fill("Blocked capability test");
+    await blockedPage.getByRole("button", { name: "保存为新版本", exact: true }).click();
+    await blockedPage.getByText(/window\.isSecureContext/).waitFor();
+    assert.equal(await blockedPage.evaluate(key => localStorage.getItem(key), keys.versions), null);
+    await blockedContext.close();
+
     assert.deepEqual(errors, []); assert.deepEqual(modelPosts, []);
-    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["native click navigation", "question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "version snapshot and ledger exports", "portal menus and rollback dialog", "unreadable data preserved"] }, null, 2));
+    await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ mode: "synthetic-sample-UI-NOT-LIVE", widths: [1440, 1366, 768, 390], routes: 7, modelPosts, errors, checks: ["native click navigation", "question handoff", "accessible case tabs", "7-route active navigation", "no horizontal overflow", "unconfigured provider", "sample boundary", "evidence selection", "PDF link", "version snapshot and ledger exports", "portal menus and rollback dialog", "unreadable data preserved", "insecure-context model and persistence blocked"] }, null, 2));
   } finally {
     await browser?.close(); server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]);
     if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; }

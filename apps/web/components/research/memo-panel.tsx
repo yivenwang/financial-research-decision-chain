@@ -9,7 +9,7 @@ import { appendMemoReview, appendMemoRun, MEMO_UPDATED_EVENT, readMemoLedger } f
 import type { ResearchVersion, WorkspaceScope } from "@/lib/research-versions";
 import { MEMO_PROMPT_VERSION } from "@/lib/research-memo";
 import { MemoRevisionPanel } from "@/components/research/memo-revision-panel";
-import { researchBrowserIssue } from "@/lib/research-browser";
+import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
 
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
@@ -72,7 +72,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
     setBusy(true); setNotice(null);
     const request = new AbortController(); controller.current = request;
     try {
-      const response = await fetch("/api/research-memo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(version), signal: request.signal });
+      const response = await runResearchBrowserOperation(() => fetch("/api/research-memo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(version), signal: request.signal }));
       const data = await response.json();
       if (data.run) {
         // Keep the returned audit/result exportable when storage quota is exhausted.

@@ -1,4 +1,5 @@
 import { buildMemoContext, canonicalJson, validateMemo, type MemoRun, type MemoReview } from "./research-memo.ts";
+import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { readStoredVersions, type ResearchVersion, type WorkspaceScope } from "./research-versions.ts";
 
 export const MEMO_UPDATED_EVENT = "research-memo-updated";
@@ -18,11 +19,12 @@ function writeLedger(ledger: MemoLedger, scope: WorkspaceScope) {
   window.dispatchEvent(new Event(MEMO_UPDATED_EVENT));
 }
 async function withWriteLock<T>(scope: WorkspaceScope, operation: () => Promise<T>): Promise<T> {
-  if (typeof window === "undefined" || !window.navigator?.locks) throw new Error("当前浏览器不支持可靠追加保存，请使用 HTTPS 或 localhost 下的现代浏览器。");
+  requireResearchBrowserCapabilities();
   // Serialize the complete ledger read-modify-write across tabs. There is no unsafe fallback.
   return window.navigator.locks.request(memoStorageKey(scope), operation);
 }
 export async function appendMemoRun(run: MemoRun, version: ResearchVersion, scope: WorkspaceScope) {
+  requireResearchBrowserCapabilities();
   if (!validProviderAudit(run)) throw new Error("备忘录提供方记录无效，已停止写入。");
   const stored = readStoredVersions(scope).find((item) => item.versionId === version.versionId);
   if (!stored) throw new Error("研究版本已不存在，调用记录未写入其他版本。");
@@ -36,6 +38,7 @@ export async function appendMemoRun(run: MemoRun, version: ResearchVersion, scop
   });
 }
 export async function appendMemoReview(runId: string, status: MemoReview["status"], reviewer: string, note: string, scope: WorkspaceScope) {
+  requireResearchBrowserCapabilities();
   if (!reviewer.trim() || reviewer.length > 100 || note.length > 1000) throw new Error("请填写有效的备忘录审核人和意见。");
   return withWriteLock(scope, async () => {
     const ledger = readMemoLedger(scope);

@@ -64,5 +64,5 @@ test("access limiter bounds attempts and resets without trusting spoofable IP he
 test("HTTP and missing browser primitives block research generation before spending", () => {
   const ready = { secure: true, hashing: true, ids: true, locks: true };
   assert.equal(researchBrowserIssue(ready), null);
-  for (const key of Object.keys(ready)) assert.match(researchBrowserIssue({ ...ready, [key]: false }), /本次未调用模型/);
+  for (const key of Object.keys(ready)) assert.match(researchBrowserIssue({ ...ready, [key]: false }), /未调用模型/);
 });

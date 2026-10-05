@@ -1,4 +1,5 @@
 import { canonicalJson, sha256Text } from "./research-memo.ts";
+import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { readActiveVersionId, readStoredVersions } from "./research-versions.ts";
 import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionExplanation, type QuestionRun } from "./research-question.ts";
 
@@ -30,10 +31,11 @@ export async function validateQuestionRun(run: QuestionRun) {
   } else if (["ANSWER_READY", "PARTIAL"].includes(run.status)) throw new Error("有效结果缺失。");
 }
 async function locked<T>(fn: () => Promise<T>): Promise<T> {
-  if (!navigator.locks) throw new Error("当前浏览器不支持可靠追加保存，请使用 HTTPS 或 localhost 下的现代浏览器。");
+  requireResearchBrowserCapabilities();
   return navigator.locks.request(QUESTION_STORAGE_KEY, fn);
 }
 export async function appendQuestionRun(run: QuestionRun) {
+  requireResearchBrowserCapabilities();
   await validateQuestionRun(run);
   return locked(async () => {
     const ledger = readQuestionLedger();
@@ -42,6 +44,7 @@ export async function appendQuestionRun(run: QuestionRun) {
   });
 }
 export async function appendQuestionReview(runId: string, status: QuestionReview["status"], reviewer: string, note: string) {
+  requireResearchBrowserCapabilities();
   if (!["accepted", "rejected"].includes(status) || !reviewer.trim() || reviewer.length > 100 || note.length > 1000) throw new Error("请填写有效审核人和意见。");
   return locked(async () => {
     const ledger = readQuestionLedger();

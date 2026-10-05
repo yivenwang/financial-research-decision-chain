@@ -1,4 +1,5 @@
 import { buildMemoContext, canonicalJson, memoMarkdown, MEMO_PROMPT_VERSION, MEMO_SECTIONS, memoSectionLabel, sha256Text, validateMemo, validateMemoOutput, type MemoPoint, type MemoRun, type ResearchMemo } from "./research-memo.ts";
+import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { readMemoLedger, memoStorageKey } from "./research-memo-storage.ts";
 import { readStoredVersions, storageKeys, type WorkspaceScope } from "./research-versions.ts";
 
@@ -59,6 +60,7 @@ const damaged = "人工修订记录不完整或已改变，已停止写入；请
 export async function readMemoRevisionLedger(scope: WorkspaceScope): Promise<MemoRevisionLedger> {
   const empty: MemoRevisionLedger = { schemaVersion: "research-memo-revision-ledger.v1", revisions: [], reviews: [] };
   if (typeof window === "undefined") return empty;
+  requireResearchBrowserCapabilities();
   const bytes = window.localStorage.getItem(memoRevisionStorageKey(scope));
   if (bytes === null) return empty;
   let value: MemoRevisionLedger;
@@ -128,7 +130,7 @@ function unchanged(bytes: ReturnType<typeof captureBytes>) {
   requireValue(bytes.every(([key, value]) => window.localStorage.getItem(key) === value), "记录在操作期间已更新，请核对最新版本后再保存。");
 }
 async function withWriteLock<T>(scope: WorkspaceScope, operation: () => Promise<T>): Promise<T> {
-  requireValue(typeof window !== "undefined" && window.navigator?.locks, "当前浏览器不支持安全保存修订，请使用支持此功能的新版浏览器。");
+  requireResearchBrowserCapabilities();
   // Serializes writers across tabs. There is no unsafe unlocked fallback.
   return window.navigator.locks.request(memoRevisionStorageKey(scope), operation);
 }
