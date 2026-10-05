@@ -139,8 +139,8 @@ test("simultaneous requests cannot duplicate a provider call and completed reque
 test("append-only question history, bound human review, rollback isolation and corruption failure preserve research", async () => {
   const previousWindow = globalThis.window; const locks = Object.getOwnPropertyDescriptor(navigator, "locks");
   const data = new Map(); let tail = Promise.resolve();
-  globalThis.window = { localStorage: { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) } };
   Object.defineProperty(navigator, "locks", { configurable: true, value: { request: (_key, fn) => { const p = tail.then(fn); tail = p.catch(() => {}); return p; } } });
+  globalThis.window = { isSecureContext: true, crypto: globalThis.crypto, navigator: { locks: navigator.locks }, localStorage: { getItem: k => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) } };
   try {
     const version = questionTestSnapshot(); const keys = storageKeys("research"); data.set(keys.versions, JSON.stringify([version])); data.set(keys.active, version.versionId);
     const original = data.get(keys.versions); const h = harness(); const draft = await h.draft(); const { run } = await (await h.execute(draft)).json();

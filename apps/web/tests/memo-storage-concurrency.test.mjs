@@ -50,7 +50,7 @@ function browserContexts(t) {
     return result;
   } };
   const tabs = ["tab-a", "tab-b"].map(id => {
-    const tab = { id, holds: new Set() };
+    const tab = { id, holds: new Set(), isSecureContext: true, crypto: globalThis.crypto };
     tab.localStorage = {
       getItem: key => data.get(key) ?? null,
       setItem: (key, value) => {

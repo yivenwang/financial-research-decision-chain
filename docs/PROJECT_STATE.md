@@ -1,5 +1,31 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-05 — C-01 browser secure-context capability preflight
+
+Work started from merged `main` `a9749f894659c2c57abefc32f9b9efdf2328bb74`
+on `codex/secure-context-capability-preflight`. The implementation centralizes
+the four mandatory browser guarantees (`window.isSecureContext`,
+`crypto.subtle`, `crypto.randomUUID`, and `navigator.locks`) and fails closed
+before PDF-derived evidence processing, Memo / Question model POSTs, or any
+research version, run, review, and human-revision write. The storage APIs also
+enforce the same preflight directly, so a caller cannot bypass the UI check.
+There is no unlocked, unhashed, or substitute-ID fallback.
+
+Local automated evidence is complete: every missing capability is covered,
+blocked callbacks make zero model requests, blocked persistence performs zero
+storage reads/writes, the full 99-test Web corpus passes, lint has no errors,
+TypeScript and the production build pass, runtime smoke passes, production
+dependency audit reports zero vulnerabilities, and the S-05 / S-06 plus
+Question and Lighthouse UI browser suites pass using labelled non-live model
+transport. The homepage and Lighthouse visual system were not changed. No paid
+model call was made and S-07 was not accessed or executed.
+
+C-01 is **not yet complete**. The code change still requires PR review and
+merge, deployment of the resulting main SHA, and the Issue #33 manual target-
+environment chain (upload → review → save → task → execute → review → revision
+→ export). Automated code evidence and that remaining production acceptance
+must continue to be reported separately.
+
 ## 2026-10-04 — Parser layout generalization (new stage)
 
 PR #31 merged with owner approval, without deployment, at

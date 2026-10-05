@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { runResearchBrowserOperation } from "@/lib/research-browser";
 import {
   nextVersionId,
   readStoredVersions,
@@ -282,7 +283,7 @@ export function UpdateWorkflow() {
     setSource(null);
     setCandidates([]);
     try {
-      const extraction = await extractPdfItems(file);
+      const extraction = await runResearchBrowserOperation(() => extractPdfItems(file));
       const record = resolveSourceRecord(file.name, extraction.documentTitle);
       if (!record || record.sourceId !== selectedRecord.sourceId) {
         setParserResult(null);
@@ -311,11 +312,11 @@ export function UpdateWorkflow() {
             : "PDF 已读取，但没有定位到目标指标。请检查 Source 记录与报告格式。",
       );
       setStep("review");
-    } catch {
+    } catch (error) {
       setParserResult(null);
       setSource(null);
       setCandidates([]);
-      setMessage("PDF 解析失败。文件可能是扫描件或受保护；当前版本尚不处理 OCR。");
+      setMessage(error instanceof Error ? error.message : "PDF 解析失败。文件可能是扫描件或受保护；当前版本尚不处理 OCR。");
     } finally {
       setIsParsing(false);
     }

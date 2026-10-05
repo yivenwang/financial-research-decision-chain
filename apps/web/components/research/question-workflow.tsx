@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { INTENT_LABELS, QUESTION_CAPABILITY, questionSources, questionMarkdown, type QuestionRun, type SignedQuestionDraft } from "@/lib/research-question";
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, type QuestionLedger } from "@/lib/research-question-storage";
 import { readStoredVersions, readActiveVersionId, VERSION_UPDATED_EVENT, type ResearchVersion } from "@/lib/research-versions";
-import { researchBrowserIssue } from "@/lib/research-browser";
+import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
 
 const examples = ["安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？", "归母净利润同比下降的来源在哪里？", "这次更新影响了哪些Claim和Assumption？"];
 const statusLabel = { CONTRACT_DRAFTED: "待确认研究任务", MATERIALS_REQUIRED: "需要补充材料", OUT_OF_SCOPE: "超出当前范围", BLOCKED: "已阻断", ANSWER_READY: "研究草稿待审核", PARTIAL: "部分回答待审核" };
@@ -63,8 +63,8 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       // Read the current snapshot at the confirmation action, not from a stale render.
       const versions = readStoredVersions("research");
       const current = versions.find(v => v.versionId === readActiveVersionId(versions, "research")) ?? null;
-      const response = await fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify(phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current }), signal: AbortSignal.timeout(175000) });
+      const response = await runResearchBrowserOperation(() => fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify(phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current }), signal: AbortSignal.timeout(175000) }));
       const data = await response.json();
       if (!response.ok || !data.run) throw new Error(data.error ?? "研究请求未完成。");
       setShown(data.run);
