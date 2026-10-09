@@ -72,6 +72,9 @@ test("low bytes/inodes and reserved quota block before provider with zero calls"
   for(const options of [{probeSpace:async()=>({bytes:0,inodes:100000})},{probeSpace:async()=>({bytes:1e12,inodes:0})},{maxBytes:OPERATION_LIMITS.recordBytes-1}]){
     const f=await fixture(t,options);assert.equal((await f.plan()).response.status,503);assert.equal(f.calls(),0);
   }
+  const capped=await fixture(t,{maxOperations:1});assert.equal((await capped.plan()).response.status,200);
+  assert.equal((await capped.handler().POST(capped.post(capped.planBody,capped.a,{"Idempotency-Key":crypto.randomUUID()}))).status,503);
+  assert.equal(capped.calls(),1);assert.equal((await capped.handler().GET(capped.get("plan",capped.id))).status,200);
 });
 test("ENOSPC after provider completion retains durable claim and blocks rebilling",async t=>{
   const f=await fixture(t,{beforeWrite:async path=>{if(path.endsWith("completed.tmp"))throw Object.assign(new Error("disk full"),{code:"ENOSPC"});}});
@@ -84,6 +87,7 @@ test("independent processes share one atomic owner claim, then read completed st
   const script=`import {operationStore} from ${JSON.stringify(new URL("../lib/research-operation.server.ts",import.meta.url).href)};const s=operationStore(process.argv[1]);const r=await s.claim('plan',process.argv[2],'a'.repeat(64),'b'.repeat(64));process.stdout.write(r?'claimed':'exists');`;
   const results=await Promise.all([1,2].map(()=>promisify(execFile)(process.execPath,["--experimental-strip-types","--input-type=module","-e",script,f.directory,f.id])));assert.deepEqual(results.map(r=>r.stdout).sort(),["claimed","exists"]);
   const store=operationStore(f.directory),record=await store.read("plan",f.id);await store.complete("plan",f.id,record,Response.json({fixture:"NOT-LIVE"}));
+  assert.equal((await store.inspect()).records[0].record.response,undefined); // Inventory never accumulates result bodies.
   const reader=`import {operationStore} from ${JSON.stringify(new URL("../lib/research-operation.server.ts",import.meta.url).href)};process.stdout.write(JSON.stringify(await operationStore(process.argv[1]).read('plan',process.argv[2])));`;
   assert.deepEqual(JSON.parse((await promisify(execFile)(process.execPath,["--experimental-strip-types","--input-type=module","-e",reader,f.directory,f.id])).stdout),await store.read("plan",f.id));
 });

@@ -143,7 +143,13 @@ export function operationStore(explicitDirectory?: string, options: StoreOptions
     }
     if (keys.size > (options.maxOperations ?? OPERATION_LIMITS.maxOperations)) throw new Error("OPERATION_CAPACITY_EXCEEDED");
     const records = [];
-    for (const key of keys) { const item = await readOne(key); if (!item) throw new Error("OPERATION_STORE_RECOVERY_REQUIRED"); records.push({ key, ...item }); }
+    for (const key of keys) {
+      const item = await readOne(key); if (!item) throw new Error("OPERATION_STORE_RECOVERY_REQUIRED");
+      const r = item.record;
+      // Verify full bytes one record at a time, retaining only admission metadata.
+      // A store at its disk quota must not retain all research responses in RAM.
+      records.push({ key, bytes: item.bytes, record: { schema: r.schema, ownerSha256: r.ownerSha256, inputSha256: r.inputSha256, startedAt: r.startedAt, state: r.state } });
+    }
     return records;
   }
   async function space() {
