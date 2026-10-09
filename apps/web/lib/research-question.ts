@@ -39,6 +39,7 @@ export type ResearchContract = {
 };
 export type QuestionEvent = { sequence: number; event: string; at: string; details: unknown; detailsSha256: string };
 export type QuestionModelAudit = {
+  inputBudget?: { version: string; wireBytes: number; estimatedInputTokens: number; reservedOutputTokens: number; estimatedCostUsdMicros: number };
   phase: "plan" | "explain"; provider: string; requestedModel: string; returnedModel: string | null;
   promptVersion: string; promptSha256: string; requestSha256: string; responseSha256: string | null;
   responseId: string | null; startedAt: string; finishedAt: string; durationMs: number;

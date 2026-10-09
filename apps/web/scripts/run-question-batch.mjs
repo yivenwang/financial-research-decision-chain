@@ -6,6 +6,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { operationStore } from "../lib/research-operation.server.ts";
+import { QUESTION_BUDGET_VERSION, QUESTION_BUDGET_ACK, QUESTION_BATCH_BUDGET, budgetSummary, costEstimateUsdMicros } from "../lib/question-batch-budget.ts";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { canonicalJson, buildMemoContext } from "../lib/research-memo.ts";
@@ -28,6 +29,8 @@ export function assertQuestionBatchEnvironment(env) {
   assert.equal(env.GITHUB_EVENT_NAME, "workflow_dispatch", "Only an explicit manual dispatch may spend this batch");
   assert.equal(env.GITHUB_RUN_ATTEMPT, "1", "Do not rerun a paid batch; preserve its first attempt");
   assert.equal(env.QUESTION_ACCEPTANCE_APPROVAL, QUESTION_BATCH_AUTHORIZATION);
+  assert.equal(env.QUESTION_BUDGET_ACKNOWLEDGEMENT, QUESTION_BUDGET_ACK, "Budget estimates are not a monetary hard cap; new explicit acknowledgement required");
+  assert.ok(budgetSummary().planningReserveUsdMicros <= QUESTION_BATCH_BUDGET.estimateCeilingUsdMicros);
   assert.match(env.GITHUB_SHA ?? "", /^[a-f0-9]{40}$/);
   assert.equal(env.EXPECTED_COMMIT_SHA, env.GITHUB_SHA, "Selected branch must match the approved fixed commit");
   assert.equal(env.MODEL_PROVIDER, "deepseek");
@@ -41,6 +44,7 @@ export async function runBoundedQuestionBatch({ commitSha, executePhase, persist
   assert.match(commitSha, /^[a-f0-9]{40}$/);
   const manifest = {
     schemaVersion: "question-live-batch.v1", authorization: QUESTION_BATCH_AUTHORIZATION, commitSha,
+    budget: budgetSummary(), reservedInputEstimateTokens: 0,
     evaluation: "live-provider-http", model: "deepseek-v4-pro", maxRequests: 6,
     maxOutputTokensPerRequest: 6000, maxPossibleOutputTokens: 36000, timeoutMsPerRequest: 150000,
     reasoningEffort: "low", startedAt: new Date().toISOString(), status: "running", contentReview: "pending",
@@ -53,12 +57,18 @@ export async function runBoundedQuestionBatch({ commitSha, executePhase, persist
     let draft;
     for (const phase of ["plan", "execute"]) {
       check(manifest.requests.length < manifest.maxRequests, "BATCH_BUDGET_EXHAUSTED");
+      manifest.reservedInputEstimateTokens += QUESTION_BATCH_BUDGET.maxInputEstimatePerRequest;
+      check(manifest.reservedInputEstimateTokens <= QUESTION_BATCH_BUDGET.maxInputEstimateTotal, "BATCH_INPUT_BUDGET_EXHAUSTED");
       const record = { index: manifest.requests.length + 1, caseId: spec.id, phase, status: "reserved", startedAt: new Date().toISOString(), usage: null };
       manifest.requests.push(record); item.requestIndexes.push(record.index);
       await persist(structuredClone(manifest)); // If persistence fails, do not call the provider.
       let outcome;
       try { outcome = await executePhase({ spec, phase, draft, index: record.index }); }
       catch { outcome = { ok: false, failureCode: "REQUEST_OR_VALIDATION_FAILED", record: null }; }
+      const usage = outcome.audit?.usage;
+      if (outcome.ok && (!usage || ![usage.inputTokens, usage.outputTokens].every(n => Number.isSafeInteger(n) && n >= 0) || usage.inputTokens > 16000 || usage.outputTokens > 6000 || manifest.knownInputTokens + usage.inputTokens > 96000)) {
+        outcome = { ...outcome, ok: false, failureCode: "BATCH_USAGE_BUDGET_INVALID" };
+      }
       // Archive first. An archive failure aborts rather than spending another request.
       await archive(record.index, { caseId: spec.id, phase, record: outcome.record ?? null });
       Object.assign(record, { status: outcome.ok === true ? "technical-completed" : "failed", finishedAt: new Date().toISOString(),
@@ -67,6 +77,7 @@ export async function runBoundedQuestionBatch({ commitSha, executePhase, persist
       manifest.knownInputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.inputTokens ?? 0), 0);
       manifest.knownOutputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.outputTokens ?? 0), 0);
       manifest.requestsWithoutUsage = manifest.requests.filter(r => !r.usage).length;
+      manifest.estimatedKnownUsageUsdMicros = costEstimateUsdMicros(manifest.knownInputTokens, manifest.knownOutputTokens);
       if (outcome.ok !== true) { item.status = "failed"; manifest.status = "stopped-after-failure"; }
       else if (phase === "plan") draft = outcome.data;
       else item.status = "technical-completed-content-pending";
@@ -93,6 +104,8 @@ export async function verifyLiveQuestionPhase({ phase, spec, response, snapshot,
     && /^deepseek-v4-pro(?:-|$)/.test(a.returnedModel ?? ""), "PROVIDER_OR_MODEL_MISMATCH");
   check(a.requestLimits?.maxOutputTokens === 6000 && a.requestLimits?.timeoutMs === 150000, "REQUEST_LIMIT_MISMATCH");
   check(a.usage?.outputTokens > 0 && a.usage.outputTokens <= 6000 && a.responseId && a.responseSha256 && a.requestSha256, "MODEL_AUDIT_INCOMPLETE");
+  check(a.inputBudget?.version === QUESTION_BUDGET_VERSION && a.inputBudget.estimatedInputTokens <= 16000 &&
+    Number.isSafeInteger(a.usage.inputTokens) && a.usage.inputTokens >= 0 && a.usage.inputTokens <= a.inputBudget.estimatedInputTokens, "INPUT_BUDGET_AUDIT_INVALID");
   const prompt = phase === "plan" ? QUESTION_PLAN_INSTRUCTIONS : QUESTION_ANSWER_INSTRUCTIONS;
   check(a.promptSha256 === digest(prompt) && a.promptVersion === (phase === "plan" ? QUESTION_PLAN_PROMPT_VERSION : QUESTION_ANSWER_PROMPT_VERSION), "PROMPT_MISMATCH");
   check(Array.isArray(run.events) && run.events.length > 0, "EVENTS_MISSING");
@@ -129,6 +142,7 @@ async function main() {
   check(prior.pdfSha256 === "88d2ab7c603a94b7e0943ef07e219235ee59b9048e1dfa8e38bd6ebac99b6d03"
     && prior.snapshot.source.sha256 === prior.pdfSha256, "SOURCE_DIGEST_MISMATCH");
   await buildMemoContext(prior.snapshot);
+  assertArchiveSafe(prior, [process.env.DEEPSEEK_API_KEY]);
   await writeFile(resolve(out, "input-snapshot.json"), JSON.stringify(prior, null, 2), { flag: "wx" });
   const token = randomBytes(24).toString("hex");
   const runDirectory = await mkdtemp(join(tmpdir(), "beacon-question-live-"));
@@ -141,7 +155,7 @@ async function main() {
   const require = createRequire(import.meta.url);
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4324", "-H", "127.0.0.1"], {
     cwd: appRoot, stdio: ["ignore", "ignore", "ignore"],
-    env: { ...process.env, RESEARCH_DEMO_TOKEN: token, RESEARCH_APP_ORIGIN: origin, RESEARCH_RUN_DIRECTORY: runDirectory, REVIEW_SESSION_SECRET: sessionSecret, REVIEW_ACCESS_DEADLINE: testDeadline },
+    env: { ...process.env, RESEARCH_DEMO_TOKEN: token, RESEARCH_APP_ORIGIN: origin, RESEARCH_RUN_DIRECTORY: runDirectory, REVIEW_SESSION_SECRET: sessionSecret, REVIEW_ACCESS_DEADLINE: testDeadline, QUESTION_ACCEPTANCE_BUDGET_MODE: QUESTION_BUDGET_VERSION },
   });
   const exited = new Promise(resolveExit => server.once("close", resolveExit));
   let spawnFailed = false; server.once("error", () => { spawnFailed = true; });
@@ -162,14 +176,17 @@ async function main() {
     check(login.ok, "ACCEPTANCE_SESSION_NOT_READY");
     const cookie = login.headers.get("set-cookie")?.split(";")[0];
     check(cookie?.startsWith("beacon_review_access="), "ACCEPTANCE_SESSION_NOT_READY");
+    const secrets = [process.env.DEEPSEEK_API_KEY, token, sessionSecret, cookie, cookie.slice(cookie.indexOf("=") + 1)];
     let checkpoint = 0;
     const result = await runBoundedQuestionBatch({ commitSha: process.env.GITHUB_SHA,
       persist: async manifest => {
         const text = JSON.stringify(manifest, null, 2);
+        assertArchiveSafe(manifest, secrets);
         await writeFile(resolve(out, "checkpoints", `${String(++checkpoint).padStart(2, "0")}.json`), text, { flag: "wx" });
         await writeFile(resolve(out, "manifest.json"), text);
       },
       archive: async (index, data) => {
+        assertArchiveSafe(data, secrets);
         await writeFile(resolve(out, `request-${String(index).padStart(2, "0")}.json`), JSON.stringify(data, null, 2), { flag: "wx" });
         if (data.record?.run?.answer) await writeFile(resolve(out, `${data.caseId}.md`), questionMarkdown(data.record.run), { flag: "wx" });
       },
@@ -178,6 +195,7 @@ async function main() {
         const response = await fetch(`${origin}/api/research-question`, { method: "POST", headers: { origin, "content-type": "application/json", cookie, "Idempotency-Key": phase === "plan" ? crypto.randomUUID() : draft.run.requestId },
           body: JSON.stringify(body), signal: AbortSignal.timeout(175000), redirect: "error" });
         const data = await response.json();
+        if (typeof data.ticket === "string") secrets.push(data.ticket);
         // Do not archive the transient signed execution ticket or access token.
         const record = { httpStatus: response.status, run: data.run ?? null, code: data.code ?? null };
         try {
@@ -195,5 +213,10 @@ async function main() {
     server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]);
     if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; }
   }
+}
+export function assertArchiveSafe(value, secrets) {
+  const text = JSON.stringify(value);
+  if (secrets.some(secret => typeof secret === "string" && secret.length && (text.includes(secret) || text.includes(JSON.stringify(secret).slice(1, -1))))) throw new Error("ARCHIVE_SECRET_BLOCKED");
+  if (/"(?:cookie|authorization|ticket|apiKey|sessionSecret)"\s*:/i.test(text)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) await main();

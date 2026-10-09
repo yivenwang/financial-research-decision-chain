@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { memoConfig, configured, sameOrigin, readBoundedJson, parseMemoJson, finalOutput, type MemoConfig } from "./research-memo.server.ts";
 import { reviewSessionOwner } from "./reviewer-access.ts";
+import { checkQuestionInputBudget, QUESTION_BUDGET_VERSION } from "./question-batch-budget.ts";
 import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
 import {
@@ -45,6 +46,11 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
   run.calls.push(audit);
   await addQuestionEvent(run, "model_requested", { phase, promptVersion: audit.promptVersion, requestSha256: audit.requestSha256, requestLimits: limits });
   try {
+    const budgetMode = process.env.QUESTION_ACCEPTANCE_BUDGET_MODE;
+    if (budgetMode) {
+      if (budgetMode !== QUESTION_BUDGET_VERSION) throw new Error("QUESTION_BUDGET_CONFIGURATION_INVALID");
+      audit.inputBudget = checkQuestionInputBudget(body); // Exact outgoing wire, before provider fetch.
+    }
     const providerSignal = AbortSignal.timeout(limits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(deepseek ? "https://api.deepseek.com/responses" : "https://api.openai.com/v1/responses", {
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body,
@@ -65,7 +71,7 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     try { return parseMemoJson(audit.rawOutput); } catch { throw new Error("MODEL_JSON_INVALID"); }
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|MODEL_JSON_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
+    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
     throw new Error(audit.failureCode);
   } finally {
     audit.finishedAt = new Date().toISOString(); audit.durationMs = Date.now() - started;

@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { assertQuestionBatchEnvironment, runBoundedQuestionBatch, verifyLiveQuestionPhase, QUESTION_LIVE_CASES, QUESTION_BATCH_AUTHORIZATION } from "../scripts/run-question-batch.mjs";
+import { assertQuestionBatchEnvironment, runBoundedQuestionBatch, verifyLiveQuestionPhase, QUESTION_LIVE_CASES, QUESTION_BATCH_AUTHORIZATION, assertArchiveSafe } from "../scripts/run-question-batch.mjs";
+import { QUESTION_BUDGET_ACK, QUESTION_BUDGET_VERSION, checkQuestionInputBudget, budgetSummary } from "../lib/question-batch-budget.ts";
+process.env.QUESTION_ACCEPTANCE_BUDGET_MODE = QUESTION_BUDGET_VERSION; // Isolated NOT-LIVE test worker only.
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { questionTestConfig, planOutput, answerOutput, providerResponse, questionRequest, questionTestSnapshot } from "./question-test-helpers.mjs";
 
 const commitSha = "a".repeat(40);
 const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_RUN_ATTEMPT: "1", GITHUB_SHA: commitSha, EXPECTED_COMMIT_SHA: commitSha,
-  QUESTION_ACCEPTANCE_APPROVAL: QUESTION_BATCH_AUTHORIZATION, MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", DEEPSEEK_API_KEY: "synthetic-NOT-LIVE" };
+  QUESTION_ACCEPTANCE_APPROVAL: QUESTION_BATCH_AUTHORIZATION, QUESTION_BUDGET_ACKNOWLEDGEMENT: QUESTION_BUDGET_ACK, MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", DEEPSEEK_API_KEY: "synthetic-NOT-LIVE" };
 
 test("paid batch rejects automatic events, reruns, moving code and missing authorization before execution", () => {
   assert.doesNotThrow(() => assertQuestionBatchEnvironment(env));
   for (const patch of [{ GITHUB_EVENT_NAME: "push" }, { GITHUB_RUN_ATTEMPT: "2" }, { EXPECTED_COMMIT_SHA: "b".repeat(40) },
-    { QUESTION_ACCEPTANCE_APPROVAL: "" }, { DEEPSEEK_API_KEY: "" }, { MODEL_PROVIDER: "openai" }]) {
+    { QUESTION_ACCEPTANCE_APPROVAL: "" }, { QUESTION_BUDGET_ACKNOWLEDGEMENT: "" }, { DEEPSEEK_API_KEY: "" }, { MODEL_PROVIDER: "openai" }]) {
     assert.throws(() => assertQuestionBatchEnvironment({ ...env, ...patch }));
   }
 });
@@ -75,4 +77,33 @@ test("acceptance verifier replays actual handler outputs for three intents and r
       await assert.rejects(verifyLiveQuestionPhase({ phase: "execute", spec, response: { httpStatus: 200, data: bad }, snapshot, draft }));
     }
   }
+});
+
+test("input estimate covers full UTF-8 wire/schema and fails before provider transport", async () => {
+  const body = JSON.stringify({ model: "deepseek-v4-pro", max_output_tokens: 6000, reasoning: { effort: "low" }, input: "中文", text: { schema: "schema bytes" } });
+  assert.equal(checkQuestionInputBudget(body).estimatedInputTokens, Buffer.byteLength(body) + 4096);
+  assert.throws(() => checkQuestionInputBudget(body.replace("6000", "6001")), /CONFIGURATION/);
+  let calls = 0;
+  const h = createQuestionHandler(() => questionTestConfig, { fetcher: async () => { calls++; throw Error("must not reach provider"); } });
+  process.env.QUESTION_ACCEPTANCE_BUDGET_MODE = "unsupported-mode";
+  try {
+    const result = await (await h.POST(questionRequest({phase:"plan",question:QUESTION_LIVE_CASES[0].question}))).json();
+    assert.equal(calls,0);assert.deepEqual(result.run.reasons,["QUESTION_BUDGET_CONFIGURATION_INVALID"]);
+  } finally { process.env.QUESTION_ACCEPTANCE_BUDGET_MODE = QUESTION_BUDGET_VERSION; }
+  assert.throws(() => checkQuestionInputBudget(body.replace("schema bytes", "x".repeat(16000))), /INPUT_BUDGET_EXCEEDED/);
+});
+
+test("usage over budget or missing usage stops immediately without refunding unknown reservations", async () => {
+  for (const usage of [null, {inputTokens:16001,outputTokens:1}, {inputTokens:1,outputTokens:6001}]) {
+    let calls=0;
+    const result=await runBoundedQuestionBatch({commitSha,persist:async()=>{},archive:async()=>{},executePhase:async()=>{calls++;return {ok:true,data:{},audit:{usage}};}});
+    assert.equal(calls,1); assert.equal(result.status,"stopped-after-failure");assert.equal(result.reservedInputEstimateTokens,16000);
+  }
+  const b=budgetSummary();assert.equal(b.estimatedMaximumUsdMicros,269280);assert.equal(b.planningReserveUsdMicros,336600);assert.equal(b.monetaryHardCap,false);
+});
+
+test("archive blocks credentials, signed tickets and escaped secrets while retaining safe audit hashes", () => {
+  for(const secret of ["NOT-LIVE-cookie-value", 'NOT-LIVE-key-"escaped', "a".repeat(64)])assert.throws(()=>assertArchiveSafe({rawOutput:secret},[secret]),/SECRET_BLOCKED/);
+  for(const key of ["cookie","authorization","ticket","apiKey","sessionSecret"])assert.throws(()=>assertArchiveSafe({[key]:"NOT-LIVE"},[]),/CREDENTIAL_FIELD/);
+  assert.doesNotThrow(()=>assertArchiveSafe({run:{answerSha256:"b".repeat(64)},code:"MODEL_JSON_INVALID"},["NOT-LIVE-key"]));
 });
