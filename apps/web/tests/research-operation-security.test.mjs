@@ -52,6 +52,10 @@ test("same cookie across handler restart/tabs replays exact content; input confl
   assert.deepEqual(await(await f.handler().POST(f.post(f.planBody,f.a,{"Idempotency-Key":f.id}))).json(),draft);
   assert.equal((await f.handler().POST(f.post({phase:"plan",question:"核对证据"},f.a,{"Idempotency-Key":f.id}))).status,409);
   assert.deepEqual(await(await f.handler().GET(f.get("plan",f.id))).json(),draft);assert.equal(f.calls(),1);
+  const automatic = await (await f.handler().POST(f.post(f.planBody))).json();
+  assert.deepEqual(await (await f.handler().GET(f.get("plan",automatic.run.requestId))).json(),automatic);
+  assert.deepEqual(await (await f.handler().POST(f.post(f.planBody,f.a,{"Idempotency-Key":automatic.run.requestId}))).json(),automatic);
+  assert.equal(f.calls(),2); // Server-generated IDs must identify the same durable receipt.
 });
 test("legacy unowned receipts are rejected unchanged, including matching keys and shared Bearer",async t=>{
   const f=await fixture(t);await f.plan();const id=crypto.randomUUID(),dir=join(f.directory,`plan-${id}`);await mkdir(dir,{mode:0o700});

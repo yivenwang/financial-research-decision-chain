@@ -166,7 +166,11 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
     let input: Record<string, unknown>;
     try { input = await readBoundedJson(request, MAX_QUESTION_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs }) as Record<string, unknown>; }
     catch { return json({ code: "INVALID_BODY", error: "请求内容无效或超出大小限制。" }, 400); }
-    const copy = () => new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify(input) });
+    const copy = (operationId?: string) => {
+      const headers = new Headers(request.headers);
+      if (operationId) headers.set("Idempotency-Key", operationId);
+      return new Request(request.url, { method: "POST", headers, body: JSON.stringify(input) });
+    };
     if (!input || typeof input !== "object" || Array.isArray(input)) return core.POST(copy());
     const phase = input.phase;
     let id: string;
@@ -189,9 +193,13 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       if (!release) return json({ code: "MODEL_BUSY", error: "已有模型请求正在处理，请稍后读取状态或手动重试。" }, 429);
       try {
         const record = await store.claim(phase, id, hash, owner);
-        if (!record) { const existing = await store.read(phase, id); return existing && existing.ownerSha256 === owner && existing.inputSha256 === hash ? replay(existing) : json({ code: "OPERATION_CONFLICT", error: "任务记录已存在，请读取状态。" }, 409); }
+        if (!record) {
+          const existing = await store.read(phase, id);
+          if (existing && existing.ownerSha256 !== owner) return json({ code: "OPERATION_NOT_FOUND", error: "当前会话无权访问此任务。" }, 404);
+          return existing && existing.inputSha256 === hash ? replay(existing) : json({ code: "OPERATION_CONFLICT", error: "任务记录已存在，请读取状态。" }, 409);
+        }
         modelMayHaveStarted = true;
-        const response = await core.POST(copy());
+        const response = await core.POST(copy(id));
         await store.complete(phase, id, record, response);
         return response;
       } finally { release(); }
