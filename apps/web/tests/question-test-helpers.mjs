@@ -2,6 +2,9 @@ import { parseResearchReport, extractCandidates, createResearchSnapshot } from "
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 
+// Synthetic HTTP tests have their own open window; production deadline is unchanged.
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+
 // Synthetic prose and transport responses are NEVER production fallbacks.
 export const questionTestConfig = { provider: "deepseek", apiKey: "question-test-NOT-A-REAL-KEY", accessToken: "question-test-access-code", model: "deepseek-v4-pro" };
 export const mainQuestion = "安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？";

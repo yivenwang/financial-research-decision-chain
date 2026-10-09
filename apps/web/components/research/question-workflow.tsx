@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { CheckCircle2, CircleAlert, Database, ServerCog, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { INTENT_LABELS, QUESTION_CAPABILITY, questionSources, questionMarkdown, type QuestionRun, type SignedQuestionDraft } from "@/lib/research-question";
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, type QuestionLedger } from "@/lib/research-question-storage";
 import { readStoredVersions, readActiveVersionId, VERSION_UPDATED_EVENT, type ResearchVersion } from "@/lib/research-versions";
+import { questionReason } from "@/lib/question-presentation";
 import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
+
+const PENDING_KEY = "beacon-question-pending-v1";
+const DRAFT_KEY = "beacon-question-draft-v1";
+type Pending = { phase: "plan" | "execute"; id: string; body?: unknown };
 
 const examples = ["安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？", "归母净利润同比下降的来源在哪里？", "这次更新影响了哪些Claim和Assumption？"];
 const statusLabel = { CONTRACT_DRAFTED: "待确认研究任务", MATERIALS_REQUIRED: "需要补充材料", OUT_OF_SCOPE: "超出当前范围", BLOCKED: "已阻断", ANSWER_READY: "研究草稿待审核", PARTIAL: "部分回答待审核" };
@@ -38,6 +43,11 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   const [browserIssue, setBrowserIssue] = useState<string | null>("正在检查浏览器环境…");
   const [reviewer, setReviewer] = useState("");
   const [note, setNote] = useState("");
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatus, setHistoryStatus] = useState("all");
+  const recoveryAbort = useRef<AbortController | null>(null);
+  const resumePending = useEffectEvent((waiting: Pending) => { void recover(waiting); });
   const reload = () => {
     const next = readQuestionLedger(); setLedger(next);
     const versions = readStoredVersions("research");
@@ -46,14 +56,57 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   };
   useEffect(() => {
     let active = true;
-    const initialize = () => { if (!active) return; try { const next = reload(); setShown(next.runs.at(-1) ?? null); } catch (e) { setError(plainError(e)); } };
+    const initialize = () => { if (!active) return; try { const next = reload(); setShown(next.runs.at(-1) ?? null); const saved = JSON.parse(localStorage.getItem(DRAFT_KEY) ?? "null"); if (saved?.ticket && saved.run?.status === "CONTRACT_DRAFTED") setDraft(saved); const waiting = JSON.parse(localStorage.getItem(PENDING_KEY) ?? "null"); if (waiting?.id && ["plan", "execute"].includes(waiting.phase)) { setPending(waiting); resumePending(waiting); } } catch (e) { setError(plainError(e)); } };
     const refresh = () => { if (!active) return; try { reload(); } catch (e) { setError(plainError(e)); } };
     queueMicrotask(() => { if (active) setBrowserIssue(researchBrowserIssue()); initialize(); });
     window.addEventListener(VERSION_UPDATED_EVENT, refresh); window.addEventListener("storage", refresh);
     const abort = new AbortController();
     fetch("/api/research-question", { signal: abort.signal }).then(async r => { if (!r.ok) throw new Error("无法读取模型配置状态。"); setConfig(await r.json()); }).catch(e => { if (e.name !== "AbortError") setError(plainError(e)); });
-    return () => { active = false; abort.abort(); window.removeEventListener(VERSION_UPDATED_EVENT, refresh); window.removeEventListener("storage", refresh); };
+    return () => { active = false; abort.abort(); recoveryAbort.current?.abort(); window.removeEventListener(VERSION_UPDATED_EVENT, refresh); window.removeEventListener("storage", refresh); };
   }, []);
+  async function receive(data: { run: QuestionRun; ticket?: string | null }, phase: "plan" | "execute") {
+    setShown(data.run);
+    if (phase === "plan" && data.ticket) { const signed = { run: data.run, ticket: data.ticket }; localStorage.setItem(DRAFT_KEY, JSON.stringify(signed)); setDraft(signed); }
+    if (phase === "execute" && data.run.status !== "MATERIALS_REQUIRED") { localStorage.removeItem(DRAFT_KEY); setDraft(null); }
+    try { await appendQuestionRun(data.run); reload(); }
+    catch { setError("结果已返回，但本机保存失败。请立即导出完整记录；无需再次调用模型。"); }
+    localStorage.removeItem(PENDING_KEY); setPending(null);
+  }
+  async function recover(waiting: Pending) {
+    recoveryAbort.current?.abort();
+    const controller = new AbortController(); recoveryAbort.current = controller;
+    setBusy(waiting.phase); setError("");
+    try {
+      const started = Date.now();
+      while (!controller.signal.aborted && Date.now() - started < 180000) {
+        const response = await fetch(`/api/research-question?operationId=${encodeURIComponent(waiting.id)}&phase=${waiting.phase}`, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]) });
+        const data = await response.json();
+        if (response.status === 202) { await new Promise(resolve => setTimeout(resolve, 1500)); continue; }
+        if (!response.ok || !data.run) throw new Error(data.error ?? "任务状态无法读取，请保留运行标识并联系维护者。");
+        await receive(data, waiting.phase); return;
+      }
+      throw new Error("仍未读取到完整结果。请保留任务标识并再次读取状态；无需重发模型请求。");
+    } catch (e) { if (!controller.signal.aborted) setError(plainError(e)); }
+    finally { if (!controller.signal.aborted) setBusy(null); }
+  }
+  async function retryPending(waiting: Pending) {
+    if (!waiting.body) return;
+    setBusy(waiting.phase); setError("");
+    try {
+      const response = await runResearchBrowserOperation(() => fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": waiting.id }, body: JSON.stringify(waiting.body), signal: AbortSignal.timeout(175000) }));
+      if (response.status === 202) { await recover(waiting); return; }
+      const data = await response.json();
+      if (!response.ok || !data.run) throw new Error(data.error ?? "任务未完成，请先读取状态。");
+      await receive(data, waiting.phase);
+    } catch (e) { setError(plainError(e)); } finally { setBusy(null); }
+  }
+  function endWaiting() {
+    if (!pending) return;
+    const records = JSON.parse(localStorage.getItem("beacon-question-unresolved-v1") ?? "[]");
+    localStorage.setItem("beacon-question-unresolved-v1", JSON.stringify([...records, { ...pending, endedAt: new Date().toISOString() }]));
+    localStorage.removeItem(PENDING_KEY); setPending(null); setDraft(null); localStorage.removeItem(DRAFT_KEY);
+    setError("原任务标识已保留，服务器记录不会删除。新任务可能再次产生调用费用；请先核查原任务。");
+  }
   async function request(phase: "plan" | "execute") {
     const issue = researchBrowserIssue();
     if (issue) { setBrowserIssue(issue); setError(issue); return; }
@@ -63,16 +116,15 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       // Read the current snapshot at the confirmation action, not from a stale render.
       const versions = readStoredVersions("research");
       const current = versions.find(v => v.versionId === readActiveVersionId(versions, "research")) ?? null;
-      const response = await runResearchBrowserOperation(() => fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify(phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current }), signal: AbortSignal.timeout(175000) }));
+      const waiting: Pending = { phase, id: phase === "execute" ? draft!.run.requestId : crypto.randomUUID(), body: phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current } };
+      localStorage.setItem(PENDING_KEY, JSON.stringify(waiting)); setPending(waiting);
+      const response = await runResearchBrowserOperation(() => fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": waiting.id },
+        body: JSON.stringify(waiting.body), signal: AbortSignal.timeout(175000) }));
+      if (response.status === 202) { await recover(waiting); return; }
       const data = await response.json();
+      if ([400, 401, 403, 422, 429].includes(response.status)) { localStorage.removeItem(PENDING_KEY); setPending(null); }
       if (!response.ok || !data.run) throw new Error(data.error ?? "研究请求未完成。");
-      setShown(data.run);
-      if (phase === "plan" && data.ticket) setDraft({ run: data.run, ticket: data.ticket });
-      if (phase === "execute" && data.run.status !== "MATERIALS_REQUIRED") setDraft(null);
-      // Keep result visible and downloadable even if local persistence fails.
-      try { await appendQuestionRun(data.run); reload(); }
-      catch { setError("结果已返回，但本机保存失败。请立即导出完整记录；无需再次调用模型。"); }
+      await receive(data, phase);
     } catch (e) { setError(plainError(e)); }
     finally { setBusy(null); }
   }
@@ -86,14 +138,14 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
   const answer = shown?.answer;
   const lastReview = ledger.reviews.filter(r => r.runId === shown?.runId).at(-1);
   const contract = draft?.run.contract ?? shown?.contract;
-  const selectQuestion = (value: string) => { setQuestion(value); setDraft(null); };
+  const selectQuestion = (value: string) => { setQuestion(value); setDraft(null); localStorage.removeItem(DRAFT_KEY); };
   const questionReady = question.trim().length > 0;
   const modelReady = config?.configured === true;
   return <div className="space-y-5" data-testid="question-workflow">
     <section className={panel}>
       <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-2xl font-semibold">研究问题</h2><a className="text-cyan-300 underline" href="/changes">补充材料</a></div>
       <p className="text-sm text-slate-300">{QUESTION_CAPABILITY.company} · {questionSources().map(s => s.period).join("、")} · 变化解释、证据核验、决策影响</p>
-      <p className="text-sm text-slate-400">当前材料：{snapshot ? `${snapshot.source?.sourceId} · ${snapshot.versionId}${snapshot.source?.mode === "sample" ? " · 教学合成样例" : ""}` : "尚无已审核材料，执行时会提示补充"}。每个事实附来源，关键证据不足时停止生成。</p>
+      <p className="text-sm text-slate-400">当前材料：{snapshot ? `${snapshot.source?.sourceId} · ${snapshot.versionId}${snapshot.source?.mode === "sample" ? " · 教学合成样例" : ""}` : "尚无已审核材料。可以先生成任务；执行前需要导入、逐条审核并保存 S-05（2026Q1）"}。每个事实附来源，关键证据不足时停止生成。</p>
       <label className="block space-y-2"><span>你想研究什么？</span><Textarea aria-label="研究问题" value={question} maxLength={1000} disabled={!!busy} onChange={e => selectQuestion(e.target.value)} className="min-h-24" /><span className="block text-right text-xs text-slate-400">{Array.from(question).length} / 1000</span></label>
       <div className="flex flex-wrap gap-2">{examples.map((q, i) => <Button key={q} variant="outline" disabled={!!busy} onClick={() => selectQuestion(q)}>示例 {i + 1}：{["核心盈利", "证据来源", "影响链"][i]}</Button>)}</div>
       <p className="text-sm text-slate-400">{config ? config.configured ? `${config.provider} / ${config.model}；生成任务、确认执行各调用模型一次。` : "模型服务尚未配置，请按运行说明配置服务端环境。" : "正在读取服务状态…"}</p>
@@ -103,7 +155,8 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm ${snapshot ? "border-emerald-300/25 bg-emerald-300/[0.055] text-emerald-200" : "border-slate-300/25 bg-slate-300/[0.04] text-slate-400"}`}>{snapshot ? <Database className="size-4" /> : <CircleAlert className="size-4" />}<span>研究材料<br /><small>{snapshot ? `${snapshot.versionId} 可用于执行` : "可先生成任务"}</small></span></div>
       </div>
       {browserIssue && <p role="alert" className="text-amber-200">{browserIssue}</p>}
-      <Button onClick={() => request("plan")} disabled={!!busy || !modelReady || !questionReady || !!browserIssue}>生成研究任务</Button>
+      <Button onClick={() => request("plan")} disabled={!!busy || !!pending || !modelReady || !questionReady || !!browserIssue}>生成研究任务</Button>
+      {pending && <div className="text-sm"><p>任务标识：{pending.id}。刷新后可读取状态；读取状态不会调用模型。</p><Button variant="outline" disabled={!!busy} onClick={() => recover(pending)}>读取任务状态</Button>{!!pending.body && <Button variant="outline" disabled={!!busy} onClick={() => retryPending(pending)}>重发同一请求（幂等）</Button>}<Button variant="outline" disabled={!!busy} onClick={endWaiting}>保留标识并结束等待</Button><p>同一请求由服务器防重；记录不完整时禁止重发。结束等待后创建新任务可能再次计费。</p></div>}
       {busy && <p role="status" className="text-cyan-200">{busy === "plan" ? "正在理解问题并检查范围…" : busy === "execute" ? "正在核验材料、复算并生成解释…" : "正在保存审核记录…"}</p>}
       {error && <p role="alert" className="text-rose-300">{error}</p>}
     </section>
@@ -111,7 +164,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       <h2 className="text-lg font-semibold">确认研究任务</h2>
       <dl className="grid gap-2 text-sm sm:grid-cols-2"><div>公司：{contract.company}</div><div>任务：{INTENT_LABELS[contract.intent]}</div><div>报告期：{contract.period}</div><div>同比期间：{contract.comparablePeriod ?? "未要求比较"}</div><div>所需材料：{contract.requiredSourceIds.join("、") || "范围外"}</div><div>研究快照：{snapshot?.versionId ?? "待补充"}（不作为同比期间）</div></dl>
       <p className="text-sm text-slate-300">{contract.reasons.join("；")}</p>
-      {draft && <Button disabled={!!busy || !!browserIssue} onClick={() => request("execute")}>确认并执行</Button>}
+      {draft && <><p className="text-sm text-slate-400">{snapshot ? "执行前仍会复核材料、审核记录及冻结计算。" : "缺少已审核 S-05（2026Q1）：请先到材料更新导入、审核并保存，再返回确认。此时确认只检查材料，不调用解释模型。"}</p><Button disabled={!!busy || !!pending || !!browserIssue} onClick={() => request("execute")}>确认并执行</Button></>}
     </section>}
     {shown && <section className={panel} data-testid="question-result">
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">
@@ -119,7 +172,8 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         <Button variant="outline" onClick={() => download(`question-${shown.requestId}.md`, questionMarkdown(shown), "text/markdown;charset=utf-8")}>导出研究结果</Button>
       </div></div>
       <p className="text-sm text-slate-300 break-words">{shown.queryRaw}</p>
-      {shown.reasons.length > 0 && <p className="text-amber-200">{shown.reasons.join("；")}</p>}
+      {shown.reasons.length > 0 && <p className="text-amber-200">{shown.reasons.map(questionReason).join("；")}</p>}
+      {shown.status === "BLOCKED" && <details><summary>阻断技术详情</summary><code>{shown.reasons.join("；")}</code></details>}
       {shown.status === "MATERIALS_REQUIRED" && <a href="/changes" className="text-cyan-300 underline">去导入、审核并保存材料，再返回生成研究任务</a>}
       {answer && <>
         <p className="text-sm text-amber-200">证据校验通过；解释为待人工核对草稿，专业关卡仍待复核。{answer.evidence.context.source.mode === "sample" && "当前输入为教学合成样例。"}</p>
@@ -131,7 +185,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         <div className="space-y-3 border-t border-white/10 pt-4" data-testid="question-review">
           <p>{lastReview ? lastReview.status === "accepted" ? "人工已接受研究草稿" : "研究草稿已退回" : "研究草稿尚待人工审核"}</p>
           {lastReview && <p className="text-sm text-slate-400">最近审核：{lastReview.reviewer} · {formatDate(lastReview.reviewedAt)}{lastReview.note ? ` · ${lastReview.note}` : ""}</p>}
-          <p className="text-sm text-slate-400">{answer.recommendedHumanAction}</p>
+          <p className="text-sm text-slate-400">{answer.recommendedHumanAction} 再次审核会追加记录，原退回或接受意见仍保留。</p><details><summary>历次人工审核</summary>{ledger.reviews.filter(r => r.runId === shown.runId).map(r => <p key={r.id}>{r.status === "accepted" ? "接受草稿" : "退回草稿"} · {r.reviewer} · {formatDate(r.reviewedAt)} · {r.note}</p>)}</details>
           <Input aria-label="问题审核人" placeholder="审核人（自行填写）" value={reviewer} onChange={e => setReviewer(e.target.value)} maxLength={100} />
           <Textarea aria-label="问题审核意见" placeholder="审核意见" value={note} onChange={e => setNote(e.target.value)} maxLength={1000} />
           <div className="flex flex-wrap gap-2"><Button disabled={!!busy || !reviewer.trim()} onClick={() => review("accepted")}>接受研究草稿</Button><Button variant="outline" disabled={!!busy || !reviewer.trim()} onClick={() => review("rejected")}>退回研究草稿</Button></div>
@@ -139,6 +193,6 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       </>}
       <details><summary className="cursor-pointer">运行记录 · {shown.events.length} 项事件</summary><pre className="mt-3 overflow-x-auto whitespace-pre-wrap break-all text-xs">{JSON.stringify({ requestId: shown.requestId, calls: shown.calls, events: shown.events }, null, 2)}</pre></details>
     </section>}
-    {ledger.runs.length > 0 && <section className={panel}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">本机研究问题历史</h2><span className="text-sm text-slate-400">{ledger.runs.length} 次运行</span></div><div className="space-y-2">{ledger.runs.slice().reverse().map(r => <button aria-current={shown?.runId === r.runId ? "true" : undefined} className="block w-full rounded-lg border border-white/10 p-3 text-left text-sm hover:bg-white/5" key={r.runId} disabled={!!busy} onClick={() => { setShown(r); setDraft(null); }}>{statusLabel[r.status]} · {r.queryRaw}<span className="block text-xs text-slate-400">{formatDate(r.createdAt)}</span></button>)}</div></section>}
+    {ledger.runs.length > 0 && <section className={panel}><div className="flex flex-wrap items-center justify-between gap-2"><h2 className="font-semibold">本机研究问题历史</h2><span className="text-sm text-slate-400">{ledger.runs.length} 次运行</span></div><Input aria-label="查找研究问题历史" placeholder="按问题或请求标识查找" value={historySearch} onChange={e => setHistorySearch(e.target.value)} /><label>运行状态 <select aria-label="筛选研究问题状态" value={historyStatus} onChange={e => setHistoryStatus(e.target.value)}><option value="all">全部</option>{Object.entries(statusLabel).map(([key, value]) => <option value={key} key={key}>{value}</option>)}</select></label><div className="space-y-2">{ledger.runs.filter(r => (historyStatus === "all" || r.status === historyStatus) && `${r.queryRaw} ${r.requestId}`.toLowerCase().includes(historySearch.toLowerCase())).slice().reverse().map(r => <button aria-current={shown?.runId === r.runId ? "true" : undefined} className="block w-full rounded-lg border border-white/10 p-3 text-left text-sm hover:bg-white/5" key={r.runId} disabled={!!busy} onClick={() => { setShown(r); setDraft(null); }}>{statusLabel[r.status]} · {r.queryRaw}<span className="block text-xs text-slate-400">{formatDate(r.createdAt)}</span></button>)}</div></section>}
   </div>;
 }

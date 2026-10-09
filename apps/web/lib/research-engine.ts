@@ -3,6 +3,7 @@ import { runC04Chain, type C04ChainResult, type EvidenceDirection } from "../../
 import type { ParseIssueV06, ParseResultV06 } from "../../../lib/parser-v06.ts";
 import type { MetricKey, PdfTextItem, SourceMeta } from "../../../lib/parser-v04.ts";
 import type { ResearchVersion, StoredFormula } from "./research-versions.ts";
+import { groupRows } from "../../../lib/parser-v04.ts";
 
 export type { C04ChainResult, PdfTextItem, SourceMeta };
 export type ParseResult = ParseResultV06;
@@ -32,6 +33,7 @@ export type CandidateEvidence = {
   period: string;
   location: string;
   snippet: string;
+  sourceExcerpt?: string;
   reviewStatus: "pending" | "accepted" | "rejected";
 };
 
@@ -47,7 +49,8 @@ export function parseResearchReport(items: PdfTextItem[], source: SourceMeta): P
   return parseFinancialReportV06Strict(items, source);
 }
 
-export function extractCandidates(result: ParseResult): CandidateEvidence[] {
+export function extractCandidates(result: ParseResult, items?: PdfTextItem[]): CandidateEvidence[] {
+  const rows = items ? groupRows(items) : [];
   const signals = runC04Chain(result, context("candidate-preview")).evidence;
   return REQUIRED_METRICS.flatMap((key) => {
     const metric = result.metrics[key];
@@ -70,6 +73,12 @@ export function extractCandidates(result: ParseResult): CandidateEvidence[] {
       period: result.source.period,
       location: `${metric.sourceId} · P${metric.page}`,
       snippet: `${metric.label} · ${metric.current.toFixed(8)} CNY mn${yoy === null ? "" : ` · 同比 ${(yoy * 100).toFixed(2)}%`}`,
+      // Report labels can wrap across rows. Match the already parsed page/value,
+      // and retain literal row text rather than inventing a reconstructed quote.
+      ...(items ? { sourceExcerpt: rows.filter(row => row.page === metric.page && row.items.some(item => {
+        const token = item.str.replace(/[,\s]/g, "").replace(/[−–—]/g, "-");
+        return /^[-+]?\d+(?:\.\d+)?$/.test(token) && Number(token) / 1_000_000 === metric.current;
+      })).map(row => row.items.map(item => item.str).join(" | ")).join("\n") } : {}),
       reviewStatus: "pending" as const,
     }];
   });

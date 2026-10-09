@@ -6,6 +6,9 @@ import { researchBrowserIssue } from "../lib/research-browser.ts";
 import { createMemoHandler } from "../lib/research-memo.server.ts";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 
+// Test-only access window; expiration policy is separately verified.
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+
 test("return paths cannot normalize backslashes or protocol-relative URLs into an external origin", () => {
   const origin = "https://research.example.test";
   assert.equal(safeReviewReturnPath("/versions?x=1#detail", origin), "/versions?x=1#detail");

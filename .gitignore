@@ -6,4 +6,5 @@ dist/
 *.tsbuildinfo
 apps/web/public/vendor/pdfjs/
 artifacts*/
+.research-runs/
 .DS_Store

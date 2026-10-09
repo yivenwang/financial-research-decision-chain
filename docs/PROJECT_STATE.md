@@ -1,5 +1,19 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-09 — 人工审验后二次技术审计（未部署）
+
+本次从实际 main `d035075fc5c9d7cb9811102177c7e3fe5b7ba0ec` 建立
+`codex/reviewer-audit-round-2`。PR #30/#31/#32/#34 的实际状态为 merged，
+下方旧日期的未合并记录继续作为历史保留。只读生产核查显示仓库与构建收据
+均为该 SHA；公网 HTTPS 匿名问题页 307，证书验证通过。
+
+[二次审计报告](REVIEWER_AUDIT_ROUND_2.md) 记录八项复现分类、精确利润桥、
+修复文件、A–T 验收及剩余风险。修复包括标识空白误拒、显式条件推论误拒、
+Question 持久幂等收据/状态读取、历史覆盖 API 防护、PDF 资源边界、数字显示和
+最小材料/历史 UX。冻结公式、专业关卡、品牌首页、导航与 S-07 排除保持不变。
+所有模型测试均 NOT-LIVE；Reviewer 原始输出尚未取得，不把独立构造复现当成
+原始事件根因确认。生产运行收据目录尚未配置，新代码未部署；审验窗口不延长。
+
 ## 2026-10-05 — C-01 browser secure-context capability preflight
 
 Work started from merged `main` `a9749f894659c2c57abefc32f9b9efdf2328bb74`

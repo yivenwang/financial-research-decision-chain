@@ -1,6 +1,7 @@
 import { readBoundedJson } from "./request-body.ts";
 export { readBoundedJson } from "./request-body.ts";
 import { authorizedReviewer } from "./reviewer-access.ts";
+import { claimModelSlot } from "./research-operation.server.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
@@ -164,7 +165,6 @@ export function sameOrigin(request: Request, appOrigin?: string) {
   } catch { return false; }
 }
 export function createMemoHandler(getConfig = memoConfig, dependencies: Dependencies = {}) {
-  let inFlight = false;
   return {
     GET: async () => { const config = getConfig(); return json({ configured: configured(config), provider: config.provider, model: config.model }); },
     POST: async (request: Request) => {
@@ -173,8 +173,8 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
       if (!await authorized(request, config.accessToken)) return json({ error: "审验会话无效，请重新输入访问码。", code: "UNAUTHORIZED" }, 401);
       if (!sameOrigin(request, config.appOrigin)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ error: "请求格式错误。", code: "CONTENT_TYPE" }, 415);
-      if (inFlight) return json({ error: "已有模型请求正在处理，请稍后重试。", code: "MODEL_BUSY" }, 429);
-      inFlight = true;
+      const release = claimModelSlot();
+      if (!release) return json({ error: "已有模型请求正在处理，请稍后重试。", code: "MODEL_BUSY" }, 429);
       try {
         let input: unknown;
         try { input = await readBoundedJson(request, MAX_MEMO_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs }); } catch { return json({ error: "请求内容无效或超出大小限制。", code: "INVALID_BODY" }, 400); }
@@ -183,7 +183,7 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
         // Do not log request bodies, names, access codes, keys, or raw model text.
         console.info(JSON.stringify({ event: "research-memo", runId: run.runId, provider: run.audit.provider, responseId: run.audit.responseId, status: run.status, failureCode: run.audit.failureCode, validation: run.audit.validation, requestLimits: run.audit.requestLimits, providerStatus: run.audit.providerStatus, incompleteReason: run.audit.incompleteReason, reasoningTokens: run.audit.reasoningTokens }));
         return json({ run, ...(run.status === "completed" ? {} : { error: failureMessage(run) }) }, run.status === "completed" ? 200 : run.status === "blocked" ? 422 : 502);
-      } finally { inFlight = false; }
+      } finally { release(); }
     },
   };
 }

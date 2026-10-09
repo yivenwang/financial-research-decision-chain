@@ -5,5 +5,5 @@ export const runtime = "nodejs";
 export const maxDuration = 180;
 export const dynamic = "force-dynamic";
 const handler = createQuestionHandler();
-export const GET = handler.GET;
+export async function GET(request: Request) { return handler.GET(request); }
 export const POST = handler.POST;

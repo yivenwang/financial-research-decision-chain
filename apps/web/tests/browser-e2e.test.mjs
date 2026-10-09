@@ -387,6 +387,7 @@ for (const fixture of cases) {
       await page.getByRole("button").filter({ hasText: "V-01" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
       await page.getByRole("button", { name: "确认并创建回滚版本" }).click();
+      await page.waitForFunction(key => JSON.parse(localStorage.getItem(key) ?? "[]").length === 2, storageKeys(fixture.scope).versions);
       let restored = await readLedger(page, fixture.scope);
       assert.equal(restored.length, 2);
       assert.equal(restored[1].restoredFrom, "V-01");
@@ -394,6 +395,7 @@ for (const fixture of cases) {
       await page.getByRole("button").filter({ hasText: "V-02" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
       await page.getByRole("button", { name: "确认并创建回滚版本" }).click();
+      await page.waitForFunction(key => JSON.parse(localStorage.getItem(key) ?? "[]").length === 3, storageKeys(fixture.scope).versions);
       restored = await readLedger(page, fixture.scope);
       assert.equal(restored.length, 3);
       assert.deepEqual(restored[2].chain, snapshot.chain);
