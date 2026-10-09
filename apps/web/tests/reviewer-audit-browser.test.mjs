@@ -31,6 +31,10 @@ test("refresh and two tabs recover one persisted execution; safe replay, histori
   const exited = new Promise(r => server.once("close", r)); let browser, releaseExplain;
   t.after(async () => { releaseExplain?.(); await browser?.close(); server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]); if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; } await rm(root, { recursive: true, force: true }); });
   for (let i = 0; i < 80; i++) { assert.equal(server.exitCode, null, logs); try { if ((await fetch(origin)).ok) break; } catch {} await delay(250); }
+  for (const method of ["GET", "POST"]) {
+    const response = await fetch(origin + "/api/research-question" + (method === "GET" ? `?phase=plan&operationId=${crypto.randomUUID()}` : ""), { method, headers: { authorization: `Bearer ${questionTestConfig.accessToken}`, origin, "content-type": "application/json" }, ...(method === "POST" ? { body: JSON.stringify({ phase: "plan", question: "NOT-LIVE blocked request" }) } : {}) });
+    assert.equal(response.status, 401, "production proxy must reject shared Bearer for private operations");
+  }
   let calls = 0, enteredExplain;
   const entered = new Promise(r => enteredExplain = r), wait = new Promise(r => releaseExplain = r);
   const handler = createQuestionHandler(() => ({ ...questionTestConfig, appOrigin: origin }), { runDirectory: root, fetcher: async (_url, init) => {
@@ -39,17 +43,32 @@ test("refresh and two tabs recover one persisted execution; safe replay, histori
     enteredExplain(); await wait; return providerResponse(answerOutput());
   } });
   browser = await chromium.launch(); const context = await browser.newContext();
-  await context.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(questionTestConfig.accessToken), url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
-  await context.route("**/api/research-question**", async route => {
-    const request = route.request(); const headers = { ...request.headers(), authorization: `Bearer ${questionTestConfig.accessToken}` };
+  const session = await reviewSessionValue(questionTestConfig.accessToken);
+  await context.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: session, url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
+  const intercept = async route => {
+    const request = route.request(); const headers = request.headers();
     const input = new Request(request.url(), { method: request.method(), headers, ...(request.method() === "POST" ? { body: request.postData() } : {}) });
     const response = request.method() === "GET" ? await handler.GET(input) : await handler.POST(input);
     try { await route.fulfill({ status: response.status, contentType: "application/json", body: await response.text() }); } catch { /* The first POST connection is intentionally interrupted by refresh. */ }
-  });
+  };
+  await context.route("**/api/research-question**", intercept);
+  const foreign = await browser.newContext();
+  await foreign.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(questionTestConfig.accessToken), url: origin, httpOnly: true, sameSite: "Strict" }]);
+  await foreign.route("**/api/research-question**", intercept);
+  const attacker = await foreign.newPage(); await attacker.goto(origin + "/questions");
   const page = await context.newPage(), errors = []; page.on("pageerror", e => errors.push(e.message));
   await page.goto(origin + "/questions"); const keys = storageKeys();
   await page.evaluate(({ keys, snapshot }) => { localStorage.setItem(keys.versions, JSON.stringify([snapshot])); localStorage.setItem(keys.active, snapshot.versionId); window.dispatchEvent(new Event("anker-research-version-updated")); }, { keys, snapshot });
   await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+  await page.getByRole("button", { name: "确认并执行", exact: true }).waitFor();
+  const planned = await page.evaluate(() => JSON.parse(localStorage.getItem("beacon-question-draft-v1")));
+  assert.ok(planned);
+  const attack = await attacker.evaluate(async draft => {
+    const query = await fetch(`/api/research-question?operationId=${draft.run.requestId}&phase=plan`);
+    const confirm = await fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ phase: "execute", draft, confirmed: true, snapshot: null }) });
+    return [query.status, confirm.status];
+  }, planned);
+  assert.deepEqual(attack, [404, 422]); assert.equal(calls, 1);
   await page.getByRole("button", { name: "确认并执行", exact: true }).click(); await entered;
   assert.equal(calls, 2);
   await page.reload(); await page.getByRole("button", { name: "读取任务状态", exact: true }).waitFor();
@@ -60,7 +79,7 @@ test("refresh and two tabs recover one persisted execution; safe replay, histori
   const ledger = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), QUESTION_STORAGE_KEY);
   assert.equal(ledger.runs.length, 2); assert.equal(calls, 2);
   const run = ledger.runs.at(-1), original = JSON.stringify(run);
-  const replay = await handler.GET(new Request(`${origin}/api/research-question?operationId=${run.requestId}&phase=execute`, { headers: { authorization: `Bearer ${questionTestConfig.accessToken}` } }));
+  const replay = await handler.GET(new Request(`${origin}/api/research-question?operationId=${run.requestId}&phase=execute`, { headers: { cookie: `${REVIEW_ACCESS_COOKIE}=${session}` } }));
   assert.equal(JSON.stringify((await replay.json()).run), original);
   await page.getByLabel("问题审核人", { exact: true }).fill("Synthetic human reviewer");
   await page.getByRole("button", { name: "退回研究草稿", exact: true }).click(); await page.getByText("研究草稿已退回", { exact: true }).waitFor();

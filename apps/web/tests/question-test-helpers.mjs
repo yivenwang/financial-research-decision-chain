@@ -1,9 +1,15 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 import { parseResearchReport, extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 
 // Synthetic HTTP tests have their own open window; production deadline is unchanged.
 process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+process.env.REVIEW_SESSION_SECRET = "question-unit-test-SYNTHETIC-SESSION-SECRET-ONLY";
+process.env.RESEARCH_RUN_DIRECTORY = mkdtempSync(join(tmpdir(), "beacon-question-test-"));
 
 // Synthetic prose and transport responses are NEVER production fallbacks.
 export const questionTestConfig = { provider: "deepseek", apiKey: "question-test-NOT-A-REAL-KEY", accessToken: "question-test-access-code", model: "deepseek-v4-pro" };
@@ -24,4 +30,5 @@ export function questionTestSnapshot() {
     result, candidates: extractCandidates(result).map(item => ({ ...item, reviewStatus: "accepted" })) });
 }
 export const providerResponse = (output, patch = {}) => Response.json({ id: "response-question-test-NOT-LIVE", model: "question-test-NOT-LIVE", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch });
-export const questionRequest = (body, headers = {}) => new Request("http://localhost/api/research-question", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${questionTestConfig.accessToken}`, ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
+export const questionTestCookie = `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(questionTestConfig.accessToken)}`;
+export const questionRequest = (body, headers = {}) => new Request("http://localhost/api/research-question", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", ...(Object.hasOwn(headers, "authorization") ? {} : { cookie: questionTestCookie }), ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });

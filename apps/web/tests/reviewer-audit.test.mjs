@@ -14,7 +14,7 @@ import { PDF_LIMITS, validatePdfFile, validatePdfHeader, validatePdfResources } 
 import { extractCandidates, parseResearchReport } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req, questionTestCookie } from "./question-test-helpers.mjs";
 
 async function harness(t, answer = answerOutput()) {
   const directory = await mkdtemp(join(tmpdir(), "beacon-audit-test-"));
@@ -27,7 +27,7 @@ async function harness(t, answer = answerOutput()) {
   const first = handler();
   const draft = await (await first.POST(req({ phase: "plan", question: mainQuestion }))).json();
   const body = { phase: "execute", draft, snapshot: questionTestSnapshot(), confirmed: true };
-  const get = (phase, id, headers = {}) => new Request(`http://localhost/api/research-question?phase=${phase}&operationId=${id}`, { headers: { authorization: `Bearer ${config.accessToken}`, ...headers } });
+  const get = (phase, id, headers = {}) => new Request(`http://localhost/api/research-question?phase=${phase}&operationId=${id}`, { headers: { ...(Object.hasOwn(headers, "authorization") ? {} : { cookie: questionTestCookie }), ...headers } });
   return { directory, calls, first, handler, draft, body, get };
 }
 
@@ -68,7 +68,7 @@ test("interrupted persisted claim never permits automatic re-execution; unauthor
   const record = JSON.parse(await readFile(file, "utf8"));
   record.state = "running"; record.startedAt = "2020-01-01T00:00:00Z"; delete record.response;
   await writeFile(file, JSON.stringify(record));
-  assert.equal((await h.handler().POST(req(h.body))).status, 409); assert.equal(h.calls.length, 2);
+  assert.equal((await h.handler().POST(req(h.body))).status, 503); assert.equal(h.calls.length, 2);
   assert.equal((await h.handler().GET(h.get("execute", h.draft.run.requestId, { authorization: "invalid" }))).status, 401);
   assert.equal((await h.handler().GET(h.get("execute", "../../bad"))).status, 400);
   const id = crypto.randomUUID(); await mkdir(join(h.directory, `plan-${id}`));
@@ -76,7 +76,7 @@ test("interrupted persisted claim never permits automatic re-execution; unauthor
 });
 
 test("storage failure blocks before provider execution; missing lookup creates no task", async t => {
-  const h = await harness(t); const file = join(h.directory, "not-a-directory"); await writeFile(file, "fixture"); let calls = 0;
+  const h = await harness(t); const file = h.directory + "-not-a-directory"; await writeFile(file, "fixture"); t.after(() => rm(file, { force: true })); let calls = 0;
   const bad = createQuestionHandler(() => config, { runDirectory: file, fetcher: async () => { calls++; assert.fail(); } });
   assert.equal((await bad.POST(req({ phase: "plan", question: mainQuestion }))).status, 503); assert.equal(calls, 0);
   assert.equal((await h.first.GET(h.get("plan", crypto.randomUUID()))).status, 404);
@@ -84,14 +84,14 @@ test("storage failure blocks before provider execution; missing lookup creates n
 
 test("atomic billing claim is unique across independent Node processes sharing the same directory", async t => {
   const h = await harness(t); const id = crypto.randomUUID();
-  const program = `import { operationStore } from ${JSON.stringify(new URL("../lib/research-operation.server.ts", import.meta.url).href)}; const result = await operationStore(process.argv[1]).claim("plan", process.argv[2], "a".repeat(64)); process.stdout.write(result ? "claimed" : "exists");`;
+  const program = `import { operationStore } from ${JSON.stringify(new URL("../lib/research-operation.server.ts", import.meta.url).href)}; const result = await operationStore(process.argv[1]).claim("plan", process.argv[2], "a".repeat(64), "b".repeat(64)); process.stdout.write(result ? "claimed" : "exists");`;
   const outcomes = await Promise.all([1, 2].map(() => promisify(execFile)(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", program, h.directory, id])));
   assert.deepEqual(outcomes.map(x => x.stdout).sort(), ["claimed", "exists"]);
 });
 
 test("production must configure an absolute persistent directory before spending", async t => {
   const h = await harness(t);
-  const program = `import { operationStore } from ${JSON.stringify(new URL("../lib/research-operation.server.ts", import.meta.url).href)}; process.env.NODE_ENV="production"; delete process.env.RESEARCH_RUN_DIRECTORY; try { await operationStore().claim("plan", process.argv[1], "a".repeat(64)); process.stdout.write("UNSAFE"); } catch(e) { process.stdout.write(e.message); }`;
+  const program = `import { operationStore } from ${JSON.stringify(new URL("../lib/research-operation.server.ts", import.meta.url).href)}; process.env.NODE_ENV="production"; delete process.env.RESEARCH_RUN_DIRECTORY; try { await operationStore().claim("plan", process.argv[1], "a".repeat(64), "b".repeat(64)); process.stdout.write("UNSAFE"); } catch(e) { process.stdout.write(e.message); }`;
   const { stdout } = await promisify(execFile)(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", program, crypto.randomUUID()]);
   assert.equal(stdout, "PERSISTENT_RUN_DIRECTORY_REQUIRED"); assert.equal(h.calls.length, 1);
 });

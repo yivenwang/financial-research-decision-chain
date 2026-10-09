@@ -1,5 +1,7 @@
 # Beacon｜研灯 — Financial Research Decision Chain
 
+[PR #35 会话隔离与备份恢复 RC](docs/PR35_SESSION_RECOVERY_RC.md)
+
 [2026-10-09 人工审验后二次技术审计与上线前检查](docs/REVIEWER_AUDIT_ROUND_2.md)
 [Current project state and cross-chat baseline](docs/PROJECT_STATE.md) · [UI handoff](docs/UI_HANDOFF_V0.2.md) · [Manual question acceptance](docs/QUESTION_LIVE_ACCEPTANCE_V0.1.md)
 

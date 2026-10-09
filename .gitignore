@@ -7,4 +7,5 @@ dist/
 apps/web/public/vendor/pdfjs/
 artifacts*/
 .research-runs/
+.research-runs.claims/
 .DS_Store

@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
+import { operationStore } from "../lib/research-operation.server.ts";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { canonicalJson, buildMemoContext } from "../lib/research-memo.ts";
@@ -129,11 +131,17 @@ async function main() {
   await buildMemoContext(prior.snapshot);
   await writeFile(resolve(out, "input-snapshot.json"), JSON.stringify(prior, null, 2), { flag: "wx" });
   const token = randomBytes(24).toString("hex");
+  const runDirectory = await mkdtemp(join(tmpdir(), "beacon-question-live-"));
+  await operationStore(runDirectory).initialize();
+  const sessionSecret = randomBytes(32).toString("hex");
+  // Only the explicitly dispatched, isolated localhost acceptance server.
+  // Production access window and keys are never modified.
+  const testDeadline = new Date(Date.now() + 30 * 60 * 1000).toISOString();
   const origin = "http://127.0.0.1:4324";
   const require = createRequire(import.meta.url);
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4324", "-H", "127.0.0.1"], {
     cwd: appRoot, stdio: ["ignore", "ignore", "ignore"],
-    env: { ...process.env, RESEARCH_DEMO_TOKEN: token, RESEARCH_APP_ORIGIN: origin },
+    env: { ...process.env, RESEARCH_DEMO_TOKEN: token, RESEARCH_APP_ORIGIN: origin, RESEARCH_RUN_DIRECTORY: runDirectory, REVIEW_SESSION_SECRET: sessionSecret, REVIEW_ACCESS_DEADLINE: testDeadline },
   });
   const exited = new Promise(resolveExit => server.once("close", resolveExit));
   let spawnFailed = false; server.once("error", () => { spawnFailed = true; });
@@ -150,6 +158,10 @@ async function main() {
       await delay(250);
     }
     check(ready, "SERVER_NOT_READY");
+    const login = await fetch(`${origin}/api/access`, { method: "POST", headers: { origin, "content-type": "application/json" }, body: JSON.stringify({ code: token }), redirect: "error" });
+    check(login.ok, "ACCEPTANCE_SESSION_NOT_READY");
+    const cookie = login.headers.get("set-cookie")?.split(";")[0];
+    check(cookie?.startsWith("beacon_review_access="), "ACCEPTANCE_SESSION_NOT_READY");
     let checkpoint = 0;
     const result = await runBoundedQuestionBatch({ commitSha: process.env.GITHUB_SHA,
       persist: async manifest => {
@@ -163,7 +175,7 @@ async function main() {
       },
       executePhase: async ({ spec, phase, draft }) => {
         const body = phase === "plan" ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot: prior.snapshot };
-        const response = await fetch(`${origin}/api/research-question`, { method: "POST", headers: { origin, "content-type": "application/json", authorization: `Bearer ${token}` },
+        const response = await fetch(`${origin}/api/research-question`, { method: "POST", headers: { origin, "content-type": "application/json", cookie, "Idempotency-Key": phase === "plan" ? crypto.randomUUID() : draft.run.requestId },
           body: JSON.stringify(body), signal: AbortSignal.timeout(175000), redirect: "error" });
         const data = await response.json();
         // Do not archive the transient signed execution ticket or access token.

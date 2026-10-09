@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { memoConfig, configured, authorized, sameOrigin, readBoundedJson, parseMemoJson, finalOutput, type MemoConfig } from "./research-memo.server.ts";
+import { memoConfig, configured, sameOrigin, readBoundedJson, parseMemoJson, finalOutput, type MemoConfig } from "./research-memo.server.ts";
+import { reviewSessionOwner } from "./reviewer-access.ts";
 import { canonicalJson, sha256Text } from "./research-memo.ts";
-import { operationStore, validOperationId, claimModelSlot, type OperationRecord } from "./research-operation.server.ts";
+import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
 import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
   QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema,
@@ -9,19 +10,19 @@ import {
   validateQuestionExplanation, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
 
-type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string };
+type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string; storeOptions?: StoreOptions };
 export const MAX_QUESTION_REQUEST_BYTES = 512 * 1024;
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "Cache-Control": "no-store" } }); }
-function sign(run: QuestionRun, config: MemoConfig) {
+function sign(run: QuestionRun, config: MemoConfig, owner: string) {
   // Server-only provider key, not the browser's demo access code. Domain separated.
-  return createHmac("sha256", config.apiKey).update("question-draft.v1\n" + canonicalJson(run)).digest("hex");
+  return createHmac("sha256", config.apiKey).update("question-draft.v2\n" + owner + "\n" + canonicalJson(run)).digest("hex");
 }
-function validDraft(draft: SignedQuestionDraft, config: MemoConfig) {
+function validDraft(draft: SignedQuestionDraft, config: MemoConfig, owner: string) {
   if (!draft?.run || typeof draft.ticket !== "string" || !/^[a-f0-9]{64}$/.test(draft.ticket)) return false;
   const run = draft.run;
   const age = Date.now() - Date.parse(run.createdAt);
   return run.phase === "plan" && run.status === "CONTRACT_DRAFTED" && run.contract?.status === "CONTRACT_DRAFTED" &&
-    Number.isFinite(age) && age >= 0 && age <= 60 * 60 * 1000 && timingSafeEqual(Buffer.from(draft.ticket), Buffer.from(sign(run, config)));
+    Number.isFinite(age) && age >= 0 && age <= 60 * 60 * 1000 && timingSafeEqual(Buffer.from(draft.ticket), Buffer.from(sign(run, config, owner)));
 }
 function newRun(question: string, phase: QuestionRun["phase"], requestId = crypto.randomUUID()): QuestionRun {
   return { schemaVersion: QUESTION_SCHEMA_VERSION, runId: crypto.randomUUID(), requestId, phase, queryRaw: question,
@@ -73,19 +74,21 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
 }
 
 export function createQuestionHandler(getConfig = memoConfig, dependencies: Dependencies = {}) {
-  const store = operationStore(dependencies.runDirectory);
+  const store = operationStore(dependencies.runDirectory, dependencies.storeOptions);
   const replay = (record: OperationRecord) => record.state === "completed" ? json(record.response!.body, record.response!.status) :
+    record.state === "uncertain" ? json({ code: "OPERATION_INTERRUPTED", error: "该任务已标记为计费或结果不确定，禁止重发。请联系维护者核查。" }, 409) :
     Date.now() - Date.parse(record.startedAt) > 180000 ? json({ code: "OPERATION_INTERRUPTED", error: "任务未留下完整结果，不能自动重发。请先核查运行记录；新任务可能产生新的调用费用。" }, 409) :
     json({ code: "OPERATION_RUNNING", error: "任务仍在处理，请读取状态，无需再次确认。" }, 202);
   const core = {
     GET: async (request?: Request) => {
       const config = getConfig();
       if (request && new URL(request.url).searchParams.has("operationId")) {
-        if (!await authorized(request, config.accessToken)) return json({ code: "UNAUTHORIZED", error: "审验会话无效，请重新输入访问码。" }, 401);
+        const owner = await reviewSessionOwner(request, config.accessToken);
+        if (!owner) return json({ code: "RESEARCH_SESSION_REQUIRED", error: "研究任务需要有效审验会话；共享访问码不能作为任务身份。请重新登录。" }, 401);
         const params = new URL(request.url).searchParams;
         const id = params.get("operationId"), phase = params.get("phase");
         if (!validOperationId(id) || !["plan", "execute"].includes(phase ?? "")) return json({ code: "OPERATION_ID_INVALID", error: "运行标识无效。" }, 400);
-        try { const record = await store.read(phase as "plan" | "execute", id); return record ? replay(record) : json({ code: "OPERATION_NOT_FOUND", error: "服务器未找到该任务；请检查连接后手动重试同一任务。" }, 404); }
+        try { const record = await store.read(phase as "plan" | "execute", id); return record && record.ownerSha256 === owner ? replay(record) : json({ code: "OPERATION_NOT_FOUND", error: "当前会话无可读取任务。重新登录不会接管旧会话任务；请保留本机记录和任务标识。" }, 404); }
         catch { return json({ code: "OPERATION_INTERRUPTED", error: "任务记录不完整，已阻止重复调用。请保留记录并联系维护者核查。" }, 409); }
       }
       return json({ configured: configured(config), provider: config.provider, model: config.model, capability: QUESTION_CAPABILITY,
@@ -94,7 +97,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
     POST: async (request: Request) => {
       const config = getConfig();
       if (!configured(config)) return json({ code: "MODEL_NOT_CONFIGURED", error: "模型服务尚未配置。" }, 503);
-      if (!await authorized(request, config.accessToken)) return json({ code: "UNAUTHORIZED", error: "审验会话无效，请重新输入访问码。" }, 401);
+      const owner = await reviewSessionOwner(request, config.accessToken);
+      if (!owner) return json({ code: "RESEARCH_SESSION_REQUIRED", error: "请使用有效审验会话登录；共享 Bearer 不能创建或执行研究任务。" }, 401);
       if (!sameOrigin(request, config.appOrigin)) return json({ code: "ORIGIN_MISMATCH", error: "请求来源不匹配。" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ code: "CONTENT_TYPE", error: "需要 JSON 请求。" }, 415);
       let input: Record<string, unknown>;
@@ -105,7 +109,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       } catch { return json({ code: "INVALID_BODY", error: "请求内容无效或超出大小限制。" }, 400); }
       if (input.phase === "plan") {
         if (Object.keys(input).sort().join(",") !== "phase,question" || !validQuestion(input.question)) return json({ code: "QUESTION_INVALID", error: "请输入一至一千字符的研究问题。" }, 400);
-        const run = newRun(input.question, "plan");
+        const run = newRun(input.question, "plan", request.headers.get("Idempotency-Key") || crypto.randomUUID());
         await addQuestionEvent(run, "query_received", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY, sourceRegistry: questionSources().map(({ sourceId, period, url }) => ({ sourceId, period, url })) });
         try {
           const output = await modelCall(run, "plan", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY, sources: questionSources().map(({ sourceId, period }) => ({ sourceId, period })) }, questionPlanSchema, config, dependencies);
@@ -118,14 +122,14 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
           run.reasons = [code];
           await addQuestionEvent(run, "contract_failed", { code });
         }
-        return json({ run, ticket: run.status === "CONTRACT_DRAFTED" ? sign(run, config) : null });
+        return json({ run, ticket: run.status === "CONTRACT_DRAFTED" ? sign(run, config, owner) : null });
       }
       if (input.phase !== "execute" || Object.keys(input).sort().join(",") !== "confirmed,draft,phase,snapshot" || input.confirmed !== true) return json({ code: "CONFIRMATION_REQUIRED", error: "请先确认研究任务。" }, 400);
       const draft = input.draft as SignedQuestionDraft;
-      if (!validDraft(draft, config)) return json({ code: "CONTRACT_INVALID", error: "任务已过期或被修改，请重新生成。" }, 422);
+      if (!validDraft(draft, config, owner)) return json({ code: "CONTRACT_INVALID", error: "草稿不属于当前会话、已过期或被修改。重新登录不能接管旧任务；请保留原记录并重新规划。" }, 422);
       const run = newRun(draft.run.queryRaw, "execute", draft.run.requestId);
       run.contract = structuredClone(draft.run.contract);
-      await addQuestionEvent(run, "contract_confirmed", { planRunId: draft.run.runId, planSha256: await sha256Text(canonicalJson(draft.run)), contract: run.contract, identityVerified: false });
+      await addQuestionEvent(run, "contract_confirmed", { planRunId: draft.run.runId, planSha256: await sha256Text(canonicalJson(draft.run)), contract: run.contract, identityVerified: false, sessionOwnershipVerified: true });
       // Preserve full planning provenance inside each standalone execution export.
       await addQuestionEvent(run, "plan_record", draft.run);
       await addQuestionEvent(run, "snapshot_supplied", input.snapshot);
@@ -157,7 +161,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
   return { GET: core.GET, POST: async (request: Request) => {
     const config = getConfig();
     // Authenticate before reading the body, operation IDs, or stored results.
-    if (!configured(config) || !await authorized(request, config.accessToken) || !sameOrigin(request, config.appOrigin) || !request.headers.get("content-type")?.startsWith("application/json")) return core.POST(request);
+    const owner = await reviewSessionOwner(request, config.accessToken);
+    if (!configured(config) || !owner || !sameOrigin(request, config.appOrigin) || !request.headers.get("content-type")?.startsWith("application/json")) return core.POST(request);
     let input: Record<string, unknown>;
     try { input = await readBoundedJson(request, MAX_QUESTION_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs }) as Record<string, unknown>; }
     catch { return json({ code: "INVALID_BODY", error: "请求内容无效或超出大小限制。" }, 400); }
@@ -167,7 +172,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
     let id: string;
     if (phase === "plan" && Object.keys(input).sort().join(",") === "phase,question" && validQuestion(input.question)) {
       id = request.headers.get("Idempotency-Key") || crypto.randomUUID();
-    } else if (phase === "execute" && Object.keys(input).sort().join(",") === "confirmed,draft,phase,snapshot" && input.confirmed === true && validDraft(input.draft as SignedQuestionDraft, config)) {
+    } else if (phase === "execute" && Object.keys(input).sort().join(",") === "confirmed,draft,phase,snapshot" && input.confirmed === true && validDraft(input.draft as SignedQuestionDraft, config, owner)) {
       const draft = input.draft as SignedQuestionDraft;
       // Gate failures make zero provider requests and do not consume the signed task.
       if ((await resolveQuestionEvidence(draft.run.contract!, input.snapshot)).status !== "READY") return core.POST(copy());
@@ -175,18 +180,25 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
     } else return core.POST(copy());
     if (!validOperationId(id)) return json({ code: "OPERATION_ID_INVALID", error: "运行标识无效。" }, 400);
     const hash = await sha256Text(canonicalJson(input));
+    let modelMayHaveStarted = false;
     try {
       const previous = await store.read(phase, id);
+      if (previous && previous.ownerSha256 !== owner) return json({ code: "OPERATION_NOT_FOUND", error: "当前会话无权访问此任务。请保留旧会话的本机记录。" }, 404);
       if (previous) return previous.inputSha256 === hash ? replay(previous) : json({ code: "OPERATION_CONFLICT", error: "同一任务的输入已变化，请生成新的研究任务。" }, 409);
       const release = claimModelSlot();
       if (!release) return json({ code: "MODEL_BUSY", error: "已有模型请求正在处理，请稍后读取状态或手动重试。" }, 429);
       try {
-        const record = await store.claim(phase, id, hash);
-        if (!record) { const existing = await store.read(phase, id); return existing && existing.inputSha256 === hash ? replay(existing) : json({ code: "OPERATION_CONFLICT", error: "任务记录已存在，请读取状态。" }, 409); }
+        const record = await store.claim(phase, id, hash, owner);
+        if (!record) { const existing = await store.read(phase, id); return existing && existing.ownerSha256 === owner && existing.inputSha256 === hash ? replay(existing) : json({ code: "OPERATION_CONFLICT", error: "任务记录已存在，请读取状态。" }, 409); }
+        modelMayHaveStarted = true;
         const response = await core.POST(copy());
         await store.complete(phase, id, record, response);
         return response;
       } finally { release(); }
-    } catch { return json({ code: "OPERATION_STORAGE_FAILED", error: "服务器未能保存完整运行记录，已停止重复调用。请保留任务标识并联系维护者。" }, 503); }
+    } catch (error) {
+      const storageCode = error instanceof Error && /^OPERATION_[A-Z_]+$/.test(error.message) ? error.message : "OPERATION_STORAGE_IO_FAILED";
+      console.warn(JSON.stringify({ event: "question-storage-blocked", phase, operationId: id, storageCode, modelMayHaveStarted }));
+      return json({ code: "OPERATION_STORAGE_FAILED", storageCode, error: "运行存储未就绪或记录需要核对，已阻止重发。请保留任务标识并联系维护者；缺少结果不代表没有计费。" }, 503);
+    }
   } };
 }

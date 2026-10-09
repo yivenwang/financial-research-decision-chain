@@ -19,7 +19,7 @@
     "test:integration": "node --experimental-strip-types --test tests/engine-integration.test.mjs",
     "test:transfer": "node --experimental-strip-types --test tests/transfer-probe.test.mjs",
     "test": "npm run test:parser && npm run test:parser-layout && npm run test:integration && npm run test:transfer && npm run test:memo && npm run test:question && npm run test:access",
-    "test:access": "node --experimental-strip-types --test tests/reviewer-access.test.mjs tests/request-security.test.mjs tests/browser-capabilities.test.mjs tests/reviewer-audit.test.mjs",
+    "test:access": "node --experimental-strip-types --test tests/reviewer-access.test.mjs tests/request-security.test.mjs tests/browser-capabilities.test.mjs tests/reviewer-audit.test.mjs tests/research-operation-security.test.mjs",
     "test:question": "node --experimental-strip-types --test tests/research-question.test.mjs tests/question-batch.test.mjs tests/adversarial-review.test.mjs",
     "eval:review": "NODE_OPTIONS=--experimental-strip-types PROMPTFOO_DISABLE_TELEMETRY=1 npx --yes promptfoo@0.123.1 eval -c evals/reviewer-offline.yaml --no-cache --no-progress-bar",
     "test:question-browser": "node --experimental-strip-types --test tests/question-browser.test.mjs",
