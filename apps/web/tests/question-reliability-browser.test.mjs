@@ -18,6 +18,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_PACKAGE_PATH, "index.mjs")).href);
 const artifacts = new URL("../artifacts-web/question-reliability/", import.meta.url);
 const legacy = JSON.parse(await readFile(new URL("./fixtures/question-live-38047109824/request-02.json", import.meta.url), "utf8")).record.run;
+const secondFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8")).record.run;
 
 test("old output remains historical; new bad plan/causal answer block, export and recover at desktop/tablet/phone (NOT-LIVE)", { timeout: 180000 }, async t => {
   const origin = "http://127.0.0.1:4332";
@@ -38,7 +39,7 @@ test("old output remains historical; new bad plan/causal answer block, export an
     let mode = "bad-plan";
     const handler = createQuestionHandler(() => ({ ...questionTestConfig, appOrigin: origin }), { runDirectory: await mkdtemp(join(tmpdir(), "beacon-reliability-mock-")), fetcher: async (_url, init) => {
       syntheticCalls++; const body = JSON.parse(init.body);
-      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? legacy.answer.explanation : answerOutput());
+      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? legacy.answer.explanation : mode === "second-failure" ? JSON.parse(secondFailure.calls[0].rawOutput) : answerOutput());
     } });
     await context.route("**/api/research-question**", async route => {
       const request = route.request();
@@ -74,6 +75,18 @@ test("old output remains historical; new bad plan/causal answer block, export an
     const exported = JSON.parse(await readFile(new URL(`causal-blocked-${width}.json`, artifacts), "utf8"));
     assert.equal(exported.run.answer, null); assert.equal(exported.run.calls[0].rawOutput, JSON.stringify(legacy.answer.explanation));
     assert.deepEqual(exported.run.reasons, ["UNSUPPORTED_YOY_ATTRIBUTION"]);
+    mode = "second-failure";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).focus(); await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByText("模型遗漏了已提供的反向证据，草稿已阻断。", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    await page.screenshot({ path: new URL(`live-counter-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    const [counterExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await counterExport.saveAs(new URL(`live-counter-blocked-${width}.json`, artifacts).pathname);
+    const counterRecord = JSON.parse(await readFile(new URL(`live-counter-blocked-${width}.json`, artifacts), "utf8"));
+    assert.equal(counterRecord.run.answer, null); assert.equal(counterRecord.run.answerSha256, null);
+    assert.equal(counterRecord.run.calls[0].rawOutput, secondFailure.calls[0].rawOutput);
+    assert.deepEqual(counterRecord.run.reasons, ["COUNTER_EVIDENCE_OMITTED"]);
     mode = "safe-answer";
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();
@@ -87,9 +100,9 @@ test("old output remains historical; new bad plan/causal answer block, export an
     await page.locator("button[aria-current]").locator("..").getByRole("button").last().click();
     await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
     assert.equal(syntheticCalls, beforeHistory); assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
-    checks.push({ width, legacyBytesPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
+    checks.push({ width, legacyBytesPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
     await context.close();
   }
-  assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 15);
+  assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 21);
   await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticCalls, legacyRunId: legacy.runId, checks, errors, externalRequests }, null, 2));
 });

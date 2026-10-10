@@ -6,7 +6,7 @@ import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
 import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
-  QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema, questionReferenceIds, questionAnswerConstraints,
+  QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema, questionReferenceIds, questionExplanationInput,
   validateQuestionPlan, validQuestion, makeResearchContract, resolveQuestionEvidence, questionExplanationSchema,
   validateQuestionExplanation, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
@@ -156,8 +156,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       await addQuestionEvent(run, "tools_completed", { tools: run.contract!.allowedTools, facts: evidence.facts, calculations: evidence.calculations, graphDiff: evidence.graphDiff });
       await addQuestionEvent(run, "verification_result", { evidence: "PASS", professional: "pending", formalRecommendation: null });
       try {
-        const output = await modelCall(run, "explain", { contract: run.contract, evidence: evidence.context, facts: evidence.facts, calculations: evidence.calculations,
-          graphDiff: evidence.graphDiff, constraints: questionAnswerConstraints(evidence.context) }, questionExplanationSchema(evidence.context), config, dependencies);
+        const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context), config, dependencies);
         const explanation = validateQuestionExplanation(output, evidence.context);
         run.answer = { answerStatus: explanation.sufficiency === "partial" ? "PARTIAL" : "PASS", explanation, evidence,
           verification: { evidence: "PASS", professional: "pending" }, recommendedHumanAction: "核对解释及引用后接受或退回研究草稿；会计、估值和最终投资判断仍待人工专业复核。", formalRecommendation: null };

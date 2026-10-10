@@ -11,12 +11,24 @@ export function questionCitationDependencies(context: MemoContext): Record<strin
 
 // Conservative checks for known unsupported claims; not a general semantic proof.
 // Unrecognised reasoning still requires human content review and professional gates.
-export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext) {
+export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false) {
   const prefix = `EV-${context.source.sourceId}-C04-`;
   const dependencies = questionCitationDependencies(context);
   const nr = context.references.find(r => r.id === prefix + "NR");
   const missingComparison = !nr || /比较值 未提供/.test(nr.excerpt);
   const available = new Set(context.references.map(r => r.id));
+  if (strictCounter) {
+    const metricMentions: Record<string, RegExp> = {
+      [prefix + "ATTR"]: /归母|归属于.{0,12}(?:利润|净利)/,
+      [prefix + "ADJ"]: /扣非|扣除非经常/,
+      [prefix + "NR"]: /非经常性损益|调整项/,
+      [prefix + "SPREAD"]: /增速差|增速.{0,8}(?:归母|扣非)|(?:归母|扣非).{0,8}增速/,
+    };
+    const counter = context.references.filter(r => r.direction === "反证");
+    const text = answer.counterEvidence.text.replace(/扣非归母|扣除非经常性损益后(?:归属于.{0,12})?/g, "扣非");
+    if (counter.length && !counter.some(r => answer.counterEvidence.citations.includes(r.id) && metricMentions[r.id]?.test(text)))
+      throw new Error("COUNTER_FACT_NOT_STATED");
+  }
   for (const point of [answer.directAnswer, answer.inference, answer.counterEvidence, answer.uncertainty]) {
     const citations = new Set(point.citations);
     if (citations.size !== point.citations.length) throw new Error("ANSWER_CITATION_OR_TEXT_INVALID");
@@ -34,7 +46,12 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
     if (/估值|股数|倍数/.test(point.text)) requireCitations(["Valuation-B5"]);
     for (const clause of point.text.split(/[；。！？\n]/u)) {
       const qualified = /不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待|可能|假设|如果|假如|倘若|若/.test(clause);
-      if (missingComparison && (/同比|上年同期/.test(clause) || /差异|分化|相反/.test(clause) && /同比|上年同期/.test(point.text)) && /来自|源于|导致|造成|归因|所致/.test(clause) && !qualified)
+      const yoyClause = /同比|上年同期/.test(clause) || (strictCounter ? /差异|分化|相反|分歧|背离|原因/ : /差异|分化|相反/).test(clause) && /同比|上年同期/.test(point.text);
+      const unsafeCause = strictCounter
+        ? [...clause.matchAll(/来自|源于|导致|造成|归因|所致|引起|在于/g)].some(match =>
+          !/(?:不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待核验|可能|或许|假设|如果|假如|倘若|若)[^，,]*$/.test(clause.slice(0, match.index)))
+        : /来自|源于|导致|造成|归因|所致/.test(clause) && !qualified;
+      if (missingComparison && yoyClause && unsafeCause)
         throw new Error("UNSUPPORTED_YOY_ATTRIBUTION");
       if (/(?:报告|公告|全文|原文).{0,12}(?:未披露|未提供|没有披露|没有提供)|(?:未披露|未提供|没有披露|没有提供).{0,12}(?:报告|公告|全文)/.test(clause) && !/本次.{0,6}输入|受控输入|结构化输入/.test(clause))
         throw new Error("DISCLOSURE_SCOPE_OVERCLAIM");

@@ -198,7 +198,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       {draft && <><p className="text-sm text-slate-400">{snapshot ? "执行前仍会复核材料、审核记录及冻结计算。" : "缺少已审核 S-05（2026Q1）：请先到材料更新导入、审核并保存，再返回确认。此时确认只检查材料，不调用解释模型。"}</p><Button disabled={!!busy || !!pending || !!browserIssue} onClick={() => reviewGuard.protect(() => {void request("execute");})}>确认并执行</Button></>}
     </section>}
     {shown && <section className={panel} data-testid="question-result">
-      {shown.calls.some(call => call.promptVersion === "question-explanation.v1") && <p className="text-sm text-amber-200" data-testid="historical-validation-notice">这份历史草稿按当时的校验规则生成。当前已增加逐段引用和同比归因检查，历史状态与审核记录未重新评定；请人工核验原文，不将历史技术完成视为内容或专业认可。</p>}
+      {shown.calls.some(call => ["question-explanation.v1", "question-explanation.v2"].includes(call.promptVersion)) && <p className="text-sm text-amber-200" data-testid="historical-validation-notice">这份历史记录按当时的校验规则生成。当前已加强反证陈述、逐段引用和同比归因检查，历史状态与审核记录未重新评定；请人工核验原文，不将历史技术完成视为内容或专业认可。</p>}
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => download(`question-${shown.requestId}.json`, JSON.stringify({ run: shown, reviews: ledger.reviews.filter(r => r.runId === shown.runId) }, null, 2), "application/json")}>导出完整记录</Button>
         <Button variant="outline" onClick={() => download(`question-${shown.requestId}.md`, questionMarkdown(shown), "text/markdown;charset=utf-8")}>{questionExportLabel(shown.status, lastReview?.status)}</Button>

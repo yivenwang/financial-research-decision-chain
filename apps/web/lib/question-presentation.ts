@@ -12,6 +12,7 @@ export function questionReason(code: string) {
     CONTRACT_SCHEMA_INVALID: "模型返回的任务结构、指标或证据引用 ID 不符合约定，请核对运行详情。",
     PARAGRAPH_EVIDENCE_OMITTED: "段落缺少事实、比较双方或派生计算的底层引用，草稿已阻断。",
     UNSUPPORTED_YOY_ATTRIBUTION: "模型把本期勾稽当成同比原因，证据不足，草稿已阻断。",
+    COUNTER_FACT_NOT_STATED: "反证段未陈述所引用的反向事实，草稿已阻断，请核对原始记录。",
     DISCLOSURE_SCOPE_OVERCLAIM: "模型把本次输入缺失扩大为报告未披露，草稿已阻断。",
     ASSUMPTION_PROMOTED: "模型把待复核假设表述为已证实结论，草稿已阻断。",
     PROFESSIONAL_BOUNDARY_VIOLATION: "模型越过投资判断或专业复核边界，草稿已阻断。",
