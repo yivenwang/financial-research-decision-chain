@@ -25,7 +25,7 @@ export function WorkspaceDashboard() {
   const accepted = version?.evidence.filter(item => item.reviewStatus === "accepted").length ?? 0;
   const presentation = version ? dashboardPresentation(version) : null;
   const source = version?.source?.sourceId ? getSourceRecord(version.source.sourceId) : null;
-  const impact = version?.chain?.graphDiff;
+  const impact = presentation && !presentation.blocked && !presentation.missing.length ? version?.chain?.graphDiff : undefined;
   const attributable = version?.evidence.find(item => item.metricKey === "attributable_np");
   const adjusted = version?.evidence.find(item => item.metricKey === "adjusted_np");
   const nonRecurring = version?.evidence.find(item => item.metricKey === "non_recurring_total");
@@ -73,7 +73,7 @@ export function WorkspaceDashboard() {
 
           <section className={styles.panel}>
             <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT MATTERS</p><h2>这次更新影响了什么</h2></div><span>{impact ? "规则影响节点 · " + impact.changedNodeIds.length : "等待研究影响预览"}</span></div>
-            {impact ? <ul className={styles.impactList}>{Object.entries(impact.reasons).slice(0, 5).map(([node, reason]) => <li key={node}><code>{node}</code><p>{reason}</p></li>)}</ul> : <p className={styles.subtle}>完成证据审核后，系统只沿已冻结的相关路径传播影响。</p>}
+            {impact ? <ul className={styles.impactList}>{Object.entries(impact.reasons).slice(0, 5).map(([node, reason]) => <li key={node}><code>{node}</code><p>{reason}</p></li>)}</ul> : <p className={styles.subtle}>{presentation.blocked ? "当前证据或计算已阻断，研究影响待重审。历史说明保留在版本记录，不作为本次有效结论。" : "完成证据审核后，系统只沿已冻结的相关路径传播影响。"}</p>}
             <p className={styles.subtle}>规则影响说明不等于任意版本逐字段差分，也不替代最终研究判断。</p>
           </section>
 
@@ -81,7 +81,7 @@ export function WorkspaceDashboard() {
             <div><p className={styles.microLabel}>RESEARCH HEALTH</p><h2>研究完整性</h2></div>
             <Health label="Source Coverage" value={version.source ? "已登记" : "缺失"} ok={Boolean(version.source)} />
             <Health label="证据审核 · Evidence Review" value={accepted + "/" + version.evidence.length} ok={accepted === version.evidence.length && version.evidence.length > 0} />
-            <Health label="Calculation" value={version.formula?.consistent ? "F-02 闭合" : "待验证"} ok={Boolean(version.formula?.consistent)} />
+            <Health label="Calculation" value={presentation.blocked ? "已阻断，待重审" : presentation.calculationReady ? "F-02 闭合" : "待验证"} ok={presentation.calculationReady} />
             <Health label="Professional Gate" value={version.blockedGates.length ? version.blockedGates.length + " 待处理" : "仍需人工签署"} ok={false} />
           </section>
         </div>

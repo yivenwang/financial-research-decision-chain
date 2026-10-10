@@ -21,6 +21,7 @@ export function dashboardPresentation(version: ResearchVersion) {
   const needsReview = professional.length > 0 || !version.chain || version.chain.claim.humanSignoffRequired;
   return {
     missing, blocked, professional, tasks,
+    calculationReady: !blocked && !missing.length && version.formula?.consistent === true && version.chain?.formula?.consistent === true,
     title: blocked ? '当前研究更新已阻断' : missing.length ? '当前证据不足，等待核验' : needsReview ? `${version.claim.id} · 系统信号：${version.claim.systemSignal ?? '不更新'}，判断待审核` : `${version.claim.id} · 当前记录：${version.claim.after}`,
     description: blocked ? '请处理当前阻断原因；原研究判断保留，不能由本次更新形成确定性结论。' : missing.length ? '必要证据尚不完整，未形成可核验的研究影响。' : `当前规则信号为${version.claim.systemSignal ?? '不更新'}；人工记录为${version.claim.after}。${professional.length ? professional.join(' / ') + ' 待专业复核。' : '正式动作仍需人工签署。'}`,
     next: tasks[0] ?? {href:'/questions',action:'继续研究并核对草稿'},
