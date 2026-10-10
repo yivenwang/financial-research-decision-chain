@@ -10,9 +10,9 @@ export function guardResearchSwitch(action:()=>void) {
 export function useUnsavedGuard(dirty:boolean, discard:()=>void) {
   const confirmation=useConfirmAction();
   const bypass=useRef(false);
-  function protect(action:()=>void,force=false) {
+  function protect(action:()=>void,force=false,restoreFocus?:HTMLElement|null) {
     if(!dirty&&!force){action();return;}
-    confirmation.ask('放弃未保存修改？','未提交的正文、审核人或意见不会保存；已保存的版本和审核历史保留。可以继续编辑，或确认放弃后继续。',()=>{discard();bypass.current=true;setTimeout(action,0);});
+    confirmation.ask('放弃未保存修改？','未提交的正文、审核人或意见不会保存；已保存的版本和审核历史保留。可以继续编辑，或确认放弃后继续。',()=>{discard();bypass.current=true;setTimeout(action,0);},'放弃修改并继续','继续编辑',restoreFocus);
   }
   const protectNavigation=useEffectEvent((action:()=>void)=>protect(action));
   useEffect(()=>{

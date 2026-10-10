@@ -222,6 +222,7 @@ function StepRail({ active }: { active: WorkflowStep }) {
 }
 
 export function UpdateWorkflow() {
+  const sourceSelectRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<WorkflowStep>("upload");
   const [source, setSource] = useState<SourceFile | null>(null);
@@ -439,8 +440,8 @@ export function UpdateWorkflow() {
         </div>
         <div className="mt-4 max-w-lg space-y-2">
           <p className="text-sm text-slate-300">选择已登记材料</p>
-          <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { if(value!==selectedSourceId) guard.protect(() => { resetWorkflow(); setSelectedSourceId(value); }); }}>
-            <SelectTrigger aria-label="选择已登记材料" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
+          <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { if(value!==selectedSourceId) guard.protect(() => { resetWorkflow(); setSelectedSourceId(value); }, false, sourceSelectRef.current); }}>
+            <SelectTrigger ref={sourceSelectRef} aria-label="选择已登记材料" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
             <SelectContent className={light.portal}>
               {sourceRecords.map((record) => <SelectItem key={record.sourceId} value={record.sourceId}>{record.sourceId} · {record.period} · {record.useStatus === "regression-only" ? "回归演示" : "研究更新"}</SelectItem>)}
             </SelectContent>
