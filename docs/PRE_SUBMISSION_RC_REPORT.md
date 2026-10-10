@@ -1,5 +1,9 @@
 # 赛前 RC：金融输入安全与交互闭环
 
+本报告记录首轮零付费 RC。后续对 `39a41d5` 获批的真实批次实际发送 3 次后失败，
+随后零付费修复的最新状态见 [可靠性修复报告](RC_QUESTION_RELIABILITY_REPAIR.md)。
+下方零调用/148 测试/未改 Question Prompt 等说明仅对应本报告的原阶段，不能套用到后续批次或新候选 SHA。
+
 日期：2026-10-10。已审核起点 `3328bcc95fa9a3b9f8ed38c45b2664901038d8b2`。
 独立分支 `codex/pre-submission-finance-ui-rc`，stacked base 为
 `codex/reviewer-audit-round-2`；不扩大 PR #35。开始及推送前均核对远端起点一致，

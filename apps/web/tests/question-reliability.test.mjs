@@ -162,4 +162,3 @@ test("rehashing edits cannot detach an answer from original output, prompt versi
     await assert.rejects(validateQuestionRun(altered));
   }
 });
-
