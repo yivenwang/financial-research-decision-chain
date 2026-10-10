@@ -14,3 +14,8 @@ export function questionReason(code: string) {
   return reasons[code] ?? (/^[A-Z][A-Z_0-9]+$/.test(code) ? "研究请求未通过校验。请查看技术详情并联系维护者核查。" : code);
 }
 export const formatMoneyMn = (value: number) => Number.isFinite(value) ? value.toFixed(8) : "未提供";
+
+export function questionExportLabel(status: string, reviewStatus?: string) {
+  if (["ANSWER_READY", "PARTIAL"].includes(status) && reviewStatus) return reviewStatus === "accepted" ? "导出已审核研究草稿" : "导出退回研究草稿";
+  return ({BLOCKED: '导出阻断说明', OUT_OF_SCOPE: '导出范围说明', MATERIALS_REQUIRED: '导出材料需求', CONTRACT_DRAFTED: '导出待确认任务', ANSWER_READY: '导出待审核研究草稿', PARTIAL: '导出部分回答草稿'} as Record<string,string>)[status] ?? '导出研究记录';
+}

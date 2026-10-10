@@ -1,7 +1,8 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, ArrowUpRight, Check, CheckCircle2, FileSearch, GitCompareArrows, History, MessageCircleQuestion, ShieldAlert, Telescope } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, CheckCircle2, FileSearch, GitCompareArrows, History, MessageCircleQuestion, ShieldAlert, Telescope } from "lucide-react";
 import { getSourceRecord } from "@/lib/source-records";
+import { dashboardPresentation, metricTone } from "@/lib/dashboard-presentation";
 import type { StoredEvidence } from "@/lib/research-versions";
 import { useCurrentResearch } from "./use-current-research";
 import styles from "./suite.module.css";
@@ -14,7 +15,7 @@ const tasks = [
 ];
 
 function percent(item?: StoredEvidence) {
-  if (!item || item.changePct == null) return "—";
+  if (!item || item.changePct == null || !Number.isFinite(item.changePct)) return "—";
   return (item.changePct > 0 ? "+" : "") + item.changePct.toFixed(2) + "%";
 }
 
@@ -22,7 +23,7 @@ export function WorkspaceDashboard() {
   const current = useCurrentResearch();
   const version = current.kind === "ready" ? current.version : null;
   const accepted = version?.evidence.filter(item => item.reviewStatus === "accepted").length ?? 0;
-  const pending = version?.evidence.filter(item => item.reviewStatus !== "accepted").length ?? 0;
+  const presentation = version ? dashboardPresentation(version) : null;
   const source = version?.source?.sourceId ? getSourceRecord(version.source.sourceId) : null;
   const impact = version?.chain?.graphDiff;
   const attributable = version?.evidence.find(item => item.metricKey === "attributable_np");
@@ -40,7 +41,7 @@ export function WorkspaceDashboard() {
       <ol className={styles.emptyFlow}><li><span>01</span><div><strong>Ask</strong><small>明确问题</small></div></li><li><span>02</span><div><strong>Diff</strong><small>识别变化</small></div></li><li><span>03</span><div><strong>Impact</strong><small>传播影响</small></div></li><li><span>04</span><div><strong>Review</strong><small>人工提交</small></div></li></ol>
     </section>}
 
-    {version && <>
+    {version && presentation && <>
       <section className={styles.decisionSnapshot} aria-label="Decision Snapshot">
         <div className={styles.decisionHeader}>
           <div><p className={styles.eyebrow}>CURRENT RESEARCH · {version.versionId}</p><span className={styles.sourceLine}>{source?.name ?? version.source?.name ?? "未登记材料"} · {version.source?.period ?? "期间未注明"}</span></div>
@@ -49,14 +50,14 @@ export function WorkspaceDashboard() {
         <div className={styles.decisionBody}>
           <div className={styles.decisionCopy}>
             <span className={styles.microLabel}>DECISION SNAPSHOT</span>
-            <h2>{version.claim.after === "成立" ? "核心盈利质量判断维持成立" : "当前判断：" + version.claim.after}</h2>
-            <p>表观利润与扣非利润出现反向变化。确定性计算已完成，变化原因的专业定性仍需 EG-01 / EG-02 复核。</p>
-            <div className={styles.actions}><a className={styles.primary} href="/changes">处理审核队列 <ArrowRight size={14} /></a><a className={styles.secondary} href="/evidence">核查证据 <FileSearch size={14} /></a></div>
+            <h2>{presentation.title}</h2>
+            <p>{presentation.description}</p>
+            <div className={styles.actions}><a className={styles.primary} href={presentation.next.href}>{presentation.next.action} <ArrowRight size={14} /></a><a className={styles.secondary} href="/evidence">核查证据 <FileSearch size={14} /></a></div>
           </div>
           <div className={styles.keyMetrics} aria-label="关键指标">
-            <Metric label={attributable?.label ?? "归母净利润"} value={percent(attributable)} tone="down" meta={attributable?.location ?? "等待证据"} />
-            <Metric label={adjusted?.label ?? "扣非归母净利润"} value={percent(adjusted)} tone="up" meta={adjusted?.location ?? "等待证据"} />
-            <Metric label={nonRecurring?.label ?? "非经常性损益"} value={nonRecurring ? nonRecurring.valueMn.toFixed(2) : "—"} tone="neutral" meta={nonRecurring ? "CNY mn" : "等待证据"} />
+            <Metric label={attributable?.label ?? "归母净利润"} value={percent(attributable)} tone={metricTone(attributable)} meta={attributable?.location ?? "等待证据"} />
+            <Metric label={adjusted?.label ?? "扣非归母净利润"} value={percent(adjusted)} tone={metricTone(adjusted)} meta={adjusted?.location ?? "等待证据"} />
+            <Metric label={nonRecurring?.label ?? "非经常性损益"} value={nonRecurring ? nonRecurring.valueMn.toFixed(2) : "—"} tone={metricTone(nonRecurring)} meta={nonRecurring ? "CNY mn" : "等待证据"} />
           </div>
         </div>
       </section>
@@ -66,12 +67,12 @@ export function WorkspaceDashboard() {
           <section className={styles.panel}>
             <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT CHANGED</p><h2>变化不是一个数字，而是一组相互约束的信号</h2></div><a href="/changes">查看 Change Set <ArrowUpRight size={13} /></a></div>
             <div className={styles.changeList}>
-              {[attributable, adjusted, nonRecurring].filter(Boolean).map(item => <div key={item!.id} className={styles.changeRow}><span className={item!.direction === "反证" ? styles.signalNegative : styles.signalPositive}>{item!.direction}</span><div><strong>{item!.label}</strong><small>{item!.location} · {item!.reviewStatus === "accepted" ? "人工已核对" : "待核对"}</small></div><b>{item!.changePct == null ? item!.valueMn.toFixed(2) + " mn" : percent(item!)}</b></div>)}
+              {[attributable, adjusted, nonRecurring].filter(Boolean).map(item => <div key={item!.id} className={styles.changeRow}><span className={item!.direction === "反证" ? styles.signalNegative : item!.direction === "支持" ? styles.signalPositive : undefined}>{item!.direction}</span><div><strong>{item!.label}</strong><small>{item!.location} · {item!.reviewStatus === "accepted" ? "人工已核对" : "待核对"}</small></div><b>{item!.changePct == null ? item!.valueMn.toFixed(2) + " mn" : percent(item!)}</b></div>)}
             </div>
           </section>
 
           <section className={styles.panel}>
-            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT MATTERS</p><h2>这次更新影响了什么</h2></div><span>{impact ? "规则影响节点 · " + impact.changedNodeIds.length : "等待 Graph Diff"}</span></div>
+            <div className={styles.panelTitle}><div><p className={styles.microLabel}>WHAT MATTERS</p><h2>这次更新影响了什么</h2></div><span>{impact ? "规则影响节点 · " + impact.changedNodeIds.length : "等待研究影响预览"}</span></div>
             {impact ? <ul className={styles.impactList}>{Object.entries(impact.reasons).slice(0, 5).map(([node, reason]) => <li key={node}><code>{node}</code><p>{reason}</p></li>)}</ul> : <p className={styles.subtle}>完成证据审核后，系统只沿已冻结的相关路径传播影响。</p>}
             <p className={styles.subtle}>规则影响说明不等于任意版本逐字段差分，也不替代最终研究判断。</p>
           </section>
@@ -81,7 +82,7 @@ export function WorkspaceDashboard() {
             <Health label="Source Coverage" value={version.source ? "已登记" : "缺失"} ok={Boolean(version.source)} />
             <Health label="证据审核 · Evidence Review" value={accepted + "/" + version.evidence.length} ok={accepted === version.evidence.length && version.evidence.length > 0} />
             <Health label="Calculation" value={version.formula?.consistent ? "F-02 闭合" : "待验证"} ok={Boolean(version.formula?.consistent)} />
-            <Health label="Professional Gate" value={version.blockedGates.length ? version.blockedGates.length + " Pending" : "无记录"} ok={version.blockedGates.length === 0} />
+            <Health label="Professional Gate" value={version.blockedGates.length ? version.blockedGates.length + " 待处理" : "仍需人工签署"} ok={false} />
           </section>
         </div>
 
@@ -98,9 +99,9 @@ export function WorkspaceDashboard() {
           </section>
 
           <section className={styles.reviewCard}>
-            <div><p className={styles.microLabel}>REVIEW QUEUE</p><strong>{pending + version.blockedGates.length}</strong><span>项需要人处理</span></div>
-            <ul><li><Check size={14} />证据已核对 {accepted}/{version.evidence.length}</li>{version.blockedGates.map(gate => <li key={gate}><ShieldAlert size={14} />{gate} · Pending</li>)}</ul>
-            <a href="/changes">进入审核队列 <ArrowRight size={14} /></a>
+            <div><p className={styles.microLabel}>REVIEW QUEUE</p><strong>{presentation.tasks.length}</strong><span>项需要人处理</span></div>
+            <ul>{presentation.tasks.map(task => <li key={task.id}><ShieldAlert size={14} /><div><strong>{task.label}</strong><p>{task.status} · {task.reason}</p><p>负责人类型：{task.owner}</p><a href={task.href}>{task.action} <ArrowRight size={14} /></a></div></li>)}</ul>
+            {!presentation.tasks.length && <p>当前队列无待处理项；研究草稿仍需人工核对。</p>}
           </section>
         </aside>
       </div>

@@ -59,10 +59,13 @@ import {
 } from "@/lib/research-engine";
 import { verifiedSampleItems } from "@/lib/sample-s05";
 import { ChainResultPanel } from "@/components/research/chain-result-panel";
+import { useUnsavedGuard } from './use-unsaved-guard';
+import { MATERIAL_RETURN_TO, materialReturnTo } from '@/lib/material-handoff';
+import { useEffect } from 'react';
 import light from "@/components/beacon/legacy-light.module.css";
 
 type Direction = CandidateEvidence["direction"];
-type WorkflowStep = "upload" | "review" | "diff" | "saved";
+type WorkflowStep = "upload" | "review" | "diff" | "saved" | "continue";
 
 type SourceFile = SourceMeta & {
   name: string;
@@ -73,12 +76,13 @@ type SourceFile = SourceMeta & {
   sha256?: string;
 };
 
-const stepOrder: WorkflowStep[] = ["upload", "review", "diff", "saved"];
+const stepOrder: WorkflowStep[] = ["upload", "review", "diff", "saved", "continue"];
 const stepLabels: Record<WorkflowStep, string> = {
-  upload: "导入材料",
-  review: "审核证据",
-  diff: "生成变化",
+  upload: "提交材料",
+  review: "人工核验",
+  diff: "预览影响",
   saved: "保存版本",
+  continue: "继续研究",
 };
 
 function sourceFileFromRecord(
@@ -183,7 +187,7 @@ function formatValue(value: number) {
 function StepRail({ active }: { active: WorkflowStep }) {
   const activeIndex = stepOrder.indexOf(active);
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
       {stepOrder.map((step, index) => {
         const complete = index < activeIndex;
         const current = index === activeIndex;
@@ -229,6 +233,9 @@ export function UpdateWorkflow() {
   const [selectedSourceId, setSelectedSourceId] = useState("S-05");
   const [reviewer, setReviewer] = useState("");
   const [dragActive, setDragActive] = useState(false);
+  const [returnTo,setReturnTo] = useState<string|null>(null);
+  useEffect(() => {const target=materialReturnTo(new URLSearchParams(window.location.search).get('returnTo'));queueMicrotask(()=>setReturnTo(target));}, []);
+  const guard = useUnsavedGuard(source !== null && step !== 'saved', resetWorkflow);
   const selectedRecord = getSourceRecord(selectedSourceId)!;
   const workspace = selectedRecord.useStatus === "regression-only" ? "regression" : "research";
 
@@ -328,7 +335,7 @@ export function UpdateWorkflow() {
   async function handleFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (file) await processFile(file);
+    if (file) guard.protect(() => {void processFile(file);});
   }
 
   async function handleDrop(event: DragEvent<HTMLButtonElement>) {
@@ -340,7 +347,7 @@ export function UpdateWorkflow() {
       setMessage(files.length ? "每次只能导入一份 PDF，请重新选择。" : "未检测到可导入文件。");
       return;
     }
-    await processFile(files[0]);
+    guard.protect(() => {void processFile(files[0]);});
   }
 
   function updateCandidate(id: string, patch: Partial<CandidateEvidence>) {
@@ -356,7 +363,7 @@ export function UpdateWorkflow() {
     }
     if (!canPromoteToEvidence) {
       setMessage(
-        "存在 blocker，已禁止接受并进入 Graph Diff：" +
+        "存在阻断项，不能预览研究影响：" +
           summarizeBlockers(reviewBlockers),
       );
       return;
@@ -411,7 +418,9 @@ export function UpdateWorkflow() {
 
   return (
     <section className="space-y-4">
-      <div className="research-panel">
+      {guard.dialog}
+      <nav aria-label="材料更新章节" className="flex flex-wrap gap-3 text-sm"><a href="#material-intake">提交材料</a><a href="#material-review">人工核验</a><a href="#material-impact">预览影响与保存</a></nav>
+      <div id="material-intake" className="research-panel">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
             <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
@@ -430,7 +439,7 @@ export function UpdateWorkflow() {
         </div>
         <div className="mt-4 max-w-lg space-y-2">
           <p className="text-sm text-slate-300">选择已登记材料</p>
-          <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { resetWorkflow(); setSelectedSourceId(value); }}>
+          <Select value={selectedSourceId} disabled={isParsing} onValueChange={(value) => { if(value!==selectedSourceId) guard.protect(() => { resetWorkflow(); setSelectedSourceId(value); }); }}>
             <SelectTrigger aria-label="选择已登记材料" className="w-full border-white/10 bg-slate-950/40 text-slate-100"><SelectValue /></SelectTrigger>
             <SelectContent className={light.portal}>
               {sourceRecords.map((record) => <SelectItem key={record.sourceId} value={record.sourceId}>{record.sourceId} · {record.period} · {record.useStatus === "regression-only" ? "回归演示" : "研究更新"}</SelectItem>)}
@@ -488,7 +497,7 @@ export function UpdateWorkflow() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={loadSample}
+                onClick={() => guard.protect(loadSample)}
                 disabled={isParsing}
                 className="border-cyan-300/25 bg-cyan-300/[0.06] text-cyan-100 hover:bg-cyan-300/10 hover:text-white"
               >
@@ -517,6 +526,7 @@ export function UpdateWorkflow() {
         </div>
       )}
 
+      <div id="material-review" />
       {step === "review" && source && (
         <div className="grid gap-4 xl:grid-cols-[0.32fr_1fr]">
           <aside className="research-panel h-fit">
@@ -545,7 +555,7 @@ export function UpdateWorkflow() {
             <Button
               type="button"
               variant="ghost"
-              onClick={resetWorkflow}
+              onClick={() => guard.protect(resetWorkflow)}
               className="mt-4 w-full text-slate-400 hover:bg-white/5 hover:text-white"
             >
               <RotateCcw /> 重新选择材料
@@ -579,7 +589,7 @@ export function UpdateWorkflow() {
                       ))}
                     </div>
                     <p className="mt-2 text-[13px] text-rose-200">
-                      已隔离：不得进入正式 Evidence、Metrics 或 Graph Diff。
+                      已隔离：不得进入正式 证据、指标或研究影响。
                     </p>
                   </div>
                 </div>
@@ -683,9 +693,9 @@ export function UpdateWorkflow() {
             <div className="mt-5 flex flex-col gap-3 border-t border-white/8 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-slate-400">
                 {visibleBlockers.length
-                  ? "存在 blocker，已隔离候选证据，不能生成变化。"
+                  ? "存在 blocker，已隔离候选证据，不能预览影响。"
                   : allReviewed && canPromoteToEvidence
-                    ? "全部证据已处理，F-02 已闭合，可以生成变化。"
+                    ? "全部证据已处理，F-02 已闭合，可以预览影响。"
                     : "还有 " + (candidates.length - reviewedCount) + " 条证据等待处理。"}
               </p>
               <Button
@@ -694,20 +704,21 @@ export function UpdateWorkflow() {
                 disabled={!allReviewed || !canPromoteToEvidence}
                 className="bg-cyan-300 text-slate-950 hover:bg-cyan-200"
               >
-                生成 Graph Diff <ArrowRight />
+                预览研究影响 <ArrowRight />
               </Button>
             </div>
           </div>
         </div>
       )}
 
+      <div id="material-impact" />
       {(step === "diff" || step === "saved") && source && (
         <div className="grid gap-4 xl:grid-cols-[1fr_0.38fr]">
           <div className="research-panel">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="font-mono text-[13px] font-semibold uppercase tracking-[0.16em] text-cyan-300/80">
-                  Graph Diff · C-04
+                  研究影响 · C-04
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-white">新信息改变了什么</h3>
               </div>
@@ -788,16 +799,18 @@ export function UpdateWorkflow() {
                 </div>
                 <h3 className="mt-4 text-lg font-semibold text-white">{savedVersion} 已保存{workspace === "regression" ? "（回归演示）" : ""}</h3>
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  当前版本保存在本机浏览器，包含来源、审核记录、Graph Diff、公式结果与阻塞关卡。
+                  当前版本保存在本机浏览器，包含来源、审核记录、研究影响、公式结果与阻塞关卡。
                 </p>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={resetWorkflow}
+                  onClick={() => guard.protect(resetWorkflow)}
                   className="mt-5 w-full border-white/10 bg-white/[0.03] text-slate-200 hover:bg-white/[0.07] hover:text-white"
                 >
                   <RotateCcw /> 开始下一次更新
                 </Button>
+                <a href={returnTo ?? MATERIAL_RETURN_TO.split('?')[0]} className="mt-3 flex min-h-10 items-center justify-center underline">{returnTo ? '返回并继续研究' : '继续研究'} <ArrowRight className="size-4" /></a>
+                <p className="mt-2 text-sm text-slate-400">返回仅恢复本机问题与匹配的任务草稿，不自动规划、执行或调用模型。</p>
                 <a href="/versions" className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 rounded-md border border-white/10 bg-white/[0.03] px-4 text-sm text-slate-200 transition-colors hover:bg-white/[0.07] hover:text-white">
                   查看版本与审核记录 <ArrowRight className="size-4" />
                 </a>

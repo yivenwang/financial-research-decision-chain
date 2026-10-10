@@ -257,7 +257,7 @@ for (const fixture of cases) {
         close(Number(await card.getByRole("spinbutton").inputValue()), expected);
         await card.getByRole("button", { name: "接受证据", exact: true }).click();
       }
-      await page.getByRole("button", { name: "生成 Graph Diff" }).click();
+      await page.getByRole("button", { name: "预览研究影响" }).click();
       await page.getByTestId("chain-result").waitFor();
       assert.equal(await page.getByRole("button", { name: "保存为新版本" }).isDisabled(), true);
       await page.getByLabel("证据审核人（自行填写）").fill("CI evidence reviewer");
@@ -430,7 +430,7 @@ test("real upload rejects source mismatch and missing/rejected/invalid reviewed 
     assert.equal((await readLedger(page, "research")).length, 0);
     await upload(page, "S-05");
     await page.getByTestId("candidate-adjusted_np").waitFor({ timeout: 60000 });
-    const diff = page.getByRole("button", { name: "生成 Graph Diff" });
+    const diff = page.getByRole("button", { name: "预览研究影响" });
     assert.equal(await diff.isDisabled(), true);
     for (const key of ["attributable_np", "adjusted_np"]) await page.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
     await page.getByTestId("candidate-non_recurring_total").getByRole("button", { name: "拒绝进入研究链" }).click();

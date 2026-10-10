@@ -11,6 +11,8 @@ import { MEMO_PROMPT_VERSION } from "@/lib/research-memo";
 import { MemoRevisionPanel } from "@/components/research/memo-revision-panel";
 import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
 
+import { useUnsavedGuard, guardResearchSwitch } from "./use-unsaved-guard";
+
 function download(name: string, text: string, type: string) {
   const url = URL.createObjectURL(new Blob([text], { type }));
   const link = document.createElement("a");
@@ -34,6 +36,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [browserIssue, setBrowserIssue] = useState<string | null>("正在检查浏览器环境…");
+  const guard = useUnsavedGuard(!!reviewer || !!note, () => {setReviewer("");setNote("");});
   const controller = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
   }
   async function reviewMemo(status: MemoReview["status"]) {
     if (!run) return;
-    try { await appendMemoReview(run.runId, status, reviewer, note, workspace); setNotice("已追加备忘录审核记录。专业关卡仍待复核。"); }
+    try { await appendMemoReview(run.runId, status, reviewer, note, workspace); setReviewer("");setNote("");setNotice("已追加备忘录审核记录。专业关卡仍待复核。"); }
     catch (error) { setNotice(error instanceof Error ? error.message : "审核记录保存失败。"); }
   }
 
@@ -102,10 +105,11 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
       <p className="text-sm leading-6 text-slate-300">点击后，将该版本的结构化证据和冻结计算发送至 {provider === "deepseek" ? "DeepSeek" : provider === "openai" ? "OpenAI" : "已配置模型"}{model ? `（${model}）` : ""}。PDF 文件和审核人姓名不进入模型请求。</p>
     </div>}
     {browserIssue && <p role="alert" className="text-sm text-amber-200">{browserIssue}</p>}
-    <Button onClick={generate} disabled={!configured || !context || busy || !!browserIssue} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
+    <Button onClick={() => guardResearchSwitch(() => {void generate();})} disabled={!configured || !context || busy || !!browserIssue} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200">{busy ? <Loader2 className="animate-spin" /> : <Sparkles />} {busy ? "正在生成备忘录" : "生成 AI 备忘录"}</Button>
     {notice && <p role="status" className="rounded-lg border border-amber-300/20 bg-amber-300/5 p-3 text-sm leading-6 text-amber-100">{notice}</p>}
-    {runs.length > 1 && <label className="block space-y-2 text-sm text-slate-300"><span>本版本的模型调用</span><select aria-label="选择模型调用" value={run?.runId ?? ""} onChange={(event) => { setSelectedId(event.target.value); setReviewer(""); setNote(""); setNotice(null); }} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2">{runs.map((item, index) => <option key={item.runId} value={item.runId}>第 {index + 1} 次 · {item.audit.finishedAt} · {item.status === "completed" ? "已生成" : "未生成有效备忘录"}</option>)}</select></label>}
+    {runs.length > 1 && <label className="block space-y-2 text-sm text-slate-300"><span>本版本的模型调用</span><select aria-label="选择模型调用" value={run?.runId ?? ""} onChange={(event) => {const id=event.target.value;guardResearchSwitch(() => { setSelectedId(id); setReviewer(""); setNote(""); setNotice(null); }); }} className="block w-full rounded-lg border border-slate-700 bg-slate-950 p-2">{runs.map((item, index) => <option key={item.runId} value={item.runId}>第 {index + 1} 次 · {item.audit.finishedAt} · {item.status === "completed" ? "已生成" : "未生成有效备忘录"}</option>)}</select></label>}
     {run && <div className="space-y-5" data-testid="memo-run">
+      <p className="break-all text-sm">当前 Run：{run.runId} · 研究摘要：{run.context.versionId} / {run.context.source.sourceId} · 创建时间：{run.audit.startedAt}</p>
       <p className="text-sm text-cyan-200" data-testid="memo-status">AI 原稿：{statusLabel} · {run.audit.returnedModel ?? run.audit.requestedModel}</p>
       {run.memo && <>
         {run.status === "completed" && run.audit.promptVersion === MEMO_PROMPT_VERSION && <MemoRevisionPanel key={`${workspace}:${run.runId}`} run={run} workspace={workspace} />}
@@ -128,5 +132,6 @@ export function MemoPanel({ version, workspace }: { version: ResearchVersion; wo
       </div>
       <details className="rounded-xl border border-white/10 p-4"><summary className="cursor-pointer text-sm text-slate-300">调用与引用校验详情</summary><pre className="mt-3 max-h-96 overflow-auto whitespace-pre-wrap break-all text-xs leading-5 text-slate-400">{JSON.stringify(run.audit, null, 2)}</pre></details>
     </div>}
+    {guard.dialog}
   </section>;
 }

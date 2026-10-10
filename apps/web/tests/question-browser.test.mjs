@@ -89,7 +89,7 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     assert.equal(saved.run.answer.evidence.context.source.sha256, prior.pdfSha256);
     assert.equal(saved.reviews.length, 1); assert.equal(saved.run.calls[0].returnedModel, "question-test-NOT-LIVE");
     assert.ok(!JSON.stringify(saved).includes(questionTestConfig.accessToken));
-    const [mdDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出研究结果" }).click()]);
+    const [mdDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出已审核研究草稿" }).click()]);
     await mdDownload.saveAs(new URL("question-answer-NOT-LIVE.md", artifacts).pathname);
     await page.screenshot({ path: new URL("question-desktop-NOT-LIVE.png", artifacts).pathname, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });

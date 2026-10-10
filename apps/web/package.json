@@ -18,7 +18,7 @@
     "test:parser-layout": "node --experimental-strip-types --test ../../tests/parser-layout-generalization.test.mjs ../../tests/parser-layout-ci-scope.test.mjs ../../tests/chain-v01.test.mjs",
     "test:integration": "node --experimental-strip-types --test tests/engine-integration.test.mjs",
     "test:transfer": "node --experimental-strip-types --test tests/transfer-probe.test.mjs",
-    "test": "npm run test:parser && npm run test:parser-layout && npm run test:integration && npm run test:transfer && npm run test:memo && npm run test:question && npm run test:access",
+    "test": "npm run test:parser && npm run test:parser-layout && npm run test:integration && npm run test:transfer && npm run test:memo && npm run test:question && npm run test:access && npm run test:rc",
     "test:access": "node --experimental-strip-types --test tests/reviewer-access.test.mjs tests/request-security.test.mjs tests/browser-capabilities.test.mjs tests/reviewer-audit.test.mjs tests/research-operation-security.test.mjs",
     "test:question": "node --experimental-strip-types --test tests/research-question.test.mjs tests/question-batch.test.mjs tests/adversarial-review.test.mjs",
     "eval:review": "NODE_OPTIONS=--experimental-strip-types PROMPTFOO_DISABLE_TELEMETRY=1 npx --yes promptfoo@0.123.1 eval -c evals/reviewer-offline.yaml --no-cache --no-progress-bar",
@@ -26,7 +26,9 @@
     "test:memo": "node --experimental-strip-types --test tests/research-memo.test.mjs tests/memo-storage-concurrency.test.mjs tests/memo-batch.test.mjs tests/memo-revisions.test.mjs",
     "test:runtime": "node --test tests/runtime-smoke.test.mjs",
     "test:browser": "node --experimental-strip-types --test tests/browser-e2e.test.mjs",
-    "lint": "eslint . --ignore-pattern .next --ignore-pattern public/vendor"
+    "lint": "eslint . --ignore-pattern .next --ignore-pattern public/vendor",
+    "test:rc": "node --experimental-strip-types --test tests/finance-rc.test.mjs tests/dashboard-rc.test.mjs tests/interaction-rc.test.mjs",
+    "test:rc-browser": "node --experimental-strip-types --test tests/interaction-rc-browser.test.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

@@ -80,7 +80,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     assert.equal(await page.getByLabel("研究问题", { exact: true }).inputValue(), query);
     await page.getByText("模型服务尚未配置，请按运行说明配置服务端环境。", { exact: true }).waitFor();
     assert.equal(await page.getByRole("button", { name: "生成研究任务", exact: true }).isDisabled(), true);
-    assert.equal(await page.getByRole("link", { name: "补充材料", exact: true }).getAttribute("href"), "/changes");
+    assert.equal(await page.getByRole("link", { name: "补充材料", exact: true }).getAttribute("href"), "/changes?returnTo=%2Fquestions%3Fresume%3Dmaterials");
     for (const width of [1440, 1366, 768, 390]) {
       await page.setViewportSize({ width, height: width === 1366 ? 768 : 1000 });
       for (const route of ["/", "/workspace", "/questions", "/changes", "/evidence", "/versions", "/help"]) {
@@ -103,7 +103,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     await page.getByRole("button", { name: "载入 S-05 已验证样例", exact: true }).click();
     for (const key of ["attributable_np", "adjusted_np", "non_recurring_total"]) await page.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
     await capture(page, "changes-reviewed-1440.png");
-    await page.getByRole("button", { name: "生成 Graph Diff" }).click();
+    await page.getByRole("button", { name: "预览研究影响" }).click();
     await page.getByLabel("证据审核人（自行填写）").fill("UI test NOT-LIVE");
     await page.getByRole("button", { name: "保存为新版本", exact: true }).click();
     await page.getByRole("heading", { name: /V-02 已保存/ }).waitFor();
@@ -172,7 +172,7 @@ test("complete Beacon UI: navigation, landing question, evidence inspector, resp
     await blockedPage.goto(origin + "/changes", { waitUntil: "networkidle" });
     await blockedPage.getByRole("button", { name: "载入 S-05 已验证样例", exact: true }).click();
     for (const key of ["attributable_np", "adjusted_np", "non_recurring_total"]) await blockedPage.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
-    await blockedPage.getByRole("button", { name: "生成 Graph Diff" }).click();
+    await blockedPage.getByRole("button", { name: "预览研究影响" }).click();
     await blockedPage.getByLabel("证据审核人（自行填写）").fill("Blocked capability test");
     await blockedPage.getByRole("button", { name: "保存为新版本", exact: true }).click();
     await blockedPage.getByText(/window\.isSecureContext/).waitFor();
