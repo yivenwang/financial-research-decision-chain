@@ -1,5 +1,16 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-10 — 赛前候选完善（独立 stacked RC，零付费）
+
+从已审核 `3328bcc95fa9a3b9f8ed38c45b2664901038d8b2` 创建
+`codex/pre-submission-finance-ui-rc`，以 `codex/reviewer-audit-round-2` 为 base，保持 PR #35 不变。
+负责人本轮明确授权 H-01/H-02 金融输入失败关闭、H-05 数据驱动 Dashboard 和交互闭环；
+正常 S-05/S-06 算术、公式、舍入、金融口径与专业关卡不变。
+[完整变更与本地验收](PRE_SUBMISSION_RC_REPORT.md) 和 [K-07 决策说明](K07_DECISION_RC.md)
+已准备，K-07 两方案均未采纳或实施。实际 PR、最终 SHA 与普通 CI 以交付记录为准。
+本轮真实模型调用 0；无 dispatch、合并、部署、生产修改或 S-07 访问。
+最终 RC 精确 SHA 生成并通过 CI 后停止，须负责人对该 SHA 另行授权一次付费批次；旧授权不得沿用。
+
 ## 2026-10-10 — PR #35 初始清单归档冲突最小修复（零付费）
 
 起点与远端分支均核实为 `c0153ea893da0bf5bde0a602a563acaa34a9692c`。
