@@ -204,11 +204,14 @@ export function operationStore(explicitDirectory?: string, options: StoreOptions
         await inventory(); const current = (await readOne(key))?.record;
         if (!current || current.state !== "running" || JSON.stringify(current) !== JSON.stringify(record)) throw new Error("OPERATION_COMPLETION_CONFLICT");
         await space();
-        const result: OperationRecord = { ...record, state: "completed", response: { status: response.status, body: await response.clone().json() } };
+        // Consume once; the caller returns a fresh replay of this persisted value,
+        // never a response stream already involved in persistence reads.
+        const result: OperationRecord = { ...record, state: "completed", response: { status: response.status, body: await response.json() } };
         const hash = await writePrivate(join(root, key, "completed.tmp"), result);
         // Anchor first; an interruption between these writes blocks the store.
         await writePrivate(join(guard, key, "completed.json"), { schema: "question-completion.v1", recordSha256: hash });
         await rename(join(root, key, "completed.tmp"), join(root, key, "record.json")); await syncDir(join(root, key));
+        return result;
       });
     },
     // Management methods are CLI-only; there is no public recovery API.

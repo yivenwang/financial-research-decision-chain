@@ -206,8 +206,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
         }
         modelMayHaveStarted = true;
         const response = await core.POST(copy(id));
-        await store.complete(phase, id, record, response);
-        return response;
+        const completed = await store.complete(phase, id, record, response);
+        return replay(completed);
       } finally { release(); }
     } catch (error) {
       const storageCode = error instanceof Error && /^OPERATION_[A-Z_]+$/.test(error.message) ? error.message : "OPERATION_STORAGE_IO_FAILED";

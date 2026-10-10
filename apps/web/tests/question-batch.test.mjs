@@ -65,9 +65,11 @@ test("acceptance verifier replays actual handler outputs for three intents and r
       return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput(),
         { id: "NOT-LIVE-verifier-fixture", model: "deepseek-v4-pro" });
     } });
-    const draft = await (await handler.POST(questionRequest({ phase: "plan", question: spec.question }))).json();
+    const planResponse = await handler.POST(questionRequest({ phase: "plan", question: spec.question }));
+    assert.equal(planResponse.bodyUsed,false);const draft = await planResponse.json();
     await verifyLiveQuestionPhase({ phase: "plan", spec, response: { httpStatus: 200, data: draft }, snapshot });
-    const data = await (await handler.POST(questionRequest({ phase: "execute", draft, confirmed: true, snapshot }))).json();
+    const answerResponse = await handler.POST(questionRequest({ phase: "execute", draft, confirmed: true, snapshot }));
+    assert.equal(answerResponse.bodyUsed,false);const data = await answerResponse.json();
     await verifyLiveQuestionPhase({ phase: "execute", spec, response: { httpStatus: 200, data }, snapshot, draft });
     assert.equal(calls, 2);
     for (const mutate of [r => r.answer.evidence.facts[0].current = 999, r => r.answer.formalRecommendation = "BUY",
