@@ -50,7 +50,18 @@ export async function runBoundedQuestionBatch({ commitSha, executePhase, persist
     reasoningEffort: "low", startedAt: new Date().toISOString(), status: "running", contentReview: "pending",
     cases: [], requests: [], knownInputTokens: 0, knownOutputTokens: 0, requestsWithoutUsage: 0,
   };
-  await persist(structuredClone(manifest));
+  const checkpoint = async () => {
+    try { await persist(structuredClone(manifest)); }
+    catch { throw new Error("CHECKPOINT_WRITE_FAILED"); }
+  };
+  const summarize = () => {
+    manifest.knownInputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.inputTokens ?? 0), 0);
+    manifest.knownOutputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.outputTokens ?? 0), 0);
+    check([manifest.knownInputTokens, manifest.knownOutputTokens].every(Number.isSafeInteger), "BATCH_USAGE_INVALID");
+    manifest.requestsWithoutUsage = manifest.requests.filter(r => !r.usage).length;
+    manifest.estimatedKnownUsageUsdMicros = costEstimateUsdMicros(manifest.knownInputTokens, manifest.knownOutputTokens);
+  };
+  await checkpoint();
   for (const spec of QUESTION_LIVE_CASES) {
     const item = { ...spec, status: "running", requestIndexes: [] };
     manifest.cases.push(item);
@@ -61,34 +72,42 @@ export async function runBoundedQuestionBatch({ commitSha, executePhase, persist
       check(manifest.reservedInputEstimateTokens <= QUESTION_BATCH_BUDGET.maxInputEstimateTotal, "BATCH_INPUT_BUDGET_EXHAUSTED");
       const record = { index: manifest.requests.length + 1, caseId: spec.id, phase, status: "reserved", startedAt: new Date().toISOString(), usage: null };
       manifest.requests.push(record); item.requestIndexes.push(record.index);
-      await persist(structuredClone(manifest)); // If persistence fails, do not call the provider.
+      await checkpoint(); // If persistence fails, do not call the provider.
       let outcome;
       try { outcome = await executePhase({ spec, phase, draft, index: record.index }); }
       catch { outcome = { ok: false, failureCode: "REQUEST_OR_VALIDATION_FAILED", record: null }; }
-      const usage = outcome.audit?.usage;
+      if (!outcome || typeof outcome !== "object") outcome = { ok: false, failureCode: "REQUEST_OR_VALIDATION_FAILED", record: null };
+      const rawUsage = outcome.audit?.usage;
+      const usage = rawUsage && [rawUsage.inputTokens, rawUsage.outputTokens, rawUsage.inputTokens + rawUsage.outputTokens].every(n => Number.isSafeInteger(n) && n >= 0) &&
+        (rawUsage.totalTokens === undefined || rawUsage.totalTokens === rawUsage.inputTokens + rawUsage.outputTokens) &&
+        Number.isSafeInteger(manifest.knownInputTokens + rawUsage.inputTokens + manifest.knownOutputTokens + rawUsage.outputTokens) &&
+        Number.isSafeInteger(costEstimateUsdMicros(manifest.knownInputTokens + rawUsage.inputTokens, manifest.knownOutputTokens + rawUsage.outputTokens)) ? rawUsage : null;
       if (outcome.ok && (!usage || ![usage.inputTokens, usage.outputTokens].every(n => Number.isSafeInteger(n) && n >= 0) || usage.inputTokens > 16000 || usage.outputTokens > 6000 || manifest.knownInputTokens + usage.inputTokens > 96000)) {
         outcome = { ...outcome, ok: false, failureCode: "BATCH_USAGE_BUDGET_INVALID" };
       }
       // Archive first. An archive failure aborts rather than spending another request.
-      await archive(record.index, { caseId: spec.id, phase, record: outcome.record ?? null });
+      try { await archive(record.index, { caseId: spec.id, phase, record: outcome.record ?? null }); }
+      catch {
+        // Keep a safe terminal receipt, even when content cannot be archived. Do not copy the failing content/audit.
+        Object.assign(record, { status: "failed", finishedAt: new Date().toISOString(), failureCode: "ARCHIVE_WRITE_FAILED", usage });
+        item.status = "failed"; manifest.status = "stopped-after-failure"; manifest.finishedAt = new Date().toISOString();
+        summarize(); await checkpoint(); return manifest;
+      }
       Object.assign(record, { status: outcome.ok === true ? "technical-completed" : "failed", finishedAt: new Date().toISOString(),
-        failureCode: outcome.ok === true ? null : outcome.failureCode ?? "REQUEST_FAILED", audit: outcome.audit ?? null,
-        usage: outcome.audit?.usage ?? null });
-      manifest.knownInputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.inputTokens ?? 0), 0);
-      manifest.knownOutputTokens = manifest.requests.reduce((n, r) => n + (r.usage?.outputTokens ?? 0), 0);
-      manifest.requestsWithoutUsage = manifest.requests.filter(r => !r.usage).length;
-      manifest.estimatedKnownUsageUsdMicros = costEstimateUsdMicros(manifest.knownInputTokens, manifest.knownOutputTokens);
+        failureCode: outcome.ok === true ? null : typeof outcome.failureCode === "string" && /^[A-Z][A-Z_0-9]{0,79}$/.test(outcome.failureCode) ? outcome.failureCode : "REQUEST_FAILED", audit: outcome.audit ? { ...outcome.audit, usage } : null,
+        usage });
+      summarize();
       if (outcome.ok !== true) { item.status = "failed"; manifest.status = "stopped-after-failure"; }
       else if (phase === "plan") draft = outcome.data;
       else item.status = "technical-completed-content-pending";
-      await persist(structuredClone(manifest));
+      await checkpoint();
       if (outcome.ok !== true) break;
     }
     if (manifest.status === "stopped-after-failure") break;
   }
   if (manifest.status === "running") manifest.status = "technical-completed-awaiting-content-review";
   manifest.finishedAt = new Date().toISOString();
-  await persist(structuredClone(manifest));
+  await checkpoint();
   return manifest;
 }
 
@@ -113,12 +132,15 @@ export async function verifyLiveQuestionPhase({ phase, spec, response, snapshot,
     check(event.sequence === i + 1 && event.detailsSha256 === digest(canonicalJson(event.details)), "EVENT_DIGEST_MISMATCH");
   }
   if (phase === "plan") {
+    if (run.status === "BLOCKED" && run.reasons?.includes("CONTRACT_SCHEMA_INVALID")) throw new Error("CONTRACT_SCHEMA_INVALID");
+    if (run.status === "OUT_OF_SCOPE") throw new Error("PLAN_SCOPE_BLOCKED");
     check(run.status === "CONTRACT_DRAFTED" && typeof response.data.ticket === "string", "CONTRACT_NOT_READY");
     const plan = validateQuestionPlan(parseMemoJson(a.rawOutput));
     check(plan.intent === spec.intent, "INTENT_MISMATCH");
     check(plan.period === "2026Q1", "PERIOD_MISMATCH");
     check(canonicalJson(makeResearchContract(spec.question, plan, run.requestId, run.createdAt)) === canonicalJson(run.contract), "CONTRACT_REPLAY_MISMATCH");
   } else {
+    if (run.status === "BLOCKED" && /^[A-Z][A-Z_0-9]{0,79}$/.test(run.reasons?.[0] ?? "")) throw new Error(run.reasons[0]);
     check(["ANSWER_READY", "PARTIAL"].includes(run.status) && run.answer, "ANSWER_NOT_READY");
     check(run.requestId === draft.run.requestId && canonicalJson(run.contract) === canonicalJson(draft.run.contract), "PLAN_BINDING_MISMATCH");
     const expected = await resolveQuestionEvidence(run.contract, snapshot);
@@ -215,8 +237,36 @@ async function main() {
   }
 }
 export function assertArchiveSafe(value, secrets) {
-  const text = JSON.stringify(value);
+  let text;
+  try { text = JSON.stringify(value); } catch { throw new Error("ARCHIVE_SERIALIZATION_FAILED"); }
+  if (typeof text !== "string") throw new Error("ARCHIVE_SERIALIZATION_FAILED");
   if (secrets.some(secret => typeof secret === "string" && secret.length && (text.includes(secret) || text.includes(JSON.stringify(secret).slice(1, -1))))) throw new Error("ARCHIVE_SECRET_BLOCKED");
-  if (/"(?:cookie|authorization|ticket|apiKey|sessionSecret)"\s*:/i.test(text)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
+  const forbidden = new Set(["cookie", "authorization", "ticket", "apikey", "sessionsecret"]);
+  const credentialKey = key => forbidden.has(key.normalize("NFKC").replace(/[\s_.\p{Pd}\p{Cf}]/gu, "").toLowerCase());
+  const queue = [{ value, depth: 0 }];
+  for (let i = 0; i < queue.length; i++) {
+    const current = queue[i];
+    if (current.depth > 64 || queue.length > 100000) throw new Error("ARCHIVE_STRUCTURE_LIMIT");
+    const item = current.value;
+    if (typeof item === "number" && !Number.isFinite(item)) throw new Error("ARCHIVE_INVALID_NUMBER");
+    if (typeof item === "string") {
+      if (secrets.some(secret => typeof secret === "string" && secret.length && item.includes(secret))) throw new Error("ARCHIVE_SECRET_BLOCKED");
+      // Decode complete nested JSON strings/objects; also catch quoted fields in surrounding diagnostic prose.
+      for (const match of item.matchAll(/(?:\\*["'])([^"'\n]{1,80})(?:\\*["'])\s*:/g)) {
+        let key = match[1].replace(/\\+$/g, "");
+        try { key = JSON.parse('"' + key + '"'); } catch { /* Literal key still receives the same normalization. */ }
+        if (credentialKey(key)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
+      }
+      if (/^\s*[\[{\"]/.test(item)) {
+        try { const decoded = JSON.parse(item); if (decoded !== item) queue.push({ value: decoded, depth: current.depth + 1 }); }
+        catch { /* Non-JSON prose has already had its quoted keys and secret values checked. */ }
+      }
+    } else if (item && typeof item === "object") {
+      for (const [key, child] of Object.entries(item)) {
+        if (credentialKey(key)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
+        queue.push({ value: child, depth: current.depth + 1 });
+      }
+    }
+  }
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) await main();

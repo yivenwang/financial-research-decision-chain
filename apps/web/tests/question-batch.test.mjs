@@ -7,6 +7,36 @@ import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { questionTestConfig, planOutput, answerOutput, providerResponse, questionRequest, questionTestSnapshot, questionTestCookie } from "./question-test-helpers.mjs";
 
 const commitSha = "a".repeat(40);
+test("archive guards reject unknown credentials in string encodings and non-finite values while allowing safe approval receipts", () => {
+  for (const key of ["Cookie", "API Key", "api_key", "api.key", "api\u200bkey", "session-secret", "session—secret", "ticket", "AUTHORIZATION", "ＡＰＩ＿ＫＥＹ"]) {
+    const value = { [key]: "unknown-credential-value" };
+    for (const payload of [value, { raw: JSON.stringify(value) }, { raw: JSON.stringify({ nested: JSON.stringify(value) }) },
+      { raw: `prose ${JSON.stringify(value)}` }, { raw: `{'${key}':'unknown-value'}` }, { raw: JSON.stringify(value).replaceAll("a", "\\u0061") }]) assert.throws(() => assertArchiveSafe(payload, []));
+  }
+  for (const payload of [{ value: NaN }, { value: Infinity }, undefined]) assert.throws(() => assertArchiveSafe(payload, []));
+  const circular = {}; circular.self = circular; assert.throws(() => assertArchiveSafe(circular, []));
+  let deep = {}; for (let i = 0; i < 65; i++) deep = { nested: deep };
+  for (const payload of [deep, Array(100001).fill(0)]) assert.throws(() => assertArchiveSafe(payload, []), /ARCHIVE_STRUCTURE_LIMIT/);
+  assert.doesNotThrow(() => assertArchiveSafe({ approvalReference: "question-acceptance-2026-09-20", commitSha: "a".repeat(40), raw: "待项目负责人确认" }, []));
+});
+
+test("archive and checkpoint failures terminate without another request and preserve a safe receipt", async () => {
+  let calls = 0; const checkpoints = [];
+  const result = await runBoundedQuestionBatch({ commitSha: "a".repeat(40), persist: async m => checkpoints.push(m), archive: async () => { throw new Error("credential detail must not escape"); },
+    executePhase: async () => { calls++; return { ok: true, record: {}, audit: { usage: { inputTokens: 2, outputTokens: 1, totalTokens: 3 } } }; } });
+  assert.equal(calls, 1); assert.equal(result.status, "stopped-after-failure");
+  assert.equal(result.requests[0].failureCode, "ARCHIVE_WRITE_FAILED"); assert.equal(checkpoints.at(-1).status, result.status);
+  assertArchiveSafe(result, []);
+  calls = 0; let writes = 0;
+  await assert.rejects(runBoundedQuestionBatch({ commitSha: "a".repeat(40), persist: async () => { if (++writes === 2) throw new Error("disk failed"); }, archive: async () => {},
+    executePhase: async () => { calls++; return { ok: true }; } }), /CHECKPOINT_WRITE_FAILED/);
+  assert.equal(calls, 0);
+  for (const outcome of [null, { ok: false, audit: { usage: { inputTokens: NaN, outputTokens: 1 } } },
+    { ok: false, audit: { usage: { inputTokens: Number.MAX_SAFE_INTEGER, outputTokens: 0 } } }]) {
+    const stopped = await runBoundedQuestionBatch({ commitSha: "a".repeat(40), persist: async () => {}, archive: async () => {}, executePhase: async () => outcome });
+    assert.equal(stopped.status, "stopped-after-failure"); assert.equal(stopped.requests.length, 1); assert.equal(stopped.knownInputTokens, 0); assertArchiveSafe(stopped, []);
+  }
+});
 const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_RUN_ATTEMPT: "1", GITHUB_SHA: commitSha, EXPECTED_COMMIT_SHA: commitSha,
   QUESTION_ACCEPTANCE_APPROVAL: QUESTION_BATCH_AUTHORIZATION, QUESTION_BUDGET_ACKNOWLEDGEMENT: QUESTION_BUDGET_ACK, MODEL_PROVIDER: "deepseek", DEEPSEEK_MODEL: "deepseek-v4-pro", DEEPSEEK_API_KEY: "synthetic-NOT-LIVE" };
 
@@ -103,7 +133,7 @@ test("credential fields and JSON string leak variants fail before the first requ
     await assert.rejects(runBoundedQuestionBatch({ commitSha,
       persist: async manifest => assertArchiveSafe({ ...manifest, leak: leak.value }, leak.secrets),
       archive: async () => {}, executePhase: async () => { calls++; },
-    }), leak.code);
+    }), /CHECKPOINT_WRITE_FAILED/);
     assert.equal(calls, 0);
   }
 });
@@ -125,7 +155,8 @@ test("checkpoint or archive failure cannot cause another paid request (NOT-LIVE)
   let calls = 0;
   await assert.rejects(runBoundedQuestionBatch({ commitSha, persist: async () => { throw Error("disk unavailable"); }, archive: async () => {}, executePhase: async () => { calls++; } }));
   assert.equal(calls, 0);
-  await assert.rejects(runBoundedQuestionBatch({ commitSha, persist: async () => {}, archive: async () => { throw Error("disk unavailable"); }, executePhase: async () => { calls++; return { ok: true }; } }));
+  const result = await runBoundedQuestionBatch({ commitSha, persist: async () => {}, archive: async () => { throw Error("disk unavailable"); }, executePhase: async () => { calls++; return { ok: true }; } });
+  assert.equal(result.status, "stopped-after-failure"); assert.equal(result.requests[0].failureCode, "ARCHIVE_WRITE_FAILED");
   assert.equal(calls, 1);
 });
 
