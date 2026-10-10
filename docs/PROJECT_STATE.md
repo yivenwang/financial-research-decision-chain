@@ -1,5 +1,17 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-10 — 第二次真实失败后的 Question v3 专项复审
+
+起点 `0614a90d98f7ed10695b488caf75b28377308f1a` 获批后，
+[run 38062132788](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38062132788)
+实际两次，第二次 `COUNTER_EVIDENCE_OMITTED` 首失败停止，余四次未发；
+另有独立同比归因问题，原文保持 BLOCKED / answer=null。
+负责人要求高规格复审与修复，本轮明确反证 ID、逐段反证陈述及本期/同比归因限制，
+升级 Question explanation v3，保持 v1/v2 原文、历史校验、金融与专业规则、模型限额不变。
+[专项报告](RC_LIVE_V3_REVIEW.md) 记录原始失败负例、六请求零付费演练、预算与跨端验收。
+继续 PR #36 / 独立 RC；PR #35 不变。本修复阶段新增真实调用 0。
+最终新 SHA 须普通 CI 通过并另获精确授权后才能真实测试；当前不宣称现场就绪，不合并或部署。
+
 ## 2026-10-10 — PR #36 真实失败后的可靠性修复（新增付费调用 0）
 
 负责人对 `39a41d5cbbf080cb0f7506efa1ab2d192f3c41ce` 授权后，
