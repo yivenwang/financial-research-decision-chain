@@ -4,7 +4,7 @@ import { assertQuestionBatchEnvironment, runBoundedQuestionBatch, verifyLiveQues
 import { QUESTION_BUDGET_ACK, QUESTION_BUDGET_VERSION, checkQuestionInputBudget, budgetSummary } from "../lib/question-batch-budget.ts";
 process.env.QUESTION_ACCEPTANCE_BUDGET_MODE = QUESTION_BUDGET_VERSION; // Isolated NOT-LIVE test worker only.
 import { createQuestionHandler } from "../lib/research-question.server.ts";
-import { questionTestConfig, planOutput, answerOutput, providerResponse, questionRequest, questionTestSnapshot } from "./question-test-helpers.mjs";
+import { questionTestConfig, planOutput, answerOutput, providerResponse, questionRequest, questionTestSnapshot, questionTestCookie } from "./question-test-helpers.mjs";
 
 const commitSha = "a".repeat(40);
 const env = { GITHUB_EVENT_NAME: "workflow_dispatch", GITHUB_RUN_ATTEMPT: "1", GITHUB_SHA: commitSha, EXPECTED_COMMIT_SHA: commitSha,
@@ -32,6 +32,80 @@ test("three distinct intents reserve exactly six requests and never claim conten
   assert.equal(result.requests.length, 6); assert.equal(archives.length, 6); assert.equal(new Set(result.cases.map(c => c.intent)).size, 3);
   assert.equal(result.status, "technical-completed-awaiting-content-review"); assert.equal(result.contentReview, "pending");
   assert.equal(result.knownOutputTokens, 12); assert.equal(result.requestsWithoutUsage, 0);
+});
+
+test("actual initial manifest and all six handler archives pass the production archive guard (NOT-LIVE)", async () => {
+  const snapshot = questionTestSnapshot();
+  const secrets = [questionTestConfig.apiKey, questionTestConfig.accessToken, process.env.REVIEW_SESSION_SECRET,
+    questionTestCookie, questionTestCookie.slice(questionTestCookie.indexOf("=") + 1)];
+  const checkpoints = []; const archives = [];
+  let transportCalls = 0;
+  const result = await runBoundedQuestionBatch({ commitSha,
+    persist: async manifest => {
+      assertArchiveSafe(manifest, secrets);
+      checkpoints.push(manifest);
+    },
+    archive: async (index, record) => {
+      assertArchiveSafe(record, secrets);
+      archives.push([index, record]);
+    },
+    executePhase: async ({ spec, phase, draft }) => {
+      const handler = createQuestionHandler(() => questionTestConfig, { fetcher: async (_url, init) => {
+        transportCalls++;
+        const body = JSON.parse(init.body);
+        checkQuestionInputBudget(init.body);
+        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput(),
+          { id: "NOT-LIVE-manifest-regression", model: "deepseek-v4-pro" });
+      } });
+      const body = phase === "plan" ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot };
+      const response = await handler.POST(questionRequest(body));
+      const data = await response.json();
+      if (typeof data.ticket === "string") secrets.push(data.ticket);
+      const audit = await verifyLiveQuestionPhase({ phase, spec, response: { httpStatus: response.status, data }, snapshot, draft });
+      return { ok: true, data, audit, record: { httpStatus: response.status, run: data.run ?? null, code: data.code ?? null } };
+    },
+  });
+  const initial = checkpoints[0];
+  assert.equal(initial.approvalReference, QUESTION_BATCH_AUTHORIZATION);
+  assert.equal(Object.hasOwn(initial, "authorization"), false);
+  assert.equal(initial.commitSha, commitSha);
+  assert.equal(initial.schemaVersion, "question-live-batch.v1");
+  assert.deepEqual(initial.budget, budgetSummary());
+  assert.deepEqual(initial.cases, []); assert.deepEqual(initial.requests, []);
+  assert.equal(initial.reservedInputEstimateTokens, 0);
+  assert.equal(initial.maxRequests, 6); assert.equal(initial.maxOutputTokensPerRequest, 6000);
+  assert.equal(initial.maxPossibleOutputTokens, 36000); assert.equal(initial.timeoutMsPerRequest, 150000);
+  assert.equal(initial.status, "running"); assert.equal(initial.contentReview, "pending");
+  // The former field name must still be rejected, even with this harmless value.
+  const oldManifest = { ...initial, authorization: initial.approvalReference };
+  delete oldManifest.approvalReference;
+  assert.throws(() => assertArchiveSafe(oldManifest, secrets), /ARCHIVE_CREDENTIAL_FIELD_BLOCKED/);
+  assert.equal(checkpoints.length, 14); assert.equal(archives.length, 6); assert.equal(transportCalls, 6);
+  assert.equal(result.status, "technical-completed-awaiting-content-review");
+  assert.equal(result.reservedInputEstimateTokens, 96000);
+});
+
+test("credential fields and JSON string leak variants fail before the first request (NOT-LIVE)", async () => {
+  const leaks = [];
+  for (const key of ["cookie", "Cookie", "COOKIE", "authorization", "Authorization", "AUTHORIZATION",
+    "ticket", "Ticket", "apiKey", "APIKEY", "sessionSecret", "SESSIONSECRET"]) {
+    leaks.push({ value: { audit: [{ [key]: "NOT-LIVE" }] }, secrets: [], code: /ARCHIVE_CREDENTIAL_FIELD_BLOCKED/ });
+  }
+  for (const secret of ["NOT-LIVE-cookie-value", 'NOT-LIVE-key-"quoted', "NOT-LIVE-session-\\slash",
+    "NOT-LIVE-ticket-\nnewline\ttab", "NOT-LIVE-authorization-中文"]) {
+    // JSON.stringify in the real guard escapes quotes, slashes and control characters.
+    for (const variant of [secret, `Bearer ${secret}`, `cookie=${secret}; HttpOnly`]) {
+      leaks.push({ value: { audit: [{ rawOutput: `prefix ${variant} suffix` }] }, secrets: [secret], code: /ARCHIVE_SECRET_BLOCKED/ });
+    }
+  }
+  for (const leak of leaks) {
+    let calls = 0;
+    await assert.rejects(runBoundedQuestionBatch({ commitSha,
+      persist: async manifest => assertArchiveSafe({ ...manifest, leak: leak.value }, leak.secrets),
+      archive: async () => {}, executePhase: async () => { calls++; },
+    }), leak.code);
+    assert.equal(calls, 0);
+  }
 });
 
 test("failure at any of the six positions stops the whole batch and preserves unknown usage (NOT-LIVE)", async () => {

@@ -43,7 +43,7 @@ export function assertQuestionBatchEnvironment(env) {
 export async function runBoundedQuestionBatch({ commitSha, executePhase, persist, archive }) {
   assert.match(commitSha, /^[a-f0-9]{40}$/);
   const manifest = {
-    schemaVersion: "question-live-batch.v1", authorization: QUESTION_BATCH_AUTHORIZATION, commitSha,
+    schemaVersion: "question-live-batch.v1", approvalReference: QUESTION_BATCH_AUTHORIZATION, commitSha,
     budget: budgetSummary(), reservedInputEstimateTokens: 0,
     evaluation: "live-provider-http", model: "deepseek-v4-pro", maxRequests: 6,
     maxOutputTokensPerRequest: 6000, maxPossibleOutputTokens: 36000, timeoutMsPerRequest: 150000,
