@@ -60,7 +60,9 @@ test("missing material is distinct from a failed snapshot and makes no explanati
 test("scope rejects other companies, unsupported periods/metrics/nodes and annual-quarter comparison", async () => {
   for (const patch of [{ company: "其他公司" }, { period: "2027Q1" }, { period: "2026H1" }, { metricKeys: ["revenue"] }, { referenceIds: ["C-01"] }, { comparisonPeriod: "2025FY" }, { intent: "OUT_OF_SCOPE" }, { metricKeys: [], referenceIds: [] }]) {
     const h = harness(planOutput(patch)); const d = await h.draft();
-    assert.equal(d.run.status, "OUT_OF_SCOPE"); assert.equal(d.ticket, null); assert.equal(h.calls.length, 1);
+    const invalidIdentifiers = patch.metricKeys?.includes("revenue") || patch.referenceIds?.includes("C-01");
+    assert.equal(d.run.status, invalidIdentifiers ? "BLOCKED" : "OUT_OF_SCOPE"); assert.equal(d.ticket, null); assert.equal(h.calls.length, 1);
+    if (invalidIdentifiers) assert.deepEqual(d.run.reasons, ["CONTRACT_SCHEMA_INVALID"]);
   }
 });
 

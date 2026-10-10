@@ -9,7 +9,14 @@ export function questionReason(code: string) {
     PROVIDER_INCOMPLETE: "模型返回了不完整输出，已保留失败记录，不能作为成功分析。",
     MODEL_JSON_INVALID: "模型返回的结构无法读取，已保留原始阻断记录。",
     ANSWER_SCHEMA_INVALID: "模型返回的研究结构不符合约定，草稿已阻断。",
-    CONTRACT_SCHEMA_INVALID: "模型返回的任务结构不符合约定，请核对运行详情。",
+    CONTRACT_SCHEMA_INVALID: "模型返回的任务结构、指标或证据引用 ID 不符合约定，请核对运行详情。",
+    PARAGRAPH_EVIDENCE_OMITTED: "段落缺少事实、比较双方或派生计算的底层引用，草稿已阻断。",
+    UNSUPPORTED_YOY_ATTRIBUTION: "模型把本期勾稽当成同比原因，证据不足，草稿已阻断。",
+    DISCLOSURE_SCOPE_OVERCLAIM: "模型把本次输入缺失扩大为报告未披露，草稿已阻断。",
+    ASSUMPTION_PROMOTED: "模型把待复核假设表述为已证实结论，草稿已阻断。",
+    PROFESSIONAL_BOUNDARY_VIOLATION: "模型越过投资判断或专业复核边界，草稿已阻断。",
+    PROVIDER_MODEL_MISMATCH: "提供方返回的模型与请求不匹配，结果已阻断并保留原始记录。",
+    PROVIDER_USAGE_INVALID: "提供方返回的用量不完整、不一致或超过请求限额，结果已阻断。",
   };
   return reasons[code] ?? (/^[A-Z][A-Z_0-9]+$/.test(code) ? "研究请求未通过校验。请查看技术详情并联系维护者核查。" : code);
 }

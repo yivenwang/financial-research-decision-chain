@@ -6,7 +6,7 @@ import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
 import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
-  QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema,
+  QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema, questionReferenceIds, questionAnswerConstraints,
   validateQuestionPlan, validQuestion, makeResearchContract, resolveQuestionEvidence, questionExplanationSchema,
   validateQuestionExplanation, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
@@ -58,6 +58,7 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     });
     if (!response.ok) throw new Error(`PROVIDER_HTTP_${response.status}`);
     const data = await readBoundedJson(response, 256 * 1024, { signal: providerSignal, timeoutMs: Math.max(1, limits.timeoutMs - (Date.now() - started)) }) as Record<string, unknown>;
+    if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("PROVIDER_RESPONSE_INVALID");
     audit.responseSha256 = await sha256Text(canonicalJson(data));
     audit.responseId = typeof data.id === "string" ? data.id.slice(0,200) : null;
     audit.returnedModel = typeof data.model === "string" ? data.model.slice(0,100) : null;
@@ -68,10 +69,14 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     if (data.status !== "completed") throw new Error("PROVIDER_INCOMPLETE");
     if (output.refused) throw new Error("MODEL_REFUSAL");
     if (!audit.responseId || !audit.returnedModel || audit.rawOutput === null) throw new Error("PROVIDER_RESPONSE_INVALID");
+    if (audit.returnedModel !== config.model && !audit.returnedModel.startsWith(config.model + "-")) throw new Error("PROVIDER_MODEL_MISMATCH");
+    if (!audit.usage || audit.usage.outputTokens <= 0 || audit.usage.outputTokens > limits.maxOutputTokens ||
+      audit.usage.totalTokens !== audit.usage.inputTokens + audit.usage.outputTokens ||
+      audit.inputBudget && audit.usage.inputTokens > audit.inputBudget.estimatedInputTokens) throw new Error("PROVIDER_USAGE_INVALID");
     try { return parseMemoJson(audit.rawOutput); } catch { throw new Error("MODEL_JSON_INVALID"); }
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
+    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|PROVIDER_MODEL_MISMATCH|PROVIDER_USAGE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
     throw new Error(audit.failureCode);
   } finally {
     audit.finishedAt = new Date().toISOString(); audit.durationMs = Date.now() - started;
@@ -118,7 +123,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
         const run = newRun(input.question, "plan", request.headers.get("Idempotency-Key") || crypto.randomUUID());
         await addQuestionEvent(run, "query_received", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY, sourceRegistry: questionSources().map(({ sourceId, period, url }) => ({ sourceId, period, url })) });
         try {
-          const output = await modelCall(run, "plan", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY, sources: questionSources().map(({ sourceId, period }) => ({ sourceId, period })) }, questionPlanSchema, config, dependencies);
+          const output = await modelCall(run, "plan", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY,
+            referenceCatalog: questionReferenceIds(), sources: questionSources().map(({ sourceId, period }) => ({ sourceId, period })) }, questionPlanSchema, config, dependencies);
           const plan = validateQuestionPlan(output);
           run.contract = makeResearchContract(run.queryRaw, plan, run.requestId, run.createdAt);
           run.status = run.contract.status; run.reasons = [...run.contract.reasons];
@@ -150,7 +156,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       await addQuestionEvent(run, "tools_completed", { tools: run.contract!.allowedTools, facts: evidence.facts, calculations: evidence.calculations, graphDiff: evidence.graphDiff });
       await addQuestionEvent(run, "verification_result", { evidence: "PASS", professional: "pending", formalRecommendation: null });
       try {
-        const output = await modelCall(run, "explain", { contract: run.contract, evidence: evidence.context, facts: evidence.facts, calculations: evidence.calculations, graphDiff: evidence.graphDiff }, questionExplanationSchema(evidence.context), config, dependencies);
+        const output = await modelCall(run, "explain", { contract: run.contract, evidence: evidence.context, facts: evidence.facts, calculations: evidence.calculations,
+          graphDiff: evidence.graphDiff, constraints: questionAnswerConstraints(evidence.context) }, questionExplanationSchema(evidence.context), config, dependencies);
         const explanation = validateQuestionExplanation(output, evidence.context);
         run.answer = { answerStatus: explanation.sufficiency === "partial" ? "PARTIAL" : "PASS", explanation, evidence,
           verification: { evidence: "PASS", professional: "pending" }, recommendedHumanAction: "核对解释及引用后接受或退回研究草稿；会计、估值和最终投资判断仍待人工专业复核。", formalRecommendation: null };

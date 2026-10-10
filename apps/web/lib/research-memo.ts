@@ -117,6 +117,7 @@ export async function buildMemoContext(input: unknown): Promise<MemoContext> {
   requireValue(metrics && same(Object.keys(metrics).sort(), metricKeys), "原始完整指标缺失。");
   for (const [key, metric] of Object.entries(metrics)) {
     requireValue(metric && metric.key === key && finite(metric.current) && metric.sourceId === record.sourceId && Number.isInteger(metric.page) && metric.page > 0, "原始指标或定位无效。");
+    requireValue((metric.comparison == null || finite(metric.comparison)) && (metric.disclosedChange == null || finite(metric.disclosedChange)), "原始比较值或同比无效。");
     requireValue(key === "non_recurring_total" || (finite(metric.comparison) && finite(metric.disclosedChange)), "原始比较值缺失。");
     if (REQUIRED_METRICS.includes(key as (typeof REQUIRED_METRICS)[number])) requireValue(metric.unit === "CNY_mn", "财务证据单位不一致。");
   }
