@@ -145,7 +145,7 @@ test("append-only question history, bound human review, rollback isolation and c
     const version = questionTestSnapshot(); const keys = storageKeys("research"); data.set(keys.versions, JSON.stringify([version])); data.set(keys.active, version.versionId);
     const original = data.get(keys.versions); const h = harness(); const draft = await h.draft(); const { run } = await (await h.execute(draft)).json();
     await Promise.all([appendQuestionRun(draft.run), appendQuestionRun(run)]);
-    await assert.rejects(appendQuestionRun(run));
+    await appendQuestionRun(run); // Replayed server result is an idempotent local append.
     const review = await appendQuestionReview(run.runId, "accepted", "Synthetic reviewer", "NOT live content approval");
     assert.equal(review.answerSha256, run.answerSha256); assert.equal(readQuestionLedger().runs.length, 2); assert.equal(data.get(keys.versions), original);
     const rollback = createRollbackSnapshot(version, [version], "V-02", "research");

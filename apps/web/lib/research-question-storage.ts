@@ -39,7 +39,8 @@ export async function appendQuestionRun(run: QuestionRun) {
   await validateQuestionRun(run);
   return locked(async () => {
     const ledger = readQuestionLedger();
-    if (ledger.runs.some(r => r.runId === run.runId)) throw new Error("该运行记录已经保存。");
+    const existing = ledger.runs.find(r => r.runId === run.runId);
+    if (existing) { if (canonicalJson(existing) === canonicalJson(run)) return; throw new Error("该运行记录已经保存且内容不同，禁止覆盖。"); }
     window.localStorage.setItem(QUESTION_STORAGE_KEY, JSON.stringify({ ...ledger, runs: [...ledger.runs, run] }));
   });
 }

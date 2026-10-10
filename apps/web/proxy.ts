@@ -20,7 +20,8 @@ export async function proxy(request: NextRequest) {
   if (publicReviewPath(pathname)) return protect(NextResponse.next());
 
   const accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "";
-  if ((reviewBearerPath(pathname) && hasReviewBearer(request, accessCode)) || await hasReviewSession(request, accessCode)) return protect(NextResponse.next());
+  const bearerAllowed = reviewBearerPath(pathname) && (pathname !== "/api/research-question" || request.method === "GET" && !request.nextUrl.searchParams.has("operationId"));
+  if ((bearerAllowed && hasReviewBearer(request, accessCode)) || await hasReviewSession(request, accessCode)) return protect(NextResponse.next());
 
   if (pathname.startsWith("/api/")) {
     return protect(NextResponse.json({ code: "REVIEW_ACCESS_REQUIRED", error: "请先使用审验访问码进入系统。" }, { status: 401 }));

@@ -5,6 +5,11 @@ import { createAccessLimiter, publicReviewPath, reviewBearerPath, safeReviewRetu
 import { researchBrowserIssue } from "../lib/research-browser.ts";
 import { createMemoHandler } from "../lib/research-memo.server.ts";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
+import { reviewSessionValue, REVIEW_ACCESS_COOKIE } from "../lib/reviewer-access.ts";
+
+// Test-only access window; expiration policy is separately verified.
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+process.env.REVIEW_SESSION_SECRET = "request-security-test-SYNTHETIC-SESSION-SECRET";
 
 test("return paths cannot normalize backslashes or protocol-relative URLs into an external origin", () => {
   const origin = "https://research.example.test";
@@ -46,7 +51,7 @@ test("slow bodies release both handler locks without any provider request", asyn
   for (const createHandler of [createMemoHandler, createQuestionHandler]) {
     let calls = 0;
     const handler = createHandler(() => config, { bodyTimeoutMs: 20, fetcher: async () => { calls++; assert.fail("No model call expected"); } });
-    const headers = { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${config.accessToken}` };
+    const headers = { origin: "http://localhost", "content-type": "application/json", ...(createHandler === createQuestionHandler ? { cookie: `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(config.accessToken)}` } : { authorization: `Bearer ${config.accessToken}` }) };
     const slow = new Request("http://localhost/api/research-question", { method: "POST", headers, body: new ReadableStream({}), duplex: "half" });
     assert.equal((await handler.POST(slow)).status, 400);
     const next = await handler.POST(new Request("http://localhost/api/research-question", { method: "POST", headers, body: "{}" }));

@@ -37,6 +37,7 @@ import {
   baselineVersion,
   createRollbackSnapshot,
   appendVersion,
+  withVersionWriteLock,
   type WorkspaceScope,
   readActiveVersionId,
   readStoredVersions,
@@ -94,6 +95,8 @@ export function VersionHistory() {
   const [storedVersions, setStoredVersions] = useState<ResearchVersion[]>([]);
   const [activeVersionId, setActive] = useState("V-01");
   const [selectedVersionId, setSelected] = useState("V-01");
+  const [search, setSearch] = useState("");
+  const [kind, setKind] = useState("all");
   const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -120,7 +123,7 @@ export function VersionHistory() {
   );
   const selectedVersion =
     allVersions.find((version) => version.versionId === selectedVersionId) ?? baselineVersion;
-  const newestFirst = [...allVersions].reverse();
+  const newestFirst = [...allVersions].reverse().filter(version => (kind === "all" || (version.kind ?? "update") === kind) && `${version.versionId} ${version.source?.name ?? ""} ${version.source?.sourceId ?? ""} ${version.source?.period ?? ""} ${version.humanReview?.reviewer ?? ""}`.toLowerCase().includes(search.toLowerCase()));
   const acceptedCount = selectedVersion.evidence.filter(
     (item) => item.reviewStatus === "accepted",
   ).length;
@@ -130,16 +133,18 @@ export function VersionHistory() {
   const rollbackTested = storedVersions.some((version) => version.kind === "rollback");
   const canRollback = storedVersions.length > 0 && selectedVersion.versionId !== activeVersionId;
 
-  function performRollback() {
-    const current = readStoredVersions(workspace);
+  async function performRollback() {
     try {
-      const rollbackVersion = createRollbackSnapshot(selectedVersion, current, readActiveVersionId(current, workspace), workspace);
-      appendVersion(rollbackVersion, workspace);
-      const versionId = rollbackVersion.versionId;
-      setStoredVersions([...current, rollbackVersion]);
-      setActive(versionId);
-      setSelected(versionId);
-      setNotice(versionId + " 已创建，内容恢复自 " + selectedVersion.versionId + "；原历史未被覆盖。");
+      await withVersionWriteLock(workspace, () => {
+        const current = readStoredVersions(workspace);
+        const rollbackVersion = createRollbackSnapshot(selectedVersion, current, readActiveVersionId(current, workspace), workspace);
+        appendVersion(rollbackVersion, workspace);
+        const versionId = rollbackVersion.versionId;
+        setStoredVersions([...current, rollbackVersion]);
+        setActive(versionId);
+        setSelected(versionId);
+        setNotice(versionId + " 已创建，内容恢复自 " + selectedVersion.versionId + "；原历史未被覆盖。");
+      });
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "回滚保存失败，原记录已保留。");
     }
@@ -235,6 +240,7 @@ export function VersionHistory() {
             </Badge>
           </div>
 
+          <div className="mt-4 space-y-2"><input className="w-full rounded-lg border p-2 text-sm" aria-label="查找版本历史" placeholder="版本、材料、期间或审核人" value={search} onChange={e => setSearch(e.target.value)} /><label className="text-sm">版本类型 <select aria-label="筛选版本类型" value={kind} onChange={e => setKind(e.target.value)}><option value="all">全部</option><option value="baseline">基线</option><option value="update">材料更新</option><option value="rollback">回滚</option></select></label></div>
           <div className="mt-5 space-y-2.5">
             {newestFirst.map((version) => {
               const selected = version.versionId === selectedVersion.versionId;
