@@ -34,7 +34,7 @@ async function fixture(t) {
   const raw = { ...output, supporting: output.supporting[0], counter: output.counter[0], alternatives: output.alternatives[0], questions: { first: output.questions[0], second: output.questions[1] } };
   let calls = 0;
   const run = await createMemoRun(version, { provider: "deepseek", apiKey: "synthetic-not-a-real-key", accessToken: "synthetic-not-a-real-access-code", model: "deepseek-v4-pro" }, { fetcher: async () => {
-    calls++; return Response.json({ id: "response_synthetic_revision_fixture", model: "test-transport-not-live", status: "completed", output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(raw) }] }] });
+    calls++; return Response.json({ id: "response_synthetic_revision_fixture", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(raw) }] }] });
   } });
   assert.equal(run.status, "completed");
   await appendMemoRun(run, version, "research");

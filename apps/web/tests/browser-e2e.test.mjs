@@ -169,7 +169,7 @@ async function stubMemoTransport(page) {
   };
   await page.route("**/api/research-memo", async (route) => {
     if (route.request().method() === "GET") { await route.fulfill({ json: { configured: true, provider: "deepseek", model: "deepseek-v4-pro" } }); return; }
-    const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
+    const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
     await route.fulfill({ json: { run } });
   });
 }
@@ -362,7 +362,7 @@ for (const fixture of cases) {
         assert.equal(typeof modelRun.audit.responseId, "string");
         assert.ok(modelRun.audit.responseId.trim().length > 0);
         if (liveMemo) { assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live"); assert.ok(!/test|stub/i.test(modelRun.audit.returnedModel)); }
-        else assert.equal(modelRun.audit.returnedModel, "test-transport-not-live");
+        else assert.equal(modelRun.audit.returnedModel, "deepseek-v4-pro");
         assert.ok(modelRun.audit.usage.inputTokens > 0);
         assert.ok(modelRun.audit.usage.outputTokens > 0);
         assert.equal(modelRun.context.source.mode, "pdf");

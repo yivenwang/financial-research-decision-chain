@@ -35,9 +35,11 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
   const deepseek = config.provider === "deepseek";
   const started = Date.now();
   const limits = { maxOutputTokens: deepseek ? 6000 : 4000, timeoutMs: dependencies.timeoutMs ?? (deepseek ? 150000 : 90000) };
-  const body = JSON.stringify({ model: config.model, ...(deepseek ? {} : { store: false }), reasoning: { effort: "low" }, max_output_tokens: limits.maxOutputTokens,
+  const requestBody = { model: config.model, reasoning: { effort: "low" }, max_output_tokens: limits.maxOutputTokens,
     input: [{ role: "system", content: prompt }, { role: "user", content: canonicalJson(input) }],
-    text: { format: { type: "json_schema", name: `research_question_${phase}`, strict: true, schema } } });
+    text: { format: { type: "json_schema", name: `research_question_${phase}`, strict: true, schema } } };
+  if (!deepseek) Object.assign(requestBody, { store: false });
+  const body = JSON.stringify(requestBody);
   const audit: QuestionModelAudit = { phase, provider: config.provider, requestedModel: config.model, returnedModel: null,
     promptVersion: phase === "plan" ? QUESTION_PLAN_PROMPT_VERSION : QUESTION_ANSWER_PROMPT_VERSION,
     promptSha256: await sha256Text(prompt), requestSha256: await sha256Text(body), responseSha256: null,
@@ -56,7 +58,10 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body,
       signal: providerSignal, redirect: "error",
     });
-    if (!response.ok) throw new Error(`PROVIDER_HTTP_${response.status}`);
+    if (!response.ok) {
+      void response.body?.cancel().catch(() => {});
+      throw new Error(`PROVIDER_HTTP_${response.status}`);
+    }
     const data = await readBoundedJson(response, 256 * 1024, { signal: providerSignal, timeoutMs: Math.max(1, limits.timeoutMs - (Date.now() - started)) }) as Record<string, unknown>;
     if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("PROVIDER_RESPONSE_INVALID");
     audit.responseSha256 = await sha256Text(canonicalJson(data));
@@ -76,11 +81,14 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     try { return parseMemoJson(audit.rawOutput); } catch { throw new Error("MODEL_JSON_INVALID"); }
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
-    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|PROVIDER_MODEL_MISMATCH|PROVIDER_USAGE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
+    const bodyCode = error instanceof Error && "code" in error ? error.code : null;
+    audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" :
+      ["BODY_INVALID_JSON", "BODY_EMPTY", "BODY_TOO_LARGE"].includes(bodyCode as string) ? "PROVIDER_RESPONSE_INVALID" :
+      /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|PROVIDER_MODEL_MISMATCH|PROVIDER_USAGE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
     throw new Error(audit.failureCode);
   } finally {
     audit.finishedAt = new Date().toISOString(); audit.durationMs = Date.now() - started;
-    await addQuestionEvent(run, "model_returned", { ...audit, rawOutput: undefined });
+    await addQuestionEvent(run, "model_returned", Object.assign({}, audit, { rawOutput: undefined }));
   }
 }
 

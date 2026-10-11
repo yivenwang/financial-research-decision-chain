@@ -29,7 +29,7 @@ const memo = () => ({
 });
 const wire = (output) => ({ ...output, supporting: output.supporting[0], counter: output.counter[0], alternatives: output.alternatives[0], questions: { first: output.questions[0], second: output.questions[1] } });
 function provider(output = memo(), patch = {}) {
-  return Response.json({ id: "resp_unit_transport_stub", model: "test-model", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(wire(output)) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
+  return Response.json({ id: "resp_unit_transport_stub", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(wire(output)) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
 }
 const request = (body, headers = {}) => new Request("http://localhost/api/research-memo", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${config.accessToken}`, ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
 
@@ -232,7 +232,7 @@ test("DeepSeek and optional OpenAI use fixed endpoints, the same schema and trut
     assert.equal(sent.text.format.strict, true);
     assert.deepEqual(sent.text.format.schema, memoSchema(await buildMemoContext(version)));
     assert.equal(sent.input[0].content, MEMO_INSTRUCTIONS);
-    return provider();
+    return provider(memo(), { model: "gpt-5.6-sol" });
   } });
   assert.equal(openaiRun.status, "completed"); assert.equal(openaiRun.audit.provider, "openai");
   assert.deepEqual(openaiRun.audit.requestLimits, { maxOutputTokens: 4000, timeoutMs: 90000 });
@@ -437,7 +437,7 @@ test("memo and review ledgers append independently, preserve version bytes, and 
     const version = snapshot(); appendVersion(version);
     const bytes = data.get(storageKeys().versions);
     const run = await createMemoRun(version, config, { fetcher: async () => provider() });
-    const oldOpenAI = await createMemoRun(version, { ...config, provider: "openai", model: "gpt-5.6-sol" }, { fetcher: async () => provider() });
+    const oldOpenAI = await createMemoRun(version, { ...config, provider: "openai", model: "gpt-5.6-sol" }, { fetcher: async () => provider(memo(), { model: "gpt-5.6-sol" }) });
     for (const field of ["requestLimits", "providerStatus", "incompleteReason", "reasoningTokens"]) delete oldOpenAI.audit[field];
     const legacyBytes = JSON.stringify(oldOpenAI);
     await appendMemoRun(oldOpenAI, version, "research");
