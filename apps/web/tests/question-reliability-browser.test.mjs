@@ -20,6 +20,7 @@ const artifacts = new URL("../artifacts-web/question-reliability/", import.meta.
 const legacy = JSON.parse(await readFile(new URL("./fixtures/question-live-38047109824/request-02.json", import.meta.url), "utf8")).record.run;
 const secondFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8")).record.run;
 const professionalFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38108168529/request-02.json", import.meta.url), "utf8")).record.run;
+const paragraphFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38138604171/request-02.json", import.meta.url), "utf8")).record.run;
 
 const plannerFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38129833565/request-01.json", import.meta.url), "utf8")).record.run;
 
@@ -71,6 +72,16 @@ test("old output remains historical; new bad plan/causal answer block, export an
     await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
     await page.getByTestId("historical-validation-notice").waitFor();
     assert.deepEqual(await page.evaluate(k => JSON.parse(localStorage.getItem(k)).runs[0], QUESTION_STORAGE_KEY), professionalFailure);
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: paragraphFailure });
+    await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    await page.getByTestId("historical-validation-notice").waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    const [paragraphExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await paragraphExport.saveAs(new URL(`live-paragraph-blocked-${width}.json`, artifacts).pathname);
+    assert.deepEqual(JSON.parse(await readFile(new URL(`live-paragraph-blocked-${width}.json`, artifacts), "utf8")).run, paragraphFailure);
+    assert.equal(syntheticCalls, (width === 1440 ? 0 : width === 768 ? 9 : 18));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    await page.screenshot({ path: new URL(`live-paragraph-blocked-${width}.png`, artifacts).pathname, fullPage: true });
     await page.evaluate(({ keys, key, run }) => {
       localStorage.setItem(keys.versions, JSON.stringify([run.answer.evidence.snapshot])); localStorage.setItem(keys.active, run.answer.evidence.snapshot.versionId);
       localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] }));
@@ -134,7 +145,7 @@ test("old output remains historical; new bad plan/causal answer block, export an
     await page.locator("button[aria-current]").locator("..").getByRole("button").last().click();
     await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
     assert.equal(syntheticCalls, beforeHistory); assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
-    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, historicalPlannerMismatchPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
+    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, historicalV4FailurePreserved: true, historicalPlannerMismatchPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
     await context.close();
   }
   assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 27);

@@ -1,5 +1,16 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-11 — 真实 API 两次连通，逐段引用门禁保留
+
+负责人要求直接真实执行，对精确 `364b7afb44f78fe7be6e84e0fcda6d162cd7c7b1`
+启动一次 [run 38138604171](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38138604171)。
+预检、构建、PDF/问题浏览器通过；实际两次 HTTP 200、正确模型/用量、规划 v3 正确，
+解释 v4 三段引用缺口触发 PARAGRAPH_EVIDENCE_OMITTED，首失败停，余四次未发。
+[专项记录](RC_LIVE_V5_REVIEW.md) 保留原文与 hash，解释 v5 改为每段先选引用后写正文，
+去掉重复描述，金融/专业/校验标准与付费门禁不变；修复新增真实请求零次。
+继续同一 RC / PR #36，不 rerun、无限付费、合并或部署。新候选普通 CI 与精确 SHA 授权
+仍为下一次真实批次前提，不能声明完整内容或现场已验收通过。
+
 ## 2026-10-11 — 通信边界定点修复，真实调用零次
 
 负责人要求直接排查 Vibe Coding 遗留问题。现行官方 API 契约及原始成功 HTTP 记录
