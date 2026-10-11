@@ -1,5 +1,16 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-11 — 获批 RC 批次在零付费预检停止，修复写入锁竞争
+
+负责人批准 `cb4bb75b467a778826aa0bc1cbb3ae2ac419a195` 后只触发一次
+[run 38103389908](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38103389908)。
+无提供方凭据的普通测试中，跨进程竞争认领触发临时锁释放后 lstat 的 ENOENT；
+真实步骤 skipped，**新增真实请求 0**，原失败保留，不重跑或补发。
+[锁修复报告](RC_WRITER_LOCK_REPAIR.md) 记录确定性复现、有限获取修复及六进程唯一认领回归。
+完整离线测试 166/166；金融、专业门禁、Prompt、模型配置及安全边界不变。
+继续同一 RC / PR #36，PR #35 保持 `3328bcc95fa9a3b9f8ed38c45b2664901038d8b2`。
+最终新 SHA 须普通 CI 完成后另获精确授权；本次预检失败不构成新提交的可复用 live authorization。
+
 ## 2026-10-10 — 第二次真实失败后的 Question v3 专项复审
 
 起点 `0614a90d98f7ed10695b488caf75b28377308f1a` 获批后，

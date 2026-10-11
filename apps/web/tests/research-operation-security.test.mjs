@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, writeFile, chmod, cp, rm, symlink } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, chmod, cp, rm, rmdir, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFile, spawn } from "node:child_process";
@@ -82,10 +82,34 @@ test("ENOSPC after provider completion retains durable claim and blocks rebillin
   assert.equal((await f.handler().POST(f.post(f.planBody,f.a,{"Idempotency-Key":f.id}))).status,202);assert.equal(f.calls(),1);
   assert.equal((await operationStore(f.directory).read("plan",f.id)).state,"running");
 });
-test("independent processes share one atomic owner claim, then read completed state after restart",async t=>{
+test("released contended writer lock is reacquired without a duplicate claim or provider call",async t=>{
+  const f=await fixture(t);await operationStore(f.directory).initialize();
+  let announceHeld,releaseHeld;
+  const held=new Promise(resolve=>{announceHeld=resolve;}),release=new Promise(resolve=>{releaseHeld=resolve;});
+  const owner=operationStore(f.directory,{beforeWrite:async path=>{
+    if(path.endsWith("record.json")){announceHeld();await release;}
+  }});
+  const first=owner.claim("plan",f.id,"a".repeat(64),"b".repeat(64));
+  await held;let inspections=0;
+  const contender=operationStore(f.directory,{beforeLockInspection:async()=>{
+    inspections++;releaseHeld();await first; // Owner removes the lock before contender's lstat.
+  }});
+  assert.equal(await contender.claim("plan",f.id,"a".repeat(64),"b".repeat(64)),null);
+  assert.equal(inspections,1);assert.equal((await first).state,"running");
+  assert.deepEqual(await contender.read("plan",f.id),await first);assert.equal(f.calls(),0);
+});
+test("contended unsafe writer lock modes and symlinks are still rejected with zero provider calls",async t=>{
+  const f=await fixture(t),store=operationStore(f.directory);await store.initialize();
+  const lock=join(store.guard,".writer-lock");await mkdir(lock,{mode:0o755});
+  await assert.rejects(store.claim("plan",f.id,"a".repeat(64),"b".repeat(64)),/NOT_PRIVATE/);
+  await rmdir(lock);await symlink(f.directory,lock);
+  await assert.rejects(store.claim("plan",f.id,"a".repeat(64),"b".repeat(64)),/NOT_PRIVATE/);
+  assert.equal(f.calls(),0);
+});
+test("six independent processes share one atomic owner claim, then read completed state after restart",async t=>{
   const f=await fixture(t);await operationStore(f.directory).initialize();
   const script=`import {operationStore} from ${JSON.stringify(new URL("../lib/research-operation.server.ts",import.meta.url).href)};const s=operationStore(process.argv[1]);const r=await s.claim('plan',process.argv[2],'a'.repeat(64),'b'.repeat(64));process.stdout.write(r?'claimed':'exists');`;
-  const results=await Promise.all([1,2].map(()=>promisify(execFile)(process.execPath,["--experimental-strip-types","--input-type=module","-e",script,f.directory,f.id])));assert.deepEqual(results.map(r=>r.stdout).sort(),["claimed","exists"]);
+  const results=await Promise.all(Array.from({length:6},()=>promisify(execFile)(process.execPath,["--experimental-strip-types","--input-type=module","-e",script,f.directory,f.id])));assert.deepEqual(results.map(r=>r.stdout).sort(),["claimed",...Array(5).fill("exists")]);
   const store=operationStore(f.directory),record=await store.read("plan",f.id);await store.complete("plan",f.id,record,Response.json({fixture:"NOT-LIVE"}));
   assert.equal((await store.inspect()).records[0].record.response,undefined); // Inventory never accumulates result bodies.
   const reader=`import {operationStore} from ${JSON.stringify(new URL("../lib/research-operation.server.ts",import.meta.url).href)};process.stdout.write(JSON.stringify(await operationStore(process.argv[1]).read('plan',process.argv[2])));`;

@@ -11,6 +11,8 @@ type Phase = "plan" | "execute";
 export type StoreOptions = {
   probeSpace?: () => Promise<{ bytes: number; inodes: number }>;
   beforeWrite?: (path: string) => Promise<void>;
+  // Internal fault-injection seam; never configured from HTTP input or environment.
+  beforeLockInspection?: (path: string) => Promise<void>;
   maxBytes?: number; minFreeBytes?: number; maxOperations?: number;
 };
 export const OPERATION_LIMITS = { recordBytes: 2 * 1024 * 1024, totalBytes: 1024 ** 3, minFreeBytes: 128 * 1024 * 1024, minFreeInodes: 1024, maxOperations: 1000 };
@@ -100,7 +102,16 @@ export function operationStore(explicitDirectory?: string, options: StoreOptions
     let acquired = false;
     for (let i = 0; i < 200; i++) {
       try { await mkdir(path, { mode: 0o700 }); acquired = true; break; }
-      catch (e) { if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e; await privateDirectory(path); }
+      catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+        await options.beforeLockInspection?.(path);
+        try { await privateDirectory(path); }
+        catch (inspectionError) {
+          // The current holder can release this ephemeral lock between mkdir
+          // and lstat. Re-enter bounded acquisition; never delete/adopt a lock.
+          if (!missing(inspectionError)) throw inspectionError;
+        }
+      }
       await new Promise(r => setTimeout(r, 25));
     }
     if (!acquired) throw new Error("OPERATION_STORE_LOCKED");
