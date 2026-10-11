@@ -1,5 +1,15 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-11 — 真实两请求后停止，Question v4 对齐既有引用要求
+
+负责人要求继续，对 `7af0c7c160d0d07b1c4b68defbc5126cd412a019` 启动一次
+[run 38108168529](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38108168529)。
+普通预检和浏览器通过，实际两次 DeepSeek 请求，第二次 PROFESSIONAL_LIMIT_OMITTED 停止，余四次未发。
+原文另有条件比较双方/反证缺口引用遗漏，内容不接受。已知用量估算 $0.016334，非账单。
+[v4 对齐报告](RC_LIVE_V4_REVIEW.md) 记录逐段独立问题、原始 bytes、专业必引引用与段落引用明确化。
+校验标准、金融、专业规则、Memo、模型限额和历史 v3 不变；修复新增真实请求 0。
+继续 PR #36，不合并/部署；最终新 SHA 须普通 CI 完成及另获精确付费授权，原批次不重跑。
+
 ## 2026-10-11 — 获批 RC 批次在零付费预检停止，修复写入锁竞争
 
 负责人批准 `cb4bb75b467a778826aa0bc1cbb3ae2ac419a195` 后只触发一次

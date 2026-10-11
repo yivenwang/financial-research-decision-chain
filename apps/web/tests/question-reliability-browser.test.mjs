@@ -19,6 +19,7 @@ const { chromium } = await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_P
 const artifacts = new URL("../artifacts-web/question-reliability/", import.meta.url);
 const legacy = JSON.parse(await readFile(new URL("./fixtures/question-live-38047109824/request-02.json", import.meta.url), "utf8")).record.run;
 const secondFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8")).record.run;
+const professionalFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38108168529/request-02.json", import.meta.url), "utf8")).record.run;
 
 test("old output remains historical; new bad plan/causal answer block, export and recover at desktop/tablet/phone (NOT-LIVE)", { timeout: 180000 }, async t => {
   const origin = "http://127.0.0.1:4332";
@@ -39,6 +40,8 @@ test("old output remains historical; new bad plan/causal answer block, export an
     let mode = "bad-plan";
     const handler = createQuestionHandler(() => ({ ...questionTestConfig, appOrigin: origin }), { runDirectory: await mkdtemp(join(tmpdir(), "beacon-reliability-mock-")), fetcher: async (_url, init) => {
       syntheticCalls++; const body = JSON.parse(init.body);
+      if (!body.text.format.name.endsWith("plan") && mode === "professional-failure")
+        return providerResponse({}, { output: [{ type: "message", content: [{ type: "output_text", text: professionalFailure.calls[0].rawOutput }] }] });
       return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? legacy.answer.explanation : mode === "second-failure" ? JSON.parse(secondFailure.calls[0].rawOutput) : answerOutput());
     } });
     await context.route("**/api/research-question**", async route => {
@@ -49,6 +52,10 @@ test("old output remains historical; new bad plan/causal answer block, export an
     });
     const page = await context.newPage(); page.on("pageerror", e => errors.push(e.message));
     await page.goto(origin + "/questions");
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: professionalFailure });
+    await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    await page.getByTestId("historical-validation-notice").waitFor();
+    assert.deepEqual(await page.evaluate(k => JSON.parse(localStorage.getItem(k)).runs[0], QUESTION_STORAGE_KEY), professionalFailure);
     await page.evaluate(({ keys, key, run }) => {
       localStorage.setItem(keys.versions, JSON.stringify([run.answer.evidence.snapshot])); localStorage.setItem(keys.active, run.answer.evidence.snapshot.versionId);
       localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] }));
@@ -87,6 +94,18 @@ test("old output remains historical; new bad plan/causal answer block, export an
     assert.equal(counterRecord.run.answer, null); assert.equal(counterRecord.run.answerSha256, null);
     assert.equal(counterRecord.run.calls[0].rawOutput, secondFailure.calls[0].rawOutput);
     assert.deepEqual(counterRecord.run.reasons, ["COUNTER_EVIDENCE_OMITTED"]);
+    mode = "professional-failure";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByText("模型未在未知与限制段引用专业复核依据，草稿已阻断。", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    await page.screenshot({ path: new URL(`live-professional-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    const [professionalExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await professionalExport.saveAs(new URL(`live-professional-blocked-${width}.json`, artifacts).pathname);
+    const professionalRecord = JSON.parse(await readFile(new URL(`live-professional-blocked-${width}.json`, artifacts), "utf8"));
+    assert.equal(professionalRecord.run.answer, null); assert.equal(professionalRecord.run.answerSha256, null);
+    assert.equal(professionalRecord.run.calls[0].rawOutput, professionalFailure.calls[0].rawOutput);
+    assert.deepEqual(professionalRecord.run.reasons, ["PROFESSIONAL_LIMIT_OMITTED"]);
     mode = "safe-answer";
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();
@@ -100,9 +119,9 @@ test("old output remains historical; new bad plan/causal answer block, export an
     await page.locator("button[aria-current]").locator("..").getByRole("button").last().click();
     await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
     assert.equal(syntheticCalls, beforeHistory); assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
-    checks.push({ width, legacyBytesPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
+    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
     await context.close();
   }
-  assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 21);
+  assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 27);
   await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticCalls, legacyRunId: legacy.runId, checks, errors, externalRequests }, null, 2));
 });
