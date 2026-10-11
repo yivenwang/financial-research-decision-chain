@@ -1,3 +1,4 @@
+import { finiteChange, isFiniteNumber } from "./financial-numbers.ts";
 import {
   groupRows,
   parseNonRecurringTotal,
@@ -42,9 +43,6 @@ function toMn(value: number): number {
   return value / 1_000_000;
 }
 
-function relativeChange(current: number, comparison: number): number {
-  return (current - comparison) / Math.abs(comparison);
-}
 
 function approxEqual(left: number, right: number, absTol = 0.001, relTol = 1e-6): boolean {
   const difference = Math.abs(left - right);
@@ -66,9 +64,12 @@ function addNumericValidation(metrics: Partial<Record<MetricKey, MetricValue>>, 
       }
       continue;
     }
-    const recalculated = metric.unit === 'ratio'
-      ? metric.current - metric.comparison
-      : relativeChange(metric.current, metric.comparison);
+    const recalculated = finiteChange(metric.current, metric.comparison, metric.unit === "ratio");
+    if (recalculated === null || !isFiniteNumber(metric.disclosedChange)) {
+      issues.push({ code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, page: metric.page,
+        message: `${key}: change cannot be calculated from a zero, missing or non-finite basis; promotion is blocked.` });
+      continue;
+    }
     if (Math.abs(recalculated - metric.disclosedChange) > 0.005) {
       issues.push({
         code: 'YOY_RECONCILIATION_FAIL',
@@ -155,7 +156,7 @@ export function parseFinancialReportV06(items: PdfTextItem[], source: SourceMeta
   const nonRecurring = parseNonRecurringTotal(rows, source);
   if (nonRecurring) metrics.non_recurring_total = nonRecurring;
   for (const key of ['attributable_np', 'adjusted_np', 'non_recurring_total'] as MetricKey[]) {
-    if (metrics[key]?.current === undefined) issues.push({ code: 'REQUIRED_FIELD_MISSING', severity: 'FAIL', field: key,
+    if (!isFiniteNumber(metrics[key]?.current)) issues.push({ code: 'REQUIRED_FIELD_MISSING', severity: 'FAIL', field: key,
       message: 'Required field ' + key + ' is missing; F-02 and Graph Diff must be blocked.' });
   }
   addNumericValidation(metrics, issues);

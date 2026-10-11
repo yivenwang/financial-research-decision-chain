@@ -9,8 +9,21 @@ export function questionReason(code: string) {
     PROVIDER_INCOMPLETE: "模型返回了不完整输出，已保留失败记录，不能作为成功分析。",
     MODEL_JSON_INVALID: "模型返回的结构无法读取，已保留原始阻断记录。",
     ANSWER_SCHEMA_INVALID: "模型返回的研究结构不符合约定，草稿已阻断。",
-    CONTRACT_SCHEMA_INVALID: "模型返回的任务结构不符合约定，请核对运行详情。",
+    CONTRACT_SCHEMA_INVALID: "模型返回的任务结构、指标或证据引用 ID 不符合约定，请核对运行详情。",
+    PARAGRAPH_EVIDENCE_OMITTED: "段落缺少事实、比较双方或派生计算的底层引用，草稿已阻断。",
+    UNSUPPORTED_YOY_ATTRIBUTION: "模型把本期勾稽当成同比原因，证据不足，草稿已阻断。",
+    COUNTER_FACT_NOT_STATED: "反证段未陈述所引用的反向事实，草稿已阻断，请核对原始记录。",
+    DISCLOSURE_SCOPE_OVERCLAIM: "模型把本次输入缺失扩大为报告未披露，草稿已阻断。",
+    ASSUMPTION_PROMOTED: "模型把待复核假设表述为已证实结论，草稿已阻断。",
+    PROFESSIONAL_BOUNDARY_VIOLATION: "模型越过投资判断或专业复核边界，草稿已阻断。",
+    PROVIDER_MODEL_MISMATCH: "提供方返回的模型与请求不匹配，结果已阻断并保留原始记录。",
+    PROVIDER_USAGE_INVALID: "提供方返回的用量不完整、不一致或超过请求限额，结果已阻断。",
   };
   return reasons[code] ?? (/^[A-Z][A-Z_0-9]+$/.test(code) ? "研究请求未通过校验。请查看技术详情并联系维护者核查。" : code);
 }
 export const formatMoneyMn = (value: number) => Number.isFinite(value) ? value.toFixed(8) : "未提供";
+
+export function questionExportLabel(status: string, reviewStatus?: string) {
+  if (["ANSWER_READY", "PARTIAL"].includes(status) && reviewStatus) return reviewStatus === "accepted" ? "导出已审核研究草稿" : "导出退回研究草稿";
+  return ({BLOCKED: '导出阻断说明', OUT_OF_SCOPE: '导出范围说明', MATERIALS_REQUIRED: '导出材料需求', CONTRACT_DRAFTED: '导出待确认任务', ANSWER_READY: '导出待审核研究草稿', PARTIAL: '导出部分回答草稿'} as Record<string,string>)[status] ?? '导出研究记录';
+}

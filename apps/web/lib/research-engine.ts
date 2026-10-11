@@ -1,3 +1,4 @@
+import { finiteChange, isFiniteNumber } from "../../../lib/financial-numbers.ts";
 import { parseFinancialReportV06Strict } from "../../../lib/parser-v06-strict.ts";
 import { runC04Chain, type C04ChainResult, type EvidenceDirection } from "../../../lib/chain-v01.ts";
 import type { ParseIssueV06, ParseResultV06 } from "../../../lib/parser-v06.ts";
@@ -114,9 +115,9 @@ export function reviewAndRun(result: ParseResult, candidates: CandidateEvidence[
       fail(key, `${METRIC_CONFIG[key].label} 必须是有效数字。`);
       continue;
     }
-    if (candidate.comparisonMn !== null && candidate.disclosedChange !== null) {
-      const change = (candidate.valueMn - candidate.comparisonMn) / Math.abs(candidate.comparisonMn);
-      if (!Number.isFinite(change) || Math.abs(change - candidate.disclosedChange) > 0.005) {
+    if (key !== "non_recurring_total") {
+      const change = finiteChange(candidate.valueMn, candidate.comparisonMn);
+      if (change === null || !isFiniteNumber(candidate.disclosedChange) || Math.abs(change - candidate.disclosedChange) > 0.005) {
         blockers.push({ code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, message: `${METRIC_CONFIG[key].label} 的修改值与披露同比不一致。` });
       }
     }

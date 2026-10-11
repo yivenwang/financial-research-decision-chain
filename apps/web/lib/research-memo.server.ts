@@ -2,6 +2,8 @@ import { readBoundedJson } from "./request-body.ts";
 export { readBoundedJson } from "./request-body.ts";
 import { authorizedReviewer } from "./reviewer-access.ts";
 import { claimModelSlot } from "./research-operation.server.ts";
+import { DuplicateJsonKeyError, parseMemoJson } from "./model-json.ts";
+export { parseMemoJson } from "./model-json.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
@@ -28,31 +30,6 @@ export function memoConfig(env: NodeJS.ProcessEnv = process.env): MemoConfig {
 export function configured(config: MemoConfig) {
   const definition = providerDefinition(config.provider);
   return Boolean(definition && config.apiKey.trim() && config.accessToken.length >= 16 && definition.accepts(config.model) && (!config.appOrigin || serializedOrigin(config.appOrigin)));
-}
-
-class DuplicateJsonKeyError extends SyntaxError {}
-export function parseMemoJson(raw: string): unknown {
-  // Validate JSON syntax first, then inspect keys before using JSON.parse's result.
-  // Otherwise duplicate keys silently discard earlier model content.
-  const parsed: unknown = JSON.parse(raw);
-  const stack: ({ keys: Set<string>; expectsKey: boolean } | null)[] = [];
-  for (const match of raw.matchAll(/"(?:\\.|[^"\\])*"|[{}\[\],]/g)) {
-    const token = match[0];
-    if (token === "{") stack.push({ keys: new Set(), expectsKey: true });
-    else if (token === "[") stack.push(null);
-    else if (token === "}" || token === "]") stack.pop();
-    else {
-      const frame = stack.at(-1);
-      if (token === ",") { if (frame) frame.expectsKey = true; }
-      else if (frame?.expectsKey) {
-        const key: string = JSON.parse(token);
-        if (frame.keys.has(key)) throw new DuplicateJsonKeyError("Duplicate JSON field");
-        frame.keys.add(key);
-        frame.expectsKey = false;
-      }
-    }
-  }
-  return parsed;
 }
 
 function diagnosticEnum<T extends string>(value: unknown, allowed: readonly T[]): T | "unknown" | null {

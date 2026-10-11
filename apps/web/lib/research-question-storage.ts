@@ -1,7 +1,9 @@
 import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { readActiveVersionId, readStoredVersions } from "./research-versions.ts";
-import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionExplanation, type QuestionRun } from "./research-question.ts";
+import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionExplanation, validateQuestionPlan, makeResearchContract,
+  questionPromptInstructions, type QuestionRun } from "./research-question.ts";
+import { parseMemoJson } from "./model-json.ts";
 
 export const QUESTION_STORAGE_KEY = "financial-research-questions-v1";
 export type QuestionReview = { id: string; runId: string; answerSha256: string; snapshotSha256: string;
@@ -22,12 +24,50 @@ export async function validateQuestionRun(run: QuestionRun) {
     const e = run.events[i];
     if (e.sequence !== i + 1 || await sha256Text(canonicalJson(e.details)) !== e.detailsSha256) throw new Error("运行日志校验失败。");
   }
+  if (!["plan", "execute"].includes(run.phase) || !Array.isArray(run.calls) || run.calls.length > 1) throw new Error("研究调用记录无效。");
+  for (const call of run.calls) {
+    const family = run.phase === "plan" ? "question-contract." : "question-explanation.";
+    if (typeof call.promptVersion !== "string" || !call.promptVersion.startsWith(family) ||
+      call.promptSha256 !== await sha256Text(questionPromptInstructions(call.promptVersion)) ||
+      call.phase !== (run.phase === "plan" ? "plan" : "explain")) throw new Error("问题指令版本或摘要不一致。");
+    const requested = run.events.filter(e => e.event === "model_requested");
+    const returned = run.events.filter(e => e.event === "model_returned");
+    if (requested.length !== 1 || returned.length !== 1 ||
+      canonicalJson(returned[0].details) !== canonicalJson({ ...call, rawOutput: undefined })) throw new Error("模型调用与日志不一致。");
+    const details = requested[0].details as Record<string, unknown>;
+    if (details.promptVersion !== call.promptVersion || details.requestSha256 !== call.requestSha256 ||
+      canonicalJson(details.requestLimits) !== canonicalJson(call.requestLimits)) throw new Error("模型请求与日志不一致。");
+  }
+  if (run.phase === "plan" && run.contract) {
+    const call = run.calls[0];
+    if (!call?.rawOutput || call.failureCode) throw new Error("规划原文缺失。");
+    const plan = validateQuestionPlan(parseMemoJson(call.rawOutput), call.promptVersion);
+    if (canonicalJson(makeResearchContract(run.queryRaw, plan, run.requestId, run.createdAt)) !== canonicalJson(run.contract) || run.status !== run.contract.status)
+      throw new Error("规划合同与原文不一致。");
+  }
+  if (run.phase === "execute") {
+    const originals = run.events.filter(e => e.event === "plan_record");
+    const confirmations = run.events.filter(e => e.event === "contract_confirmed");
+    if (originals.length !== 1 || confirmations.length !== 1) throw new Error("规划绑定记录缺失。");
+    const original = originals[0].details as QuestionRun;
+    await validateQuestionRun(original);
+    const confirmed = confirmations[0].details as Record<string, unknown>;
+    if (original.phase !== "plan" || original.status !== "CONTRACT_DRAFTED" || original.requestId !== run.requestId || original.queryRaw !== run.queryRaw ||
+      canonicalJson(original.contract) !== canonicalJson(run.contract) || confirmed.planRunId !== original.runId ||
+      confirmed.planSha256 !== await sha256Text(canonicalJson(original)) || canonicalJson(confirmed.contract) !== canonicalJson(run.contract)) throw new Error("规划与执行绑定不一致。");
+  }
   if (run.answer) {
     if (!run.contract || !["ANSWER_READY", "PARTIAL"].includes(run.status) || await sha256Text(canonicalJson(run.answer)) !== run.answerSha256) throw new Error("结果摘要不一致。");
     const resolved = await resolveQuestionEvidence(run.contract, run.answer.evidence.snapshot);
     if (resolved.status !== "READY" || canonicalJson(resolved.evidence) !== canonicalJson(run.answer.evidence)) throw new Error("结果证据与冻结计算不一致。");
-    validateQuestionExplanation(run.answer.explanation, resolved.evidence.context);
-    if (run.answer.formalRecommendation !== null || run.answer.verification.professional !== "pending") throw new Error("专业边界被修改。");
+    const call = run.calls[0];
+    if (!call?.rawOutput || call.failureCode) throw new Error("解释原文缺失。");
+    // Historical versions keep their own original validation, without changing their reviews.
+    const explanation = validateQuestionExplanation(parseMemoJson(call.rawOutput), resolved.evidence.context, call.promptVersion);
+    if (canonicalJson(explanation) !== canonicalJson(run.answer.explanation) ||
+      run.status !== (explanation.sufficiency === "partial" ? "PARTIAL" : "ANSWER_READY") ||
+      run.answer.answerStatus !== (explanation.sufficiency === "partial" ? "PARTIAL" : "PASS")) throw new Error("解释与原始输出或状态不一致。");
+    if (run.answer.formalRecommendation !== null || run.answer.verification.professional !== "pending" || run.answer.verification.evidence !== "PASS") throw new Error("专业边界被修改。");
   } else if (["ANSWER_READY", "PARTIAL"].includes(run.status)) throw new Error("有效结果缺失。");
 }
 async function locked<T>(fn: () => Promise<T>): Promise<T> {

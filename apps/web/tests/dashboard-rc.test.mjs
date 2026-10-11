@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { dashboardPresentation, metricTone } from '../lib/dashboard-presentation.ts';
+import { createResearchSnapshot, parseResearchReport, extractCandidates } from '../lib/research-engine.ts';
+import { getSourceRecord } from '../lib/source-records.ts';
+import { verifiedSampleItems } from '../lib/sample-s05.ts';
+import { baselineVersion } from '../lib/research-versions.ts';
+function snapshot(){const s=getSourceRecord('S-05'),r=parseResearchReport(verifiedSampleItems,s);return createResearchSnapshot({versionId:'V-02',parentVersionId:'V-01',createdAt:'2026-10-10T00:00:00Z',reviewer:'NOT-LIVE',source:{...s,name:s.name,size:0,pageCount:14,mode:'sample'},result:r,candidates:extractCandidates(r).map(v=>({...v,reviewStatus:'accepted'})),scope:'research'});}
+test('H-05 reverse directions and current Claim signal replace sample claims',()=>{const v=snapshot();v.claim.systemSignal='削弱';v.evidence[0].changePct=5;v.evidence[1].changePct=-10;const p=dashboardPresentation(v);assert.match(p.title,/削弱.*待审核/);assert.doesNotMatch(p.title,/维持成立/);assert.equal(metricTone(v.evidence[0]),'up');assert.equal(metricTone(v.evidence[1]),'down');assert.ok(p.tasks.filter(t=>t.id.startsWith('EG')).every(t=>t.href==='/help#professional-review'));});
+test('H-05 blocked and insufficient states never claim deterministic success',()=>{const v=snapshot();v.chain.status='blocked';const p=dashboardPresentation(v);assert.match(p.title,/阻断/);assert.equal(p.calculationReady,false);assert.equal(p.next.href,'/changes');const empty=dashboardPresentation(baselineVersion);assert.match(empty.title,/证据不足/);assert.equal(empty.missing.length,3);assert.equal(metricTone({changePct:NaN}),'neutral');});
+test('H-05 queue separates fact verification from professional review with real entrances',()=>{const v=snapshot();v.evidence[0].reviewStatus='pending';const p=dashboardPresentation(v);const fact=p.tasks.find(t=>t.id===v.evidence[0].id);assert.equal(fact.owner,'事实核验研究者');assert.equal(fact.href,'/evidence');assert.match(fact.reason,/尚未接受/);for(const gate of p.tasks.filter(t=>t.id.startsWith('EG'))){assert.match(gate.status,/专业/);assert.notEqual(gate.href,'/changes');assert.match(gate.owner,/专业复核人/);}});
+
+test('H-05 contradictory historical formula cannot make blocked current calculation look complete',()=>{const v=snapshot();assert.equal(dashboardPresentation(v).calculationReady,true);v.chain.formula.consistent=false;const p=dashboardPresentation(v);assert.equal(p.blocked,true);assert.equal(p.calculationReady,false);assert.equal(v.formula.consistent,true,'retained historical record is not overwritten');});

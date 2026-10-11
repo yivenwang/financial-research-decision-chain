@@ -18,9 +18,9 @@ export const planOutput = (patch = {}) => ({ intent: "CHANGE_EXPLAIN", company: 
 export const answerOutput = (patch = {}) => ({
   sufficiency: "complete",
   directAnswer: { text: "归母下滑与扣非增长应拆开核对，不能单凭一个指标认定核心经营恶化。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "A-03"] },
-  inference: { text: "负向调整可能影响表面利润，但扣非能否代表核心经营仍是待复核假设。", citations: ["EV-S-05-C04-NR", "A-03", "F-02"] },
+  inference: { text: "负向调整可能影响表面利润，但扣非能否代表核心经营仍是待复核假设。", citations: ["EV-S-05-C04-NR", "A-03", "F-02", "EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ"] },
   counterEvidence: { text: "归母利润下降仍构成反向证据，不能忽略。", citations: ["EV-S-05-C04-ATTR"] },
-  uncertainty: { text: "需复核调整项经常性及连续可比期间，现有输入不足以完成专业判断。", citations: ["A-03", "K-07"] }, ...patch,
+  uncertainty: { text: "需复核调整项经常性及连续可比期间，现有输入不足以完成专业判断。", citations: ["A-03", "K-07", "EV-S-05-C04-NR"] }, ...patch,
 });
 export function questionTestSnapshot() {
   const source = getSourceRecord("S-05");
@@ -29,6 +29,6 @@ export function questionTestSnapshot() {
     source: { name: "Synthetic coordinates NOT real PDF", sourceId: source.sourceId, period: source.period, url: source.url, size: 0, pageCount: 14, mode: "sample" },
     result, candidates: extractCandidates(result).map(item => ({ ...item, reviewStatus: "accepted" })) });
 }
-export const providerResponse = (output, patch = {}) => Response.json({ id: "response-question-test-NOT-LIVE", model: "question-test-NOT-LIVE", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch });
+export const providerResponse = (output, patch = {}) => Response.json({ id: "response-question-test-NOT-LIVE", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch });
 export const questionTestCookie = `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(questionTestConfig.accessToken)}`;
 export const questionRequest = (body, headers = {}) => new Request("http://localhost/api/research-question", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", ...(Object.hasOwn(headers, "authorization") ? {} : { cookie: questionTestCookie }), ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });

@@ -1,3 +1,4 @@
+import { finiteChange, isFiniteNumber } from "./financial-numbers.ts";
 import {
   detectPrimaryTableColumns,
   groupRows,
@@ -176,9 +177,6 @@ export function parsePrimaryMetricsV05(
   return metrics;
 }
 
-function relativeChange(current: number, comparison: number): number {
-  return (current - comparison) / Math.abs(comparison);
-}
 
 function approxEqual(
   left: number,
@@ -204,7 +202,7 @@ function validateV05(
   ];
 
   for (const key of required) {
-    if (metrics[key]?.current === undefined) {
+    if (!isFiniteNumber(metrics[key]?.current)) {
       issues.push({
         code: "REQUIRED_FIELD_MISSING",
         severity: "FAIL",
@@ -239,10 +237,12 @@ function validateV05(
       continue;
     }
 
-    const recalculated =
-      metric.unit === "ratio"
-        ? metric.current - metric.comparison
-        : relativeChange(metric.current, metric.comparison);
+    const recalculated = finiteChange(metric.current, metric.comparison, metric.unit === "ratio");
+    if (recalculated === null || !isFiniteNumber(metric.disclosedChange)) {
+      issues.push({ code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, page: metric.page,
+        message: `${key}: change cannot be calculated from a zero, missing or non-finite basis; promotion is blocked.` });
+      continue;
+    }
     if (Math.abs(recalculated - metric.disclosedChange) > 0.005) {
       issues.push({
         code: "YOY_RECONCILIATION_FAIL",

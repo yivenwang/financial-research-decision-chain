@@ -1,3 +1,4 @@
+import { isFiniteNumber } from "./financial-numbers.ts";
 import type { MetricValue } from './parser-v04.ts';
 import type { ParseResultV05 } from './parser-v05.ts';
 
@@ -125,7 +126,7 @@ export function runC04Chain(result: ParseResultV05, context: ChainContext): C04C
     ...(context.gates.eg02 === 'approved' ? [] : ['EG-02']),
   ];
 
-  if (!result.canPromoteToEvidence || result.blockers.length > 0 || attr?.current === undefined || adjusted?.current === undefined || nonRecurring?.current === undefined) {
+  if (!result.canPromoteToEvidence || result.blockers.length > 0 || !isFiniteNumber(attr?.current) || !isFiniteNumber(adjusted?.current) || !isFiniteNumber(nonRecurring?.current) || !Number.isFinite(attr.current - nonRecurring.current) || !Number.isFinite((attr.current - nonRecurring.current) - adjusted.current)) {
     return {
       runId: context.runId,
       sourceId,
@@ -170,22 +171,37 @@ export function runC04Chain(result: ParseResultV05, context: ChainContext): C04C
   const earningsBasis = killTriggered ? 'attributable_np' as const : 'adjusted_np' as const;
   const periodEarnings = killTriggered ? attr.current : adjusted.current;
   const annualizationFactor = context.valuation?.annualizationFactor ?? inferAnnualizationFactor(result.source.period);
-  const annualizedEarnings = annualizationFactor === null ? null : periodEarnings * annualizationFactor;
   const dilutedSharesMn = context.valuation?.dilutedSharesMn ?? null;
   const peMultiples = context.valuation?.peMultiples ?? null;
   const valuationBlockers = [...baseDecisionGates];
   if (annualizationFactor === null) valuationBlockers.push('VALUATION_PERIOD_BASIS_MISSING');
-  if (dilutedSharesMn === null || dilutedSharesMn <= 0) valuationBlockers.push('VALUATION_SHARE_COUNT_MISSING');
+  if (dilutedSharesMn === null) valuationBlockers.push('VALUATION_SHARE_COUNT_MISSING');
   if (!peMultiples) valuationBlockers.push('VALUATION_MULTIPLES_MISSING');
   if (!formula.consistent) valuationBlockers.push('F-02');
 
+  const validInputs = isFiniteNumber(periodEarnings) && isFiniteNumber(annualizationFactor) && annualizationFactor > 0 &&
+    isFiniteNumber(dilutedSharesMn) && dilutedSharesMn > 0 && peMultiples !== null &&
+    [peMultiples.bear, peMultiples.base, peMultiples.bull].every(value => isFiniteNumber(value) && value > 0) &&
+    peMultiples.bear <= peMultiples.base && peMultiples.base <= peMultiples.bull;
+  if (!validInputs) valuationBlockers.push('VALUATION_INPUT_INVALID');
+  let annualizedEarnings: number | null = null;
   let scenarios: C04ChainResult['valuation']['scenarios'] = null;
-  if (annualizedEarnings !== null && dilutedSharesMn && peMultiples && formula.consistent) {
-    scenarios = Object.fromEntries((['bear','base','bull'] as const).map((name) => {
-      const pe = peMultiples[name];
-      const equityValueMn = annualizedEarnings * pe;
-      return [name, { pe, equityValueMn, perShare: equityValueMn / dilutedSharesMn }];
-    })) as C04ChainResult['valuation']['scenarios'];
+  // Professional gates still mark otherwise valid historical scenarios as blocked.
+  // Input/bridge failures, however, never expose a partial scenario set.
+  if (validInputs && formula.consistent) {
+    const annualized = periodEarnings * annualizationFactor!;
+    if (Number.isFinite(annualized)) {
+      const calculated = (['bear', 'base', 'bull'] as const).map(name => {
+        const pe = peMultiples![name];
+        const equityValueMn = annualized * pe;
+        const perShare = equityValueMn / dilutedSharesMn!;
+        return [name, { pe, equityValueMn, perShare }] as const;
+      });
+      if (calculated.every(([, scenario]) => Number.isFinite(scenario.equityValueMn) && Number.isFinite(scenario.perShare))) {
+        annualizedEarnings = annualized;
+        scenarios = Object.fromEntries(calculated) as C04ChainResult['valuation']['scenarios'];
+      } else valuationBlockers.push('VALUATION_RESULT_NON_FINITE');
+    } else valuationBlockers.push('VALUATION_RESULT_NON_FINITE');
   }
 
   const assumptionStatus = context.gates.eg01 === 'approved' ? 'approved' : context.gates.eg01 === 'rejected' ? 'rejected' : 'pending-review';
@@ -200,7 +216,7 @@ export function runC04Chain(result: ParseResultV05, context: ChainContext): C04C
     assumption: { id: 'A-03', text: '扣非利润比归母利润更能代表本期核心经营表现。', status: assumptionStatus, gate: 'EG-01' },
     killCriterion: { id: 'K-07', text: '若扣非归母净利润同比≤0%，或调整项被认定为经常性，则下调 C-04 并取消归一化调整。', quantitativeState, accountingState, currentState, consecutiveNonPositivePeriods: consecutive },
     formula,
-    valuation: { status: valuationBlockers.length ? 'blocked' : 'provisional', earningsBasis, periodEarnings, annualizationFactor, annualizedEarnings, scenarios, blockedGates: valuationBlockers, publishable: false },
+    valuation: { status: valuationBlockers.length ? 'blocked' : 'provisional', earningsBasis, periodEarnings, annualizationFactor: isFiniteNumber(annualizationFactor) && annualizationFactor > 0 ? annualizationFactor : null, annualizedEarnings, scenarios, blockedGates: valuationBlockers, publishable: false },
     decision: { action: '继续研究', formalRecommendation: null, reviewNote: decisionGates.length ? `系统信号=${systemSignal}；专业关卡未关闭，不形成买卖建议。` : `系统信号=${systemSignal}；仍需人工签字后才能形成正式动作。`, blockedGates: decisionGates },
     graphDiff: {
       changedNodeIds: [...evidence.map((item) => item.id), 'C-04','A-03','K-07','F-02','Valuation-B5','Decision'],

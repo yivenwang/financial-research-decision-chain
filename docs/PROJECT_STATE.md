@@ -1,5 +1,42 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-10 — 第二次真实失败后的 Question v3 专项复审
+
+起点 `0614a90d98f7ed10695b488caf75b28377308f1a` 获批后，
+[run 38062132788](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38062132788)
+实际两次，第二次 `COUNTER_EVIDENCE_OMITTED` 首失败停止，余四次未发；
+另有独立同比归因问题，原文保持 BLOCKED / answer=null。
+负责人要求高规格复审与修复，本轮明确反证 ID、逐段反证陈述及本期/同比归因限制，
+升级 Question explanation v3，保持 v1/v2 原文、历史校验、金融与专业规则、模型限额不变。
+[专项报告](RC_LIVE_V3_REVIEW.md) 记录原始失败负例、六请求零付费演练、预算与跨端验收。
+继续 PR #36 / 独立 RC；PR #35 不变。本修复阶段新增真实调用 0。
+最终新 SHA 须普通 CI 通过并另获精确授权后才能真实测试；当前不宣称现场就绪，不合并或部署。
+
+## 2026-10-10 — PR #36 真实失败后的可靠性修复（新增付费调用 0）
+
+负责人对 `39a41d5cbbf080cb0f7506efa1ab2d192f3c41ce` 授权后，
+[run 38047109824](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38047109824)
+实际发送 3 次，第 3 次规划把 `S-05` 当成引用 ID，本地门禁拒绝，批次首次失败即停；余下 3 次未发送。
+第一个 PARTIAL 答案还存在同比归因过度及逐段引用不完整，不能作为内容接受证据。
+随后负责人要求严格摸排并修复：限定现有引用目录，版本化 Question v2 指令与逐段门禁，
+补齐有限数值、提供方回包、历史原文/计划绑定、编码凭据及归档终止检查。
+原 v1 Prompt、原失败档案和审核状态保留；金融判断标准、K-07、Memo 指令和 DeepSeek 配置不变。
+[修复与验收报告](RC_QUESTION_RELIABILITY_REPAIR.md) 记录完整离线回归及 1440/768/390px 证据。
+修复阶段新增真实调用 **0**，此前获批批次实际调用 **3**，不得混为项目累计零调用。
+继续同一独立 RC / PR #36，PR #35 不变；新精确 SHA 需另行明确授权，旧授权已消耗，普通 CI 不代替内容或专业验收。
+
+
+## 2026-10-10 — 赛前候选完善（独立 stacked RC，零付费）
+
+从已审核 `3328bcc95fa9a3b9f8ed38c45b2664901038d8b2` 创建
+`codex/pre-submission-finance-ui-rc`，以 `codex/reviewer-audit-round-2` 为 base，保持 PR #35 不变。
+负责人本轮明确授权 H-01/H-02 金融输入失败关闭、H-05 数据驱动 Dashboard 和交互闭环；
+正常 S-05/S-06 算术、公式、舍入、金融口径与专业关卡不变。
+[完整变更与本地验收](PRE_SUBMISSION_RC_REPORT.md) 和 [K-07 决策说明](K07_DECISION_RC.md)
+已准备，K-07 两方案均未采纳或实施。实际 PR、最终 SHA 与普通 CI 以交付记录为准。
+本轮真实模型调用 0；无 dispatch、合并、部署、生产修改或 S-07 访问。
+最终 RC 精确 SHA 生成并通过 CI 后停止，须负责人对该 SHA 另行授权一次付费批次；旧授权不得沿用。
+
 ## 2026-10-10 — PR #35 初始清单归档冲突最小修复（零付费）
 
 起点与远端分支均核实为 `c0153ea893da0bf5bde0a602a563acaa34a9692c`。
