@@ -54,11 +54,11 @@ test("actual failure, citation-only patch and causal patch are independently blo
 });
 
 test("v3 qualified uncertainty cannot excuse a separate asserted causal attribution", () => {
-  for (const text of ["归母与扣非同比分化来自非经常性损益，但仍待复核。", "归母与扣非同比背离。分歧源于非经常性损益。", "归母与扣非同比相反，其原因在于剔除非经常性损益。", "归母与扣非同比相反，扣非可能改善，分歧由非经常性损益引起。"] ) {
+  for (const text of ["归母与扣非同比分化来自非经常性损益，但仍待复核。", "归母与扣非同比背离。分歧源于非经常性损益。", "归母与扣非同比相反，其原因在于剔除非经常性损益。", "归母与扣非同比相反，扣非可能改善，分歧由非经常性损益引起。", "本期口径差异导致归母与扣非同比背离。"] ) {
     const a = safeLiveAnswer(); a.directAnswer.text = text;
     assert.throws(() => validateQuestionExplanation(a, context), /UNSUPPORTED_YOY_ATTRIBUTION/);
   }
-  for (const text of ["归母与扣非同比相反，不能归因于非经常性损益，比较期未提供。", "归母与扣非同比相反，可能来自非经常性损益，但其比较期未提供，仍待核验。", "归母同比下降、扣非同比上升，本期利润桥已闭合，不能证明同比原因。", "无法证明同比分歧由本期非经常性损益变化或上期基数引起，仍待核验。"] ) {
+  for (const text of ["归母与扣非同比相反，不能归因于非经常性损益，比较期未提供。", "归母与扣非同比相反，可能来自非经常性损益，但其比较期未提供，仍待核验。", "归母同比下降、扣非同比上升，本期利润桥已闭合，不能证明同比原因。", "无法证明同比分歧由本期非经常性损益变化或上期基数引起，仍待核验。", "归母同比下降、扣非同比上升。本期口径差异来自非经常性损益的剔除；其比较期未提供，同比原因待核验。"] ) {
     const a = safeLiveAnswer(); a.directAnswer.text = text;
     assert.doesNotThrow(() => validateQuestionExplanation(a, context));
   }

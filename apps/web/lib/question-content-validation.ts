@@ -46,7 +46,8 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
     if (/估值|股数|倍数/.test(point.text)) requireCitations(["Valuation-B5"]);
     for (const clause of point.text.split(/[；。！？\n]/u)) {
       const qualified = /不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待|可能|假设|如果|假如|倘若|若/.test(clause);
-      const yoyClause = /同比|上年同期/.test(clause) || (strictCounter ? /差异|分化|相反|分歧|背离|原因/ : /差异|分化|相反/).test(clause) && /同比|上年同期/.test(point.text);
+      const explicitlyCurrent = strictCounter && /本期(?:的)?(?:口径|勾稽|利润桥)/.test(clause);
+      const yoyClause = /同比|上年同期/.test(clause) || !explicitlyCurrent && (strictCounter ? /差异|分化|相反|分歧|背离|原因/ : /差异|分化|相反/).test(clause) && /同比|上年同期/.test(point.text);
       const unsafeCause = strictCounter
         ? [...clause.matchAll(/来自|源于|导致|造成|归因|所致|引起|在于/g)].some(match =>
           !/(?:不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待核验|可能|或许|假设|如果|假如|倘若|若)[^，,]*$/.test(clause.slice(0, match.index)))
