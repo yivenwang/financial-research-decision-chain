@@ -21,6 +21,8 @@ const legacy = JSON.parse(await readFile(new URL("./fixtures/question-live-38047
 const secondFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8")).record.run;
 const professionalFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38108168529/request-02.json", import.meta.url), "utf8")).record.run;
 
+const plannerFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38129833565/request-01.json", import.meta.url), "utf8")).record.run;
+
 test("old output remains historical; new bad plan/causal answer block, export and recover at desktop/tablet/phone (NOT-LIVE)", { timeout: 180000 }, async t => {
   const origin = "http://127.0.0.1:4332";
   const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4332", "-H", "127.0.0.1"], {
@@ -52,6 +54,19 @@ test("old output remains historical; new bad plan/causal answer block, export an
     });
     const page = await context.newPage(); page.on("pageerror", e => errors.push(e.message));
     await page.goto(origin + "/questions");
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: plannerFailure });
+    await page.reload(); await page.getByTestId("historical-validation-notice").waitFor();
+    assert.ok((await page.getByTestId("question-contract").innerText()).includes("任务：证据核验"));
+    // Historical misclassification stays visible for human task confirmation; no execution on load.
+    const [plannerExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await plannerExport.saveAs(new URL(`live-planner-original-${width}.json`, artifacts).pathname);
+    const plannerRecord = JSON.parse(await readFile(new URL(`live-planner-original-${width}.json`, artifacts), "utf8"));
+    assert.deepEqual(plannerRecord.run, plannerFailure);
+    assert.equal(plannerRecord.run.calls[0].rawOutput, plannerFailure.calls[0].rawOutput);
+    assert.equal(syntheticCalls, (width === 1440 ? 0 : width === 768 ? 9 : 18));
+    assert.equal(await page.getByRole("button", { name: "确认并执行", exact: true }).count(), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    await page.screenshot({ path: new URL(`live-planner-original-${width}.png`, artifacts).pathname, fullPage: true });
     await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: professionalFailure });
     await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
     await page.getByTestId("historical-validation-notice").waitFor();
@@ -119,7 +134,7 @@ test("old output remains historical; new bad plan/causal answer block, export an
     await page.locator("button[aria-current]").locator("..").getByRole("button").last().click();
     await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
     assert.equal(syntheticCalls, beforeHistory); assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
-    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
+    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, historicalPlannerMismatchPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
     await context.close();
   }
   assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 27);

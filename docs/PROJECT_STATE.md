@@ -1,5 +1,16 @@
 # Beacon｜研灯：统一项目状态
 
+## 2026-10-11 — 获批真实模拟在首条规划误分类时停止
+
+精确 SHA `08e65140972162a2ceb4414f172441d18ebb45f4` 的一次
+[run 38129833565](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38129833565)
+预检、构建和离线浏览器通过，实际 DeepSeek V4-Pro 一次后 INTENT_MISMATCH 停止；
+剩余五次未发送，解释 v4 尚未获真实验证。原始记录与失败保留，不 rerun。
+[规划 v3 修复报告](RC_PLANNER_V3_REVIEW.md) 明确三意图主要目标与辅助核验区别；
+Prompt/Schema 共用说明，历史 v1/v2 hash 和严格校验保留，不自动改写意图。
+继续同一 RC / PR #36；金融语义、预算、首失败停止、专业关卡与生产均不变。
+新候选仍须普通 CI 后精确 SHA 授权，不能沿用已执行授权；不能声明现场就绪。
+
 ## 2026-10-11 — 真实两请求后停止，Question v4 对齐既有引用要求
 
 负责人要求继续，对 `7af0c7c160d0d07b1c4b68defbc5126cd412a019` 启动一次

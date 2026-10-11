@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { validateQuestionRun } from "../lib/research-question-storage.ts";
-import { QUESTION_ANSWER_PROMPT_VERSION, questionPromptInstructions, questionAnswerConstraints, questionExplanationSchema,
+import { QUESTION_ANSWER_PROMPT_VERSION, QUESTION_PLAN_PROMPT_VERSION, questionPromptInstructions, questionAnswerConstraints, questionExplanationSchema,
   questionExplanationInput, resolveQuestionEvidence, validateQuestionExplanation, questionReferenceIds } from "../lib/research-question.ts";
 import { QUESTION_BUDGET_VERSION, checkQuestionInputBudget } from "../lib/question-batch-budget.ts";
 import { QUESTION_LIVE_CASES, assertArchiveSafe, verifyLiveQuestionPhase, runBoundedQuestionBatch } from "../scripts/run-question-batch.mjs";
@@ -99,7 +99,7 @@ test("six request rehearsal uses real snapshot, all intents, maximal references 
       const data = await response.json(); await validateQuestionRun(data.run);
       const audit = await verifyLiveQuestionPhase({ spec, phase, response: { httpStatus: response.status, data }, snapshot, draft });
       const record = { run: data.run }; // Signed ticket remains in memory, never archived.
-      assert.equal(data.run.calls[0].promptVersion, phase === "plan" ? "question-contract.v2" : QUESTION_ANSWER_PROMPT_VERSION);
+      assert.equal(data.run.calls[0].promptVersion, phase === "plan" ? QUESTION_PLAN_PROMPT_VERSION : QUESTION_ANSWER_PROMPT_VERSION);
       if (phase === "execute") {
         assert.equal(data.run.answer.verification.professional, "pending"); assert.equal(data.run.answer.formalRecommendation, null);
         assert.deepEqual(data.run.answer.evidence.calculations, resolved.evidence.calculations);
