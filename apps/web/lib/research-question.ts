@@ -179,7 +179,7 @@ export async function resolveQuestionEvidence(contract: ResearchContract, input:
         expression: "(current - comparable) / abs(comparable)", inputEvidenceIds: [f.id],
         result: { current: f.value, comparable: f.comparisonValue, comparisonPeriod: f.comparisonPeriod, calculatedRatio, disclosedRatio: f.disclosedYoy } };
     });
-    const calculations = [{ id: "F-02", version: ENGINE_VERSIONS.chain, expression: "attributable_np - non_recurring_total = adjusted_np", inputEvidenceIds: facts.map(f => f.id), result: structuredClone(formula) }, ...yoy];
+    const calculations = [{ id: "F-02", version: version.chainVersion!, expression: "attributable_np - non_recurring_total = adjusted_np", inputEvidenceIds: facts.map(f => f.id), result: structuredClone(formula) }, ...yoy];
     if (calculations.some(c => !Number.isFinite((c.result as { calculatedRatio?: number }).calculatedRatio ?? 0))) throw new Error("INVALID_CALCULATION");
     return { status: "READY", evidence: { context, facts, calculations, graphDiff: structuredClone(version.chain!.graphDiff), snapshot: structuredClone(version) } };
   } catch { return { status: "BLOCKED", reasons: ["快照的来源、证据、单位或冻结计算未通过复核，请返回材料更新检查。"] }; }

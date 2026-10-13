@@ -20,8 +20,8 @@ export function ChainResultPanel({ result }: { result: C04ChainResult }) {
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4">
           <h4 className="font-medium text-white">K-07 · 论点失效条件</h4>
-          <p className="mt-2 text-sm text-slate-300">{k.currentState === "triggered" ? "已触发" : k.currentState === "watch" ? "当前出现非正增长，需跟踪" : "本期数值未触发"}</p>
-          <p className="mt-2 text-sm leading-6 text-slate-400">当前仅分析一份报告；尚未输入连续可比期间序列。调整项是否具有经常性仍待会计复核。</p>
+          <p className="mt-2 text-sm text-slate-300">{k.currentState === "triggered" ? "已触发" : k.currentState === "watch" ? "首次非正进入观察；系统信号削弱，盈利口径未切换" : k.currentState === "unknown" ? "连续条件或会计定性尚不能判断" : "本期数值未触发"}</p>
+          {k.policyVersion ? <><p className="mt-2 text-sm leading-6 text-slate-400">{k.text}</p><p className="mt-2 text-sm leading-6 text-slate-400">{k.reviewNote} 会计状态：{k.accountingState === 'unknown' ? '待专业复核' : k.accountingState === 'triggered' ? '已认定经常性' : '已复核非经常性'}。</p></> : <p className="mt-2 text-sm leading-6 text-slate-400">当前仅分析一份报告；尚未输入连续可比期间序列。调整项是否具有经常性仍待会计复核。</p>}
         </div>
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 md:col-span-2">
           <h4 className="font-medium text-white">估值输入与待补条件</h4>

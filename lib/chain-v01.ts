@@ -51,10 +51,13 @@ export type C04ChainResult = {
   killCriterion: {
     id: 'K-07';
     text: string;
-    quantitativeState: 'clear' | 'watch' | 'triggered';
+    quantitativeState: 'clear' | 'watch' | 'triggered' | 'unknown';
     accountingState: 'unknown' | 'clear' | 'triggered';
-    currentState: 'clear' | 'watch' | 'triggered';
+    currentState: 'clear' | 'watch' | 'triggered' | 'unknown';
     consecutiveNonPositivePeriods: number;
+    policyVersion?: string;
+    sequenceStatus?: 'verified' | 'missing' | 'invalid';
+    reviewNote?: string;
   };
   formula: null | {
     id: 'F-02';

@@ -13,6 +13,7 @@ import {REVIEW_ACCESS_COOKIE,reviewSessionValue} from '../lib/reviewer-access.ts
 import {QUESTION_STORAGE_KEY} from '../lib/research-question-storage.ts';
 import {storageKeys,baselineVersion} from '../lib/research-versions.ts';
 import {createMemoRun} from '../lib/research-memo.server.ts';
+import {K07_B_VERSION} from '../../../lib/chain-k07-b.ts';
 
 assert.notEqual(process.env.LIVE_MODEL_E2E,'1','RC acceptance is NOT-LIVE only');
 const require=createRequire(import.meta.url);
@@ -73,6 +74,11 @@ test('RC task closure, guards, recovery, export and keyboard at 1440 / 768 / 390
   for(const key of ['attributable_np','adjusted_np','non_recurring_total'])await page.getByTestId(`candidate-${key}`).getByRole('button',{name:'接受证据',exact:true}).click();
   await page.getByRole('button',{name:'预览研究影响',exact:true}).click();await page.getByLabel('证据审核人（自行填写）').fill('RC synthetic evidence reviewer');await page.getByRole('button',{name:'保存为新版本',exact:true}).click();
   await page.getByRole('heading',{name:/V-02 已保存/}).waitFor();await capture(page,`material-saved-${width}.png`);await noOverflow(page);
+  const savedK07=await page.evaluate(keys=>JSON.parse(localStorage.getItem(keys.versions)).at(-1),storageKeys());
+  assert.equal(savedK07.chainVersion,K07_B_VERSION);assert.equal(savedK07.chain.killCriterion.currentState,'unknown');
+  assert.equal(savedK07.chain.killCriterion.sequenceStatus,'missing');
+  assert.match(await page.getByTestId('chain-result').innerText(),/首次.*连续两个/);
+  assert.match(await page.getByTestId('chain-result').innerText(),/尚不能判断|不能排除或确认/);
   await page.getByRole('link',{name:'返回并继续研究',exact:true}).click();await page.waitForURL('**/questions?resume=materials');await page.getByRole('button',{name:'确认并执行',exact:true}).waitFor();assert.equal(await page.getByLabel('研究问题',{exact:true}).inputValue(),q);assert.equal(syntheticCalls,callsBefore,'return makes no model call');
   await page.getByRole('button',{name:'确认并执行',exact:true}).click();await page.getByRole('heading',{name:'研究草稿待审核',exact:true}).waitFor();
   const runId=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).runs.at(-1).runId,QUESTION_STORAGE_KEY);

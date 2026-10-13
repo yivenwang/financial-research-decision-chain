@@ -1,4 +1,4 @@
-import { extractCandidates, reviewAndRun, REQUIRED_METRICS, METRIC_CONFIG, type ParseResult } from "./research-engine.ts";
+import { extractCandidates, reviewAndRun, REQUIRED_METRICS, METRIC_CONFIG, ENGINE_VERSIONS, type SupportedChainVersion, type ParseResult } from "./research-engine.ts";
 import { getSourceRecord } from "./source-records.ts";
 import type { ResearchVersion, WorkspaceScope } from "./research-versions.ts";
 import { V05_PRIMARY_SCHEMA } from "../../../lib/parser-v05-strict.ts";
@@ -109,7 +109,7 @@ export async function buildMemoContext(input: unknown): Promise<MemoContext> {
   requireValue(source.mode !== "pdf" || (typeof source.sha256 === "string" && /^[a-f0-9]{64}$/.test(source.sha256)), "真实 PDF 的摘要缺失。");
   const workspace = record.useStatus === "regression-only" ? "regression" : "research";
   requireValue(version.workspace === workspace, "材料与版本库不匹配。");
-  requireValue(version.parser?.version === "V0.6-strict" && version.chainVersion === "V0.1", "该历史版本尚不具备完整模型输入，请重新导入并保存。");
+  requireValue(version.parser?.version === "V0.6-strict" && (version.chainVersion === "V0.1" || version.chainVersion === ENGINE_VERSIONS.chain), "该历史版本尚不具备完整模型输入，请重新导入并保存。");
   requireValue(version.parser.canPromoteToEvidence && Array.isArray(version.parser.blockers) && version.parser.blockers.length === 0, "解析关卡未通过。");
   requireValue(version.humanReview?.scope === "evidence-only" && version.humanReview.reviewer?.trim(), "缺少证据审核记录。");
   requireValue(Array.isArray(version.evidence) && version.evidence.length === REQUIRED_METRICS.length, "证据数量无效。");
@@ -131,7 +131,7 @@ export async function buildMemoContext(input: unknown): Promise<MemoContext> {
     return { ...canonical, valueMn: item.valueMn, reviewStatus: "accepted" as const };
   });
   requireValue(version.chain && typeof version.chain.runId === "string", "冻结链记录缺失。");
-  const run = reviewAndRun(result, candidates, version.chain.runId);
+  const run = reviewAndRun(result, candidates, version.chain.runId, version.chainVersion as SupportedChainVersion);
   requireValue(run.canPromoteToEvidence && run.chain && same(run.chain, version.chain) && same(run.reviewedMetrics, version.parser.reviewedMetrics), "快照与冻结引擎复算结果不一致。");
   requireValue(same(run.formula, version.formula) && version.claim?.id === "C-04" && version.claim.after === run.chain.claim.humanFinalState && version.claim.systemSignal === run.chain.claim.systemSignal && version.decision === run.chain.decision.action && same(version.blockedGates, run.chain.decision.blockedGates), "快照的判断、计算或动作不一致。");
   const chain = run.chain;
@@ -145,7 +145,7 @@ export async function buildMemoContext(input: unknown): Promise<MemoContext> {
   });
   for (const [id, label, excerpt] of [
     ["A-03", "会计假设", `${chain.assumption.text} 状态：待专业复核。`],
-    ["K-07", "失效条件", `${chain.killCriterion.text} 当前状态：${chain.killCriterion.currentState}；未提供连续可比期间序列；会计定性未知。`],
+    ["K-07", "失效条件", version.chainVersion === 'V0.1' ? `${chain.killCriterion.text} 当前状态：${chain.killCriterion.currentState}；未提供连续可比期间序列；会计定性未知。` : `${chain.killCriterion.text} 规则版本：${chain.killCriterion.policyVersion}；当前状态：${chain.killCriterion.currentState}；${chain.killCriterion.reviewNote}会计定性未知。`],
     ["F-02", "利润桥", `归母净利润 ${money(chain.formula?.attributable)} − 非经常性损益 ${money(chain.formula?.nonRecurring)} = 扣非净利润复算值 ${money(chain.formula?.calculatedAdjusted)}；披露值 ${money(chain.formula?.reportedAdjusted)}；差额 ${money(chain.formula?.difference)}；利润桥已闭合。`],
     ["Valuation-B5", "估值输入", `盈利口径：${chain.valuation.earningsBasis === "adjusted_np" ? "扣非归母净利润" : "归母净利润"}；本期 ${money(chain.valuation.periodEarnings)}；年化占位系数 ${chain.valuation.annualizationFactor ?? "未提供"}；年化占位输入 ${money(chain.valuation.annualizedEarnings)}。待补：${chain.valuation.blockedGates.map((gate) => gateName[gate] ?? gate).join("、")}。年化只是展示占位，不是盈利预测；尚无可发布估值。`],
   ]) references.push({ id, kind: "rule", label, excerpt, direction: null, page: null, url: null });
