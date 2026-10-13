@@ -34,7 +34,7 @@ const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : proces
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
 
 // Runs inside the same uploaded/reviewed S-05 browser session, never a seeded ledger.
-async function exerciseQuestionChain(page, snapshot) {
+async function exerciseQuestionChain(page, snapshot, uploadWidth = 1440) {
   assert.equal(liveMemo, false, "This extension is exclusively synthetic");
   const directory = await mkdtemp(join(tmpdir(), "beacon-chain-NOT-LIVE-"));
   const checks = [], calls = [];
@@ -95,7 +95,7 @@ async function exerciseQuestionChain(page, snapshot) {
       await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
       checks.push({ intent, runId: run.runId, status: run.status, snapshotSha256: run.answer.evidence.context.snapshotSha256 });
     }
-    for (const width of [1440, 768, 390]) {
+    for (const width of [1440, 1366, 768, 390]) {
       await page.setViewportSize({ width, height: 900 });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
       await page.screenshot({ path: new URL(`system-chain-${width}.png`, artifacts).pathname, fullPage: true });
@@ -127,7 +127,7 @@ async function exerciseQuestionChain(page, snapshot) {
     assert.equal(await page.evaluate(key => localStorage.getItem(key), QUESTION_STORAGE_KEY), originalLedgerBytes);
     page.off("download", observeDownload);
     // Do not archive the hostile note itself, even though it is synthetic.
-    await writeFile(new URL("system-chain-acceptance-NOT-LIVE.json", artifacts), JSON.stringify({ transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticProviderCalls: calls.length, sourceSha256: snapshot.source.sha256, checks, failedRun: failed,
+    await writeFile(new URL(`system-chain-upload-${uploadWidth}-NOT-LIVE.json`, artifacts), JSON.stringify({ uploadWidth, transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticProviderCalls: calls.length, sourceSha256: snapshot.source.sha256, checks, failedRun: failed,
       reviewsBeforeExportFault: ledger.reviews, archiveBlocked: true, archivePreservedBytes: true }, null, 2));
     await page.goto(`${origin}/versions`);
   } finally { await rm(directory, { recursive: true, force: true }); }
@@ -344,9 +344,10 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   await writeFile(new URL("S-05-human-revision-history-NOT-LIVE.json", artifacts), JSON.stringify({ evaluation: "synthetic-browser-revision-flow-NOT-live-content-review", ...stored }, null, 2));
 }
 
-for (const fixture of cases) {
-  test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const viewportCases = cases.flatMap(f => (!liveMemo && f.id === "S-05" ? [1440,1366,768,390] : [1440]).map(viewportWidth => ({...f,viewportWidth})));
+for (const fixture of viewportCases) {
+  test(`real ${fixture.id} ${fixture.viewportWidth}px upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
+    const context = await browser.newContext({ viewport: { width: fixture.viewportWidth, height: 1000 } });
     await authorizeContext(context);
     const page = await context.newPage();
     let modelRequests = 0;
@@ -487,7 +488,8 @@ for (const fixture of cases) {
         await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
         if (!liveMemo) await exerciseMemoRevisions(page, modelRun, fixture.scope);
       }
-      if (!liveMemo && fixture.id === "S-05") await exerciseQuestionChain(page, snapshot);
+      if (!liveMemo && fixture.id === "S-05") await exerciseQuestionChain(page, snapshot, fixture.viewportWidth);
+      await page.setViewportSize({width:fixture.viewportWidth,height:1000});
       await page.getByRole("button").filter({ hasText: "V-01" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
       await page.getByRole("button", { name: "确认并创建回滚版本" }).click();
@@ -505,6 +507,9 @@ for (const fixture of cases) {
       assert.deepEqual(restored[2].chain, snapshot.chain);
       assert.deepEqual(restored[0], snapshot);
       assert.deepEqual(errors, []);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      await page.screenshot({path:new URL(`${fixture.id}-rollback-${fixture.viewportWidth}.png`,artifacts).pathname,fullPage:true});
+      await writeFile(new URL(`${fixture.id}-upload-chain-${fixture.viewportWidth}.json`,artifacts), JSON.stringify({viewportWidth:fixture.viewportWidth,transport:liveMemo ? "LIVE" : "synthetic-NOT-LIVE", snapshot, rollback:restored,errors},null,2));
       if (!liveMemo && fixture.id === "S-05") {
         assert.equal(await page.getByTestId("memo-revisions").count(), 0, "A new rollback snapshot must not inherit the previous memo or revision acceptance");
         const history = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(fixture.scope));

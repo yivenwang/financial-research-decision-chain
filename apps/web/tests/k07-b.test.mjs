@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { runC04Chain } from '../../../lib/chain-v01.ts';
-import { K07_B_VERSION, runC04ChainK07B } from '../../../lib/chain-k07-b.ts';
+import { REVIEW_CHAIN_VERSION } from '../../../lib/chain-professional-review.ts';
+import { runC04ChainK07B } from '../../../lib/chain-k07-b.ts';
 import { buildMemoContext, canonicalJson } from '../lib/research-memo.ts';
 import { resolveQuestionEvidence } from '../lib/research-question.ts';
 import { questionTestSnapshot, questionTestConfig, questionRequest, planOutput, answerOutput, providerResponse } from './question-test-helpers.mjs';
@@ -116,7 +117,7 @@ test('only approved accounting recognition triggers immediately without quantita
 
 test('new snapshots use version B while legacy output, context and rollback retain original bytes', async () => {
   const next = questionTestSnapshot();
-  assert.equal(next.chainVersion, K07_B_VERSION);
+  assert.equal(next.chainVersion, REVIEW_CHAIN_VERSION);
   const nextContext = await buildMemoContext(next);
   assert.match(nextContext.references.find(r => r.id === 'K-07').excerpt, /首次|连续两个/);
   const legacy = JSON.parse(readFileSync(new URL('./fixtures/question-live-38047109824/request-02.json', import.meta.url), 'utf8')).record.run;

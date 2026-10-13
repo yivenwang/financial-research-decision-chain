@@ -18,7 +18,7 @@ function statementScopes(text: string) {
 
 // Conservative checks for known unsupported claims; not a general semantic proof.
 // Unrecognised reasoning still requires human content review and professional gates.
-export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false, independentClaims = false) {
+export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false, independentClaims = false, financialBoundaries = false) {
   const prefix = `EV-${context.source.sourceId}-C04-`;
   const dependencies = questionCitationDependencies(context);
   const nr = context.references.find(r => r.id === prefix + "NR");
@@ -79,6 +79,16 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
                 !/(?:是否|可能|或许|待核验|(?:不能|无法|不应|不得)(?:断言|认为|证明))[^，,]*$/.test(clause.slice(0, match.index!))) throw new Error("UNSUPPORTED_YOY_ATTRIBUTION");
           }
         }
+      }
+      if (financialBoundaries) {
+        if (/税前|范围差/.test(clause) && /差额|差异|范围差/.test(clause) && /所得税|税影响|税费|少数股东/.test(clause)) {
+          for (const match of clause.matchAll(/来自|源于|归因|导致|造成|解释为|系由/g)) {
+            if (!assertionNegated(clause, match.index!)) throw new Error("PRETAX_SCOPE_ATTRIBUTION_UNSUPPORTED");
+          }
+        }
+        if (/年化/.test(clause) && /(?:就是|即为|已验证|已核验|可作为).{0,8}(?:盈利预测|全年预测|目标价)/.test(clause) && !/不能|不是|不等于|不得/.test(clause))
+          throw new Error("MECHANICAL_ANNUALIZATION_PROMOTED");
+        if (/(?:报告|公司).{0,10}(?:没有解释|未解释)/.test(clause) && !/不能|无法|不等于|不代表/.test(clause)) throw new Error("DISCLOSURE_SCOPE_OVERCLAIM");
       }
       const explicitlyCurrent = strictCounter && /本期(?:的)?(?:口径|勾稽|利润桥)/.test(clause);
       const yoyClause = /同比|上年同期/.test(clause) || !explicitlyCurrent && (strictCounter ? /差异|分化|相反|分歧|背离|原因/ : /差异|分化|相反/).test(clause) && /同比|上年同期/.test(point.text);

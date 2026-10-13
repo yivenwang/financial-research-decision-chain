@@ -1,6 +1,7 @@
 import { isFiniteNumber } from "./financial-numbers.ts";
 import type { MetricValue } from './parser-v04.ts';
 import type { ParseResultV05 } from './parser-v05.ts';
+import type { ProfessionalReview } from './chain-professional-review.ts';
 
 export type ReviewGateStatus = 'pending' | 'approved' | 'rejected';
 export type EvidenceDirection = '支持' | '反证' | '中性';
@@ -31,6 +32,8 @@ type ChainEvidence = {
 };
 
 export type C04ChainResult = {
+  professionalReview?: ProfessionalReview;
+  professionalGates?: ChainContext['gates'];
   runId: string;
   sourceId: string;
   status: 'blocked' | 'ready-for-human-review';
@@ -45,7 +48,7 @@ export type C04ChainResult = {
   assumption: {
     id: 'A-03';
     text: string;
-    status: 'pending-review' | 'approved' | 'rejected';
+    status: 'pending-review' | 'approved' | 'rejected' | 'qualified' | 'insufficient-evidence';
     gate: 'EG-01';
   };
   killCriterion: {

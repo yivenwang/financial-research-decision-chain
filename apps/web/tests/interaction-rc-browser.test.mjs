@@ -13,7 +13,8 @@ import {REVIEW_ACCESS_COOKIE,reviewSessionValue} from '../lib/reviewer-access.ts
 import {QUESTION_STORAGE_KEY} from '../lib/research-question-storage.ts';
 import {storageKeys,baselineVersion} from '../lib/research-versions.ts';
 import {createMemoRun} from '../lib/research-memo.server.ts';
-import {K07_B_VERSION} from '../../../lib/chain-k07-b.ts';
+import {createResearchSnapshot} from '../lib/research-engine.ts';
+import {REVIEW_CHAIN_VERSION} from '../../../lib/chain-professional-review.ts';
 
 assert.notEqual(process.env.LIVE_MODEL_E2E,'1','RC acceptance is NOT-LIVE only');
 const require=createRequire(import.meta.url);
@@ -22,7 +23,7 @@ const artifacts=new URL('../artifacts-web/rc/',import.meta.url);
 const origin='http://127.0.0.1:4331';
 const memoOutput={summary:{text:'扣非表现较强，但会计定性仍待核对。',citations:['EV-S-05-C04-ADJ','A-03']},supporting:{text:'扣非增长支持进一步核查核心经营改善。',citations:['EV-S-05-C04-ADJ']},counter:{text:'归母利润下滑构成反证，不能忽略。',citations:['EV-S-05-C04-ATTR']},alternatives:{text:'可能存在调整项性质影响利润比较的解释，仍待验证。',citations:['EV-S-05-C04-NR','A-03']},questions:{first:{text:'需要核对调整项经常性。',citations:['A-03']},second:{text:'需要补充连续可比报告。',citations:['K-07']}},gates:{eg01:'pending',eg02:'pending'}};
 
-test('RC task closure, guards, recovery, export and keyboard at 1440 / 768 / 390 (synthetic transport, zero live)',{timeout:240000},async t=>{
+test('RC task closure, guards, recovery, export and keyboard at 1440 / 1366 / 768 / 390 (synthetic transport, zero live)',{timeout:240000},async t=>{
  const server=spawn(process.execPath,[require.resolve('next/dist/bin/next'),'start','-p','4331','-H','127.0.0.1'],{cwd:new URL('..',import.meta.url),stdio:['ignore','pipe','pipe'],env:{...process.env,DEEPSEEK_API_KEY:'',OPENAI_API_KEY:'',RESEARCH_DEMO_TOKEN:questionTestConfig.accessToken,RESEARCH_APP_ORIGIN:origin,NEXT_TELEMETRY_DISABLED:'1'}});
  let logs='',browser;server.stdout.on('data',d=>logs+=d);server.stderr.on('data',d=>logs+=d);const exited=new Promise(r=>server.once('close',r));
  t.after(async()=>{await browser?.close();server.kill('SIGTERM');await Promise.race([exited,delay(3000)]);if(server.exitCode===null&&server.signalCode===null){server.kill('SIGKILL');await exited;}});
@@ -57,7 +58,7 @@ test('RC task closure, guards, recovery, export and keyboard at 1440 / 768 / 390
  const capture=async(page,name)=>page.screenshot({path:new URL(name,artifacts).pathname,fullPage:true,animations:'disabled'});
  const noOverflow=async page=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  async function cancelDialog(page){const dialog=page.getByRole('alertdialog');await dialog.waitFor();assert.equal(await dialog.getByRole('button',{name:'继续编辑',exact:true}).evaluate(e=>e===document.activeElement),true,'safe action receives initial focus');await page.keyboard.press('Tab');assert.equal(await dialog.getByRole('button',{name:'放弃修改并继续',exact:true}).evaluate(e=>e===document.activeElement),true,'focus order');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Enter');await dialog.waitFor({state:'hidden'});}
- for(const width of [1440,768,390]){
+ for(const width of [1440,1366,768,390]){
   const {context,page,posts,setMode}=await setup(width);const q=`安克创新2026Q1利润变化核验 ${width}`;
   await page.goto(origin+'/questions');await page.getByLabel('研究问题',{exact:true}).fill(q);
   await page.getByRole('button',{name:'生成研究任务',exact:true}).click();await page.getByRole('button',{name:'确认并执行',exact:true}).click();
@@ -75,10 +76,11 @@ test('RC task closure, guards, recovery, export and keyboard at 1440 / 768 / 390
   await page.getByRole('button',{name:'预览研究影响',exact:true}).click();await page.getByLabel('证据审核人（自行填写）').fill('RC synthetic evidence reviewer');await page.getByRole('button',{name:'保存为新版本',exact:true}).click();
   await page.getByRole('heading',{name:/V-02 已保存/}).waitFor();await capture(page,`material-saved-${width}.png`);await noOverflow(page);
   const savedK07=await page.evaluate(keys=>JSON.parse(localStorage.getItem(keys.versions)).at(-1),storageKeys());
-  assert.equal(savedK07.chainVersion,K07_B_VERSION);assert.equal(savedK07.chain.killCriterion.currentState,'unknown');
+  assert.equal(savedK07.chainVersion,REVIEW_CHAIN_VERSION);assert.equal(savedK07.chain.killCriterion.currentState,'unknown');
   assert.equal(savedK07.chain.killCriterion.sequenceStatus,'missing');
   assert.match(await page.getByTestId('chain-result').innerText(),/首次.*连续两个/);
-  assert.match(await page.getByTestId('chain-result').innerText(),/尚不能判断|不能排除或确认/);
+  assert.match(await page.getByTestId('chain-result').innerText(),/本期定量未触发.*会计定性仍未知/);
+  assert.match(await page.getByTestId('chain-result').innerText(),/已中断以本期结束/);
   await page.getByRole('link',{name:'返回并继续研究',exact:true}).click();await page.waitForURL('**/questions?resume=materials');await page.getByRole('button',{name:'确认并执行',exact:true}).waitFor();assert.equal(await page.getByLabel('研究问题',{exact:true}).inputValue(),q);assert.equal(syntheticCalls,callsBefore,'return makes no model call');
   await page.getByRole('button',{name:'确认并执行',exact:true}).click();await page.getByRole('heading',{name:'研究草稿待审核',exact:true}).waitFor();
   const runId=await page.evaluate(k=>JSON.parse(localStorage.getItem(k)).runs.at(-1).runId,QUESTION_STORAGE_KEY);
@@ -113,7 +115,17 @@ test('RC task closure, guards, recovery, export and keyboard at 1440 / 768 / 390
   // The dashboard's blocked state and insufficient state must remain honest on screen.
   await page.goto(origin+'/workspace');await page.getByRole('heading',{name:'当前研究更新已阻断',exact:true}).waitFor();await page.getByText('已阻断，待重审',{exact:true}).waitFor();assert.equal(await page.getByText('F-02 闭合',{exact:true}).count(),0);await capture(page,`dashboard-blocked-${width}.png`);
   await page.evaluate(({keys,baseline})=>{localStorage.setItem(keys.versions,JSON.stringify([baseline]));localStorage.setItem(keys.active,'V-01');window.dispatchEvent(new Event('anker-research-version-updated'));},{keys:storageKeys(),baseline:baselineVersion});await page.getByRole('heading',{name:'当前证据不足，等待核验',exact:true}).waitFor();await noOverflow(page);await capture(page,`dashboard-insufficient-${width}.png`);
-  checks.push({width,materialsRoundTrip:true,historyGuard:true,updateGuard:true,revisionGuard:true,pendingStateMachine:true,sameIdResend:true,keyboardFocusOrder:true,noOverflow:true});await context.close();
+  // Isolated opinion-rendering fixture, appended only after the real UI task
+  // closure above; it is not a professional signature or upload-flow proof.
+  const opinion={recordId:'synthetic-AI-opinion',workflow:'completed',source:{kind:'ai-assisted',author:'CI AI review NOT-LIVE',reference:'Synthetic opinion for UI only',reviewedAt:'2026-10-13T00:00:00Z'},scope:{companyId:'300866.SZ',sourceId:'S-05',period:'2026Q1'},limitations:['Synthetic only; no professional sign-off'],assumption:{conclusion:'rejected',evidenceIds:['EV-S-05-C04-ADJ'],rationale:'Synthetic hypothesis rejection'},accounting:[{item:'Synthetic partial item',amountMn:null,classification:'recurring',coverage:'item-only',evidenceIds:['EV-S-05-C04-NR'],rationale:'Synthetic scope-limited classification'}]};
+  const opinionVersion=createResearchSnapshot({versionId:'V-03',parentVersionId:savedK07.versionId,createdAt:'2026-10-13T00:00:00Z',reviewer:'CI evidence fixture',source:savedK07.source,result:{source:{sourceId:'S-05',period:'2026Q1',url:savedK07.source.url},metrics:savedK07.parser.originalMetrics,issues:[],blockers:[],canPromoteToEvidence:true},candidates:savedK07.evidence,scope:'research',professionalReview:opinion});
+  await page.evaluate(({keys,version})=>{const versions=JSON.parse(localStorage.getItem(keys.versions));versions.push(version);localStorage.setItem(keys.versions,JSON.stringify(versions));localStorage.setItem(keys.active,version.versionId);},{keys:storageKeys(),version:opinionVersion});
+  await page.goto(origin+'/versions');await page.getByLabel('独立审核意见').waitFor();
+  assert.match(await page.getByLabel('独立审核意见').innerText(),/审核流程：已完成.*AI 辅助审核，非专业签认/);
+  assert.match(await page.getByLabel('独立审核意见').innerText(),/不认可.*Synthetic only/);
+  assert.match(await page.getByLabel('独立审核意见').innerText(),/经常性.*仅本项目/);
+  await capture(page,`AI-opinion-pending-${width}.png`);await noOverflow(page);
+  checks.push({width,professionalOpinionProvenance:true,materialsRoundTrip:true,historyGuard:true,updateGuard:true,revisionGuard:true,pendingStateMachine:true,sameIdResend:true,keyboardFocusOrder:true,noOverflow:true});await context.close();
  }
  assert.deepEqual(errors,[]);assert.deepEqual(externalRequests,[]);
  await writeFile(new URL('acceptance.json',artifacts),JSON.stringify({mode:'synthetic/mock-transport-only',realModelCalls:0,externalRequests,syntheticCalls,memoCalls,checks,errors},null,2));
