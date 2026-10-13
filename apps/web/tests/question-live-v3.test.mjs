@@ -72,7 +72,7 @@ test("model input preserves semantic contract and engine outputs while making co
   const trace = ["schemaVersion", "requestId", "createdAt", "capabilityVersion", "status"];
   assert.deepEqual(input.contract, Object.fromEntries(Object.entries(run.contract).filter(([key]) => !trace.includes(key))));
   const expectedContext = Object.fromEntries(Object.entries(context).filter(([key]) => !["schemaVersion", "snapshotSha256"].includes(key)));
-  expectedContext.references = context.references.map(ref => ref.kind === "source" ? Object.fromEntries(Object.entries(ref).filter(([key]) => key !== "excerpt")) : ref);
+  expectedContext.references = context.references.map(ref => ref.kind === "source" ? { id: ref.id, kind: ref.kind, direction: ref.direction } : ref);
   assert.deepEqual(input.evidence, expectedContext);
   for (const ref of context.references.filter(ref => ref.kind === "source")) {
     const fact = input.facts.find(fact => fact.id === ref.id);

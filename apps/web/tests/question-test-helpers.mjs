@@ -21,7 +21,7 @@ export const answerOutput = (patch = {}) => ({
   sufficiency: "complete",
   directAnswer: { text: "归母下滑与扣非增长应拆开核对，不能单凭一个指标认定核心经营恶化。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "A-03"] },
   inference: { text: "负向调整可能影响表面利润，但扣非能否代表核心经营仍是待复核假设。", citations: ["EV-S-05-C04-NR", "A-03", "F-02", "EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ"] },
-  counterEvidence: { text: "归母利润下降仍构成反向证据，不能忽略。", citations: ["EV-S-05-C04-ATTR"] },
+  counterEvidence: { text: "归母利润下降仍构成反向证据，不能忽略；扣非增长不能自动证明核心经营改善。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "A-03"] },
   uncertainty: { text: "需复核调整项经常性及连续可比期间，现有输入不足以完成专业判断。", citations: ["A-03", "K-07", "EV-S-05-C04-NR"] }, ...patch,
 });
 export function questionTestSnapshot() {
@@ -42,8 +42,10 @@ export function syntheticQuestionWire(output) {
     if (!point || !Array.isArray(point.citations) || point.citations.some(id => typeof id !== "string")) return output;
     const selected = new Set(point.citations);
     const choices = questionCitationChoices(syntheticContext, key);
-    const tokens = point.citations.map(id => choices.find(token => token.split("|")[0] === id && token.split("|").every(dep => selected.has(dep))));
-    if (tokens.some(token => !token)) return output;
+    const eligible = choices.filter(token => token.split('|').every(id => selected.has(id))).sort((a,b) => b.split('|').length-a.split('|').length);
+    const covered = new Set(), tokens = [];
+    for (const token of eligible) if (token.split('|').some(id => !covered.has(id))) { tokens.push(token); token.split('|').forEach(id => covered.add(id)); }
+    if (covered.size !== selected.size || [...selected].some(id => !covered.has(id))) return output;
     point.citations = tokens;
   }
   return wire;

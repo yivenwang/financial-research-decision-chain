@@ -50,7 +50,7 @@ async function exerciseQuestionChain(page, snapshot) {
         directAnswer: { text: intent === "EVIDENCE_AUDIT" ? "已审核的归母、扣非与非经常性损益可逐项核对原文，本期利润桥闭合。" : intent === "DECISION_IMPACT" ? "本期更新触及既有论点与会计假设，失效条件和估值输入须复核，专业关卡未关闭。" : "归母同比下降与扣非同比上升并存，利润桥只用于本期勾稽，本次输入不能证明同比原因。",
           ids: intent === "DECISION_IMPACT" ? ["A-03", "K-07", "Valuation-B5"] : [prefix + "ATTR", prefix + "ADJ", prefix + "NR", "F-02"] },
         inference: { text: "若扣非更接近核心经营，改善可能是线索，这仍是假设待专业复核。", ids: [prefix + "ADJ", "A-03"] },
-        counterEvidence: { text: "归母同比下降仍是反证，不能用扣非增长替代核验。", ids: [prefix + "ATTR", prefix + "ADJ"] },
+        counterEvidence: { text: "归母同比下降仍是反证，不能用扣非增长替代核验；扣非代表核心经营仍是假设。", ids: [prefix + "ATTR", prefix + "ADJ", "A-03"] },
         uncertainty: { text: "本次输入缺少非经常性损益同比比较与项目构成，扣非代表核心经营仍待专业复核。", ids: [prefix + "NR", prefix + "ADJ", "A-03"] },
       };
       let output;
@@ -59,8 +59,10 @@ async function exerciseQuestionChain(page, snapshot) {
         output = { sufficiency: input.constraints.sufficiency[0] };
         for (const [key, point] of Object.entries(points)) {
           const choices = body.text.format.schema.properties[key].properties.citations.items.enum;
-          const citations = point.ids.map(id => choices.find(token => token.split("|")[0] === id && token.split("|").every(dep => point.ids.includes(dep))));
-          assert.ok(citations.every(Boolean), "Fixture must choose only explicit schema groups");
+          const eligible = choices.filter(token => token.split('|').every(id => point.ids.includes(id))).sort((a,b) => b.split('|').length-a.split('|').length);
+          const citations = [], covered = new Set();
+          for (const token of eligible) if (token.split('|').some(id => !covered.has(id))) { citations.push(token); token.split('|').forEach(id => covered.add(id)); }
+          assert.deepEqual(new Set(point.ids), covered, "Fixture chooses exactly its explicit IDs; no repair");
           output[key] = { citations, text: point.text };
         }
         if (invalid) output.inference.text = "不应给出交易建议，但现在建议买入。仍待核验。";

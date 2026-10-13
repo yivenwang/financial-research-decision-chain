@@ -18,7 +18,7 @@ function statementScopes(text: string) {
 
 // Conservative checks for known unsupported claims; not a general semantic proof.
 // Unrecognised reasoning still requires human content review and professional gates.
-export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false) {
+export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false) {
   const prefix = `EV-${context.source.sourceId}-C04-`;
   const dependencies = questionCitationDependencies(context);
   const nr = context.references.find(r => r.id === prefix + "NR");
@@ -45,7 +45,7 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
     for (const id of citations) requireCitations(dependencies[id] ?? []);
     if (currentContract) {
       const text = point.text.replace(/扣非归母|扣除非经常性损益后(?:归属于.{0,12})?/g, "扣非");
-      for (const rule of questionCitationPolicy(context)) if (rule.mentions.test(rule.id.endsWith("ATTR") ? text : point.text)) requireCitations([rule.id]);
+      for (const rule of questionCitationPolicy(context, extendedContract)) if (rule.mentions.test(rule.id.endsWith("ATTR") ? text : point.text)) requireCitations([rule.id]);
     } else {
       // Historical rules: metric mentions need their own evidence, not a citation elsewhere in the answer.
       if (/归母|归属于.{0,12}(?:利润|净利)/.test(point.text.replace(/扣非归母|扣除非经常性损益后(?:归属于.{0,12})?/g, "扣非"))) requireCitations([prefix + "ATTR"]);
@@ -58,6 +58,16 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
     }
     for (const clause of currentContract ? statementScopes(point.text) : point.text.split(/[；。！？\n]/u)) {
       const qualified = /不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待|可能|假设|如果|假如|倘若|若/.test(clause);
+      if (extendedContract) {
+        // A condition on the accounting assumption cannot establish a change
+        // in the spread across periods: only this period's spread is supplied.
+        for (const match of clause.matchAll(/(?:增速差|增长速度差)(.{0,8})(?:扩大|扩张|收窄|缩小)/g)) {
+          if (!/不能|无法|未|并非|是否|可能|或许/.test(match[1]) && !assertionNegated(clause, match.index!) &&
+              !/^(?:若|如果|假如|倘若)(?:未来|后续)?(?:增速差|增长速度差)/.test(clause)) throw new Error('UNSUPPORTED_SPREAD_TREND');
+        }
+        if (/扣非.{0,24}(?:是|代表|属于|只限于|可视为|即为).{0,8}(?:核心经营|核心盈利|核心利润|核心口径)/.test(clause) && !qualified)
+          throw new Error('ASSUMPTION_PROMOTED');
+      }
       const explicitlyCurrent = strictCounter && /本期(?:的)?(?:口径|勾稽|利润桥)/.test(clause);
       const yoyClause = /同比|上年同期/.test(clause) || !explicitlyCurrent && (strictCounter ? /差异|分化|相反|分歧|背离|原因/ : /差异|分化|相反/).test(clause) && /同比|上年同期/.test(point.text);
       const unsafeCause = strictCounter

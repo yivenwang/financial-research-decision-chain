@@ -20,7 +20,7 @@ const snapshot = historical.answer.evidence.snapshot;
 const repaired = () => ({ ...structuredClone(historical.answer.explanation),
   directAnswer: { text: "归母同比下降而扣非同比上升；本期非经常性损益与利润桥仅证明本期勾稽，不能据此确认同比分化原因。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "EV-S-05-C04-NR", "F-02"] },
   inference: { ...structuredClone(historical.answer.explanation.inference), citations: ["EV-S-05-C04-SPREAD", "A-03", "EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ"] },
-  counterEvidence: { ...structuredClone(historical.answer.explanation.counterEvidence), citations: [...historical.answer.explanation.counterEvidence.citations, "A-03"] },
+  counterEvidence: { text: "归母同比下降构成反证，扣非增长不能自动证明核心经营改善；非经常性损益比较期未提供，仍待核验。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "EV-S-05-C04-NR", "A-03"] },
   uncertainty: { ...structuredClone(historical.answer.explanation.uncertainty), citations: [...historical.answer.explanation.uncertainty.citations, "EV-S-05-C04-ADJ"] } });
 
 test("captured first failures and v1 prompts retain exact hashes and historical validation", async () => {
