@@ -115,9 +115,13 @@ export function operationStore(explicitDirectory?: string, options: StoreOptions
       await new Promise(r => setTimeout(r, 25));
     }
     if (!acquired) throw new Error("OPERATION_STORE_LOCKED");
-    await writePrivate(join(path, "holder.json"), { pid: process.pid, startedAt: new Date().toISOString() });
-    try { return await fn(); }
-    finally { await unlink(join(path, "holder.json")); await rmdir(path); await syncDir(guard); }
+    try {
+      await writePrivate(join(path, "holder.json"), { pid: process.pid, startedAt: new Date().toISOString() });
+      return await fn();
+    } finally {
+      try { await unlink(join(path, "holder.json")); } catch (e) { if (!missing(e)) throw e; }
+      await rmdir(path); await syncDir(guard);
+    }
   }
   function location(phase: Phase, id: string) {
     if (!["plan", "execute"].includes(phase) || !validOperationId(id)) throw new Error("OPERATION_ID_INVALID");

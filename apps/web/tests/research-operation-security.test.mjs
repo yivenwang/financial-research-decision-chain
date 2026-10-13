@@ -180,3 +180,19 @@ test("a receipt rolled back from completed to running is refused even with the o
   await writeFile(path, original); await assert.rejects(store.read("plan", f.id), /RECOVERY_REQUIRED/);
   await assert.rejects(store.claim("plan", crypto.randomUUID(), "a".repeat(64), "b".repeat(64)), /RECOVERY_REQUIRED/);
 });
+
+test("holder metadata failure before any operation releases the unused writer lock", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "beacon-unused-lock-"));
+  const root = join(directory, "receipts");
+  let fail = true;
+  const store = operationStore(root, { beforeWrite: async path => {
+    if (fail && path.endsWith(".writer-lock/holder.json")) { fail = false; throw new Error("SYNTHETIC_HOLDER_WRITE_FAILURE"); }
+  } });
+  try {
+    await store.initialize();
+    const id = crypto.randomUUID();
+    await assert.rejects(store.claim("plan", id, "a".repeat(64), "b".repeat(64)), /SYNTHETIC_HOLDER_WRITE_FAILURE/);
+    const record = await store.claim("plan", id, "a".repeat(64), "b".repeat(64));
+    assert.equal(record.state, "running");
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
