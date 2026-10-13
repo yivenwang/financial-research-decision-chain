@@ -14,7 +14,7 @@ import { PDF_LIMITS, validatePdfFile, validatePdfHeader, validatePdfResources } 
 import { extractCandidates, parseResearchReport } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req, questionTestCookie } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req, questionTestCookie } from "./question-test-helpers.mjs";
 
 async function harness(t, answer = answerOutput()) {
   const directory = await mkdtemp(join(tmpdir(), "beacon-audit-test-"));
@@ -100,7 +100,7 @@ test("model-invalid output remains blocked and the raw first failure is replayed
   const output = answerOutput(); output.inference.text = "已证明经营改善";
   const h = await harness(t, output); const a = await (await h.first.POST(req(h.body))).json();
   assert.equal(a.run.status, "BLOCKED"); assert.equal(a.run.answer, null); assert.deepEqual(a.run.reasons, ["INFERENCE_NOT_MARKED"]);
-  assert.equal(a.run.calls[0].rawOutput, JSON.stringify(output));
+  assert.equal(a.run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(output)));
   assert.deepEqual(await (await h.handler().POST(req(h.body))).json(), a); assert.equal(h.calls.length, 2);
 });
 

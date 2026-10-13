@@ -8,7 +8,7 @@ import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
   QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema, questionReferenceIds, questionExplanationInput,
   validateQuestionPlan, validQuestion, makeResearchContract, resolveQuestionEvidence, questionExplanationSchema,
-  validateQuestionExplanation, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
+  validateQuestionOutput, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
 
 type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string; storeOptions?: StoreOptions };
@@ -58,6 +58,7 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body,
       signal: providerSignal, redirect: "error",
     });
+    audit.providerHttpStatus = response.status;
     if (!response.ok) {
       void response.body?.cancel().catch(() => {});
       throw new Error(`PROVIDER_HTTP_${response.status}`);
@@ -164,8 +165,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       await addQuestionEvent(run, "tools_completed", { tools: run.contract!.allowedTools, facts: evidence.facts, calculations: evidence.calculations, graphDiff: evidence.graphDiff });
       await addQuestionEvent(run, "verification_result", { evidence: "PASS", professional: "pending", formalRecommendation: null });
       try {
-        const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context), config, dependencies);
-        const explanation = validateQuestionExplanation(output, evidence.context);
+        const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context, run.contract!), config, dependencies);
+        const explanation = validateQuestionOutput(output, evidence.context, QUESTION_ANSWER_PROMPT_VERSION, run.contract!);
         run.answer = { answerStatus: explanation.sufficiency === "partial" ? "PARTIAL" : "PASS", explanation, evidence,
           verification: { evidence: "PASS", professional: "pending" }, recommendedHumanAction: "核对解释及引用后接受或退回研究草稿；会计、估值和最终投资判断仍待人工专业复核。", formalRecommendation: null };
         run.status = explanation.sufficiency === "partial" ? "PARTIAL" : "ANSWER_READY";

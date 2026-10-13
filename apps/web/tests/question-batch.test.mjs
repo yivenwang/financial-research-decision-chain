@@ -84,7 +84,7 @@ test("actual initial manifest and all six handler archives pass the production a
         transportCalls++;
         const body = JSON.parse(init.body);
         checkQuestionInputBudget(init.body);
-        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput(),
+        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput({ sufficiency: "partial" }),
           { id: "NOT-LIVE-manifest-regression", model: "deepseek-v4-pro" });
       } });
       const body = phase === "plan" ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot };
@@ -167,7 +167,7 @@ test("acceptance verifier replays actual handler outputs for three intents and r
     const handler = createQuestionHandler(() => questionTestConfig, { fetcher: async (_url, init) => {
       calls++;
       const body = JSON.parse(init.body);
-      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput(),
+      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput({ sufficiency: "partial" }),
         { id: "NOT-LIVE-verifier-fixture", model: "deepseek-v4-pro" });
     } });
     const planResponse = await handler.POST(questionRequest({ phase: "plan", question: spec.question }));

@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { INTENT_LABELS, QUESTION_CAPABILITY, QUESTION_PLAN_PROMPT_VERSION, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionMarkdown, type QuestionRun, type SignedQuestionDraft } from "@/lib/research-question";
-import { appendQuestionRun, appendQuestionReview, readQuestionLedger, type QuestionLedger } from "@/lib/research-question-storage";
+import { assertArchiveSafe } from "@/lib/archive-safety";
+import { validateQuestionRun, appendQuestionRun, appendQuestionReview, readQuestionLedger, type QuestionLedger } from "@/lib/research-question-storage";
 import { readStoredVersions, readActiveVersionId, VERSION_UPDATED_EVENT, type ResearchVersion } from "@/lib/research-versions";
 import { questionReason } from "@/lib/question-presentation";
 import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
@@ -157,6 +158,17 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
     catch (e) { setError(plainError(e)); }
     finally { setBusy(null); }
   }
+  async function exportRecord(format: "json" | "markdown") {
+    if (!shown) return;
+    try {
+      const record = { run: shown, reviews: ledger.reviews.filter(r => r.runId === shown.runId) };
+      assertArchiveSafe(record, []);
+      await validateQuestionRun(shown);
+      download(`question-${shown.requestId}.${format === "json" ? "json" : "md"}`, format === "json" ? JSON.stringify(record, null, 2) : questionMarkdown(shown), format === "json" ? "application/json" : "text/markdown;charset=utf-8");
+    } catch {
+      setError("记录未通过校验或包含凭据字段，已阻止导出；原始记录仍保留在本机。");
+    }
+  }
   const answer = shown?.answer;
   const lastReview = ledger.reviews.filter(r => r.runId === shown?.runId).at(-1);
   const contract = draft?.run.contract ?? shown?.contract;
@@ -200,8 +212,8 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
     {shown && <section className={panel} data-testid="question-result">
       {shown.calls.some(call => call.promptVersion !== (call.phase === "plan" ? QUESTION_PLAN_PROMPT_VERSION : QUESTION_ANSWER_PROMPT_VERSION)) && <p className="text-sm text-amber-200" data-testid="historical-validation-notice">这份历史记录按当时的校验规则生成。当前已明确任务目标分类、反证陈述、逐段引用、专业限制引用和同比归因要求，历史状态与审核记录未重新评定；请人工核验原文，不将历史技术完成视为内容或专业认可。</p>}
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={() => download(`question-${shown.requestId}.json`, JSON.stringify({ run: shown, reviews: ledger.reviews.filter(r => r.runId === shown.runId) }, null, 2), "application/json")}>导出完整记录</Button>
-        <Button variant="outline" onClick={() => download(`question-${shown.requestId}.md`, questionMarkdown(shown), "text/markdown;charset=utf-8")}>{questionExportLabel(shown.status, lastReview?.status)}</Button>
+        <Button variant="outline" onClick={() => {void exportRecord("json");}}>导出完整记录</Button>
+        <Button variant="outline" onClick={() => {void exportRecord("markdown");}}>{questionExportLabel(shown.status, lastReview?.status)}</Button>
       </div></div>
       <p className="text-sm text-slate-300 break-words">{shown.queryRaw}</p>
       {shown.reasons.length > 0 && <p className="text-amber-200">{shown.reasons.map(questionReason).join("；")}</p>}

@@ -73,6 +73,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     const providerSignal = AbortSignal.timeout(requestLimits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: providerSignal, redirect: "error" });
     run.audit.requestId = response.headers.get("x-request-id")?.slice(0,200) ?? null;
+    run.audit.providerHttpStatus = response.status;
     if (!response.ok) {
       void response.body?.cancel().catch(() => {});
       run.audit.failureCode = `PROVIDER_HTTP_${response.status}`;

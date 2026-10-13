@@ -52,9 +52,9 @@ test("v4 instructions, wire constraints, schema and local professional requireme
   assert.equal(questionPromptInstructions("question-explanation.v4"), QUESTION_ANSWER_INSTRUCTIONS_V4);
   assert.match(questionPromptInstructions("question-explanation.v4"), /uncertainty.*必引A-03/);
   assert.match(questionPromptInstructions("question-explanation.v4"), /逐段引指标、缺口、比较双方及规则ID.*条件\/否定句/);
-  assert.match(questionExplanationSchema(context).description, /逐段引用.*比较两侧/);
+  assert.ok(questionExplanationSchema(context).properties.directAnswer.properties.citations.items.enum.some(token => token.includes("SPREAD") && token.includes("ATTR") && token.includes("ADJ")));
   assert.deepEqual(questionAnswerConstraints(context).uncertaintyCitations, [QUESTION_PROFESSIONAL_LIMIT_ID]);
-  assert.match(questionExplanationSchema(context).properties.uncertainty.description, /必引A-03/);
+  assert.ok(questionExplanationSchema(context).properties.uncertainty.properties.citations.items.enum.every(token => token.split("|").includes("A-03")));
   const a = completeCitations(); a.uncertainty.citations = a.uncertainty.citations.filter(id => id !== QUESTION_PROFESSIONAL_LIMIT_ID);
   assert.throws(() => validateQuestionExplanation(a, context), /PROFESSIONAL_LIMIT_OMITTED/);
 });
@@ -94,7 +94,7 @@ test("actual professional-limit failure stops after two mock calls and cannot re
       return { ok, failureCode: data.run.reasons[0], data, audit: data.run.calls[0], record: { run: data.run } };
     } });
   assert.equal(manifest.status, "stopped-after-failure"); assert.equal(calls, 2); assert.equal(archived.length, 2);
-  assert.deepEqual(failed.run.reasons, ["PROFESSIONAL_LIMIT_OMITTED"]); assert.equal(failed.run.answer, null);
+  assert.deepEqual(failed.run.reasons, ["ANSWER_CITATION_OR_TEXT_INVALID"]); assert.equal(failed.run.answer, null);
   assert.equal(failed.run.calls[0].rawOutput, run.calls[0].rawOutput);
   assert.deepEqual(await (await handler.POST(req(executeBody))).json(), failed); assert.equal(calls, 2);
 });

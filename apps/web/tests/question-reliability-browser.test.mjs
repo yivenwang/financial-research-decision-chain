@@ -11,7 +11,7 @@ import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { storageKeys } from "../lib/research-versions.ts";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
-import { questionTestConfig, mainQuestion, planOutput, answerOutput, providerResponse } from "./question-test-helpers.mjs";
+import { questionTestConfig, mainQuestion, planOutput, answerOutput, providerResponse, syntheticQuestionWire } from "./question-test-helpers.mjs";
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "Reliability acceptance is offline only");
 const require = createRequire(import.meta.url);
@@ -23,6 +23,8 @@ const professionalFailure = JSON.parse(await readFile(new URL("./fixtures/questi
 const paragraphFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38138604171/request-02.json", import.meta.url), "utf8")).record.run;
 
 const plannerFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38129833565/request-01.json", import.meta.url), "utf8")).record.run;
+// Current-contract negative example, independent of immutable historical bytes.
+const causalExample = answerOutput({ directAnswer: { text: "归母与扣非同比分化来自本期负向调整。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "EV-S-05-C04-NR"] } });
 
 test("old output remains historical; new bad plan/causal answer block, export and recover at desktop/tablet/phone (NOT-LIVE)", { timeout: 180000 }, async t => {
   const origin = "http://127.0.0.1:4332";
@@ -45,7 +47,7 @@ test("old output remains historical; new bad plan/causal answer block, export an
       syntheticCalls++; const body = JSON.parse(init.body);
       if (!body.text.format.name.endsWith("plan") && mode === "professional-failure")
         return providerResponse({}, { output: [{ type: "message", content: [{ type: "output_text", text: professionalFailure.calls[0].rawOutput }] }] });
-      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? legacy.answer.explanation : mode === "second-failure" ? JSON.parse(secondFailure.calls[0].rawOutput) : answerOutput());
+      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? causalExample : mode === "second-failure" ? JSON.parse(secondFailure.calls[0].rawOutput) : answerOutput());
     } });
     await context.route("**/api/research-question**", async route => {
       const request = route.request();
@@ -106,12 +108,12 @@ test("old output remains historical; new bad plan/causal answer block, export an
     const [jsonDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
     await jsonDownload.saveAs(new URL(`causal-blocked-${width}.json`, artifacts).pathname);
     const exported = JSON.parse(await readFile(new URL(`causal-blocked-${width}.json`, artifacts), "utf8"));
-    assert.equal(exported.run.answer, null); assert.equal(exported.run.calls[0].rawOutput, JSON.stringify(legacy.answer.explanation));
+    assert.equal(exported.run.answer, null); assert.equal(exported.run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(causalExample)));
     assert.deepEqual(exported.run.reasons, ["UNSUPPORTED_YOY_ATTRIBUTION"]);
     mode = "second-failure";
     await page.getByRole("button", { name: "生成研究任务", exact: true }).focus(); await page.keyboard.press("Enter");
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();
-    await page.getByText("模型遗漏了已提供的反向证据，草稿已阻断。", { exact: true }).waitFor();
+    await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
     assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
     await page.screenshot({ path: new URL(`live-counter-blocked-${width}.png`, artifacts).pathname, fullPage: true });
     const [counterExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
@@ -119,11 +121,11 @@ test("old output remains historical; new bad plan/causal answer block, export an
     const counterRecord = JSON.parse(await readFile(new URL(`live-counter-blocked-${width}.json`, artifacts), "utf8"));
     assert.equal(counterRecord.run.answer, null); assert.equal(counterRecord.run.answerSha256, null);
     assert.equal(counterRecord.run.calls[0].rawOutput, secondFailure.calls[0].rawOutput);
-    assert.deepEqual(counterRecord.run.reasons, ["COUNTER_EVIDENCE_OMITTED"]);
+    assert.deepEqual(counterRecord.run.reasons, ["ANSWER_CITATION_OR_TEXT_INVALID"]);
     mode = "professional-failure";
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();
-    await page.getByText("模型未在未知与限制段引用专业复核依据，草稿已阻断。", { exact: true }).waitFor();
+    await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
     assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
     await page.screenshot({ path: new URL(`live-professional-blocked-${width}.png`, artifacts).pathname, fullPage: true });
     const [professionalExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
@@ -131,7 +133,7 @@ test("old output remains historical; new bad plan/causal answer block, export an
     const professionalRecord = JSON.parse(await readFile(new URL(`live-professional-blocked-${width}.json`, artifacts), "utf8"));
     assert.equal(professionalRecord.run.answer, null); assert.equal(professionalRecord.run.answerSha256, null);
     assert.equal(professionalRecord.run.calls[0].rawOutput, professionalFailure.calls[0].rawOutput);
-    assert.deepEqual(professionalRecord.run.reasons, ["PROFESSIONAL_LIMIT_OMITTED"]);
+    assert.deepEqual(professionalRecord.run.reasons, ["ANSWER_CITATION_OR_TEXT_INVALID"]);
     mode = "safe-answer";
     await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
     await page.getByRole("button", { name: "确认并执行", exact: true }).click();

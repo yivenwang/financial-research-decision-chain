@@ -1,7 +1,7 @@
 import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { requireResearchBrowserCapabilities } from "./research-browser.ts";
 import { readActiveVersionId, readStoredVersions } from "./research-versions.ts";
-import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionExplanation, validateQuestionPlan, makeResearchContract,
+import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionOutput, validateQuestionExplanation, validateQuestionPlan, makeResearchContract,
   questionPromptInstructions, type QuestionRun } from "./research-question.ts";
 import { parseMemoJson } from "./model-json.ts";
 
@@ -42,7 +42,7 @@ export async function validateQuestionRun(run: QuestionRun) {
     const call = run.calls[0];
     if (!call?.rawOutput || call.failureCode) throw new Error("规划原文缺失。");
     const plan = validateQuestionPlan(parseMemoJson(call.rawOutput), call.promptVersion);
-    if (canonicalJson(makeResearchContract(run.queryRaw, plan, run.requestId, run.createdAt)) !== canonicalJson(run.contract) || run.status !== run.contract.status)
+    if (canonicalJson(makeResearchContract(run.queryRaw, plan, run.requestId, run.createdAt, call.promptVersion)) !== canonicalJson(run.contract) || run.status !== run.contract.status)
       throw new Error("规划合同与原文不一致。");
   }
   if (run.phase === "execute") {
@@ -63,7 +63,7 @@ export async function validateQuestionRun(run: QuestionRun) {
     const call = run.calls[0];
     if (!call?.rawOutput || call.failureCode) throw new Error("解释原文缺失。");
     // Historical versions keep their own original validation, without changing their reviews.
-    const explanation = validateQuestionExplanation(parseMemoJson(call.rawOutput), resolved.evidence.context, call.promptVersion);
+    const explanation = validateQuestionOutput(parseMemoJson(call.rawOutput), resolved.evidence.context, call.promptVersion, run.contract);
     if (canonicalJson(explanation) !== canonicalJson(run.answer.explanation) ||
       run.status !== (explanation.sufficiency === "partial" ? "PARTIAL" : "ANSWER_READY") ||
       run.answer.answerStatus !== (explanation.sufficiency === "partial" ? "PARTIAL" : "PASS")) throw new Error("解释与原始输出或状态不一致。");
@@ -95,6 +95,9 @@ export async function appendQuestionReview(runId: string, status: QuestionReview
     const versions = readStoredVersions("research");
     const current = versions.find(v => v.versionId === readActiveVersionId(versions, "research"));
     if (!current || await sha256Text(canonicalJson(current)) !== run.answer.evidence.context.snapshotSha256) throw new Error("当前研究版本已变化；历史答案仅供查看，请重新运行后审核。");
+    // Reading a historical run preserves its original rules and reviews. A new
+    // acceptance must satisfy current content rules; rejection remains available.
+    if (status === "accepted") validateQuestionExplanation(run.answer.explanation, run.answer.evidence.context, undefined, run.contract!);
     const review: QuestionReview = { id: crypto.randomUUID(), runId, answerSha256: run.answerSha256,
       snapshotSha256: run.answer.evidence.context.snapshotSha256, status, reviewer: reviewer.trim(), note: note.trim(),
       reviewedAt: new Date().toISOString(), scope: "question-draft-only", identityVerified: false };

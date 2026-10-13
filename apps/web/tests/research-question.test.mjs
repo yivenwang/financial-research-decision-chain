@@ -5,7 +5,7 @@ import { makeResearchContract, validateQuestionPlan, resolveQuestionEvidence, va
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, validateQuestionRun, QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { storageKeys, createRollbackSnapshot } from "../lib/research-versions.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req } from "./question-test-helpers.mjs";
 
 function harness(plan = planOutput(), answer = answerOutput()) {
   const calls = [];
@@ -98,7 +98,7 @@ test("answer validation rejects invented values/references and missing counter o
     const a = answerOutput(); mutate(a); assert.throws(() => validateQuestionExplanation(a, resolved.evidence.context));
     const bad = harness(planOutput(), a); const { run } = await (await bad.execute(await bad.draft())).json();
     assert.equal(run.status, "BLOCKED"); assert.equal(run.answer, null); assert.equal(bad.calls.length, 2);
-    assert.equal(run.calls[0].rawOutput, JSON.stringify(a)); await validateQuestionRun(run);
+    assert.equal(run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(a))); await validateQuestionRun(run);
   }
   const partial = harness(planOutput(), answerOutput({ sufficiency: "partial" }));
   assert.equal((await (await partial.execute(await partial.draft())).json()).run.status, "PARTIAL");

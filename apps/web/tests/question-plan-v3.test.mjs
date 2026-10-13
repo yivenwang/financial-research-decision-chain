@@ -27,8 +27,8 @@ test("first planner intent failure preserves original bytes, v2 hash and one-req
 });
 
 test("v3 prompt and schema distinguish primary objective from incidental verification without changing scope", () => {
-  assert.equal(QUESTION_PLAN_PROMPT_VERSION, "question-contract.v3");
-  const prompt = questionPromptInstructions(QUESTION_PLAN_PROMPT_VERSION);
+  assert.equal(questionPromptInstructions("question-contract.v3").includes(QUESTION_INTENT_GUIDANCE), true);
+  const prompt = questionPromptInstructions("question-contract.v3");
   assert.equal(questionPlanSchema.properties.intent.description, QUESTION_INTENT_GUIDANCE);
   assert.ok(prompt.endsWith(QUESTION_INTENT_GUIDANCE));
   assert.match(QUESTION_INTENT_GUIDANCE, /解释变化、原因或同比分化用CHANGE_EXPLAIN/);

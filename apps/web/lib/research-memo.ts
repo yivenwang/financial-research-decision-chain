@@ -59,6 +59,7 @@ export type MemoRun = {
     rawOutput: string | null;
     failureCode: string | null;
     validation: string[];
+    providerHttpStatus?: number;
     // Optional for pre-existing records; never backfill their missing diagnostics.
     requestLimits?: { maxOutputTokens: number; timeoutMs: number };
     providerStatus?: "completed" | "incomplete" | "failed" | "in_progress" | "queued" | "cancelled" | "unknown" | null;

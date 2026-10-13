@@ -71,18 +71,26 @@ test("model input preserves semantic contract and engine outputs while making co
   assert.equal(input.constraints.comparisonMissing, true);
   const trace = ["schemaVersion", "requestId", "createdAt", "capabilityVersion", "status"];
   assert.deepEqual(input.contract, Object.fromEntries(Object.entries(run.contract).filter(([key]) => !trace.includes(key))));
-  assert.deepEqual(input.evidence, Object.fromEntries(Object.entries(context).filter(([key]) => !["schemaVersion", "snapshotSha256"].includes(key))));
+  const expectedContext = Object.fromEntries(Object.entries(context).filter(([key]) => !["schemaVersion", "snapshotSha256"].includes(key)));
+  expectedContext.references = context.references.map(ref => ref.kind === "source" ? Object.fromEntries(Object.entries(ref).filter(([key]) => key !== "excerpt")) : ref);
+  assert.deepEqual(input.evidence, expectedContext);
+  for (const ref of context.references.filter(ref => ref.kind === "source")) {
+    const fact = input.facts.find(fact => fact.id === ref.id);
+    assert.ok(fact && Number.isFinite(fact.value) && Number.isFinite(fact.originalValue));
+    assert.equal(fact.unit, "CNY_mn"); assert.equal(fact.page, ref.page); assert.equal(fact.url, ref.url);
+    assert.equal(input.evidence.references.find(item => item.id === ref.id).direction, ref.direction);
+  }
   for (const key of ["facts", "calculations", "graphDiff"]) assert.deepEqual(input[key], resolved.evidence[key]);
   assert.equal(canonicalJson(resolved.evidence), before);
   const reverse = structuredClone(context); reverse.references.find(r => r.id.endsWith("ATTR")).direction = "支持";
   reverse.references.find(r => r.id.endsWith("ADJ")).direction = "反证";
   assert.deepEqual(questionAnswerConstraints(reverse).counterEvidenceIds, ["EV-S-05-C04-ADJ"]);
-  assert.match(questionExplanationSchema(reverse).properties.counterEvidence.description, /EV-S-05-C04-ADJ/);
+  assert.ok(questionExplanationSchema(reverse).properties.counterEvidence.properties.citations.items.enum.every(token => token.includes("EV-S-05-C04-ADJ")));
   const a = safeLiveAnswer(); a.counterEvidence = { text: "扣非净利润下降仍是反证，需人工复核。", citations: ["EV-S-05-C04-ADJ"] };
   assert.doesNotThrow(() => validateQuestionExplanation(a, reverse));
   const none = structuredClone(context); none.references.forEach(r => r.direction = null);
   assert.deepEqual(questionAnswerConstraints(none).counterEvidenceIds, []);
-  assert.match(questionExplanationSchema(none).properties.counterEvidence.description, /本次输入未提供/);
+  assert.ok(questionExplanationSchema(none).properties.counterEvidence.properties.citations.items.enum.includes("A-03"));
 });
 
 test("six request rehearsal uses real snapshot, all intents, maximal references and original budget with synthetic transport", async t => {
@@ -106,7 +114,7 @@ test("six request rehearsal uses real snapshot, all intents, maximal references 
       }
       return { ok: true, data, audit, record };
     } });
-  assert.equal(calls, 6); assert.equal(manifest.status, "technical-completed-awaiting-content-review"); assert.equal(manifest.contentReview, "pending");
+  assert.equal(manifest.status, "technical-completed-awaiting-content-review", JSON.stringify(manifest.requests.map(r => ({index: r.index, failureCode: r.failureCode})))); assert.equal(calls, 6); assert.equal(manifest.contentReview, "pending");
   assert.equal(manifest.maxRequests, 6); assert.equal(manifest.requests.length, 6);
   t.diagnostic(JSON.stringify({ transport: "synthetic-NOT-LIVE", realModelCalls: 0, receipts }));
 });

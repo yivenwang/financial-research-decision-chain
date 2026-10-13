@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 import { parseResearchReport, extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
+import { buildMemoContext } from "../lib/research-memo.ts";
+import { QUESTION_POINTS, questionCitationChoices } from "../lib/question-citation-policy.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 
 // Synthetic HTTP tests have their own open window; production deadline is unchanged.
@@ -29,6 +31,23 @@ export function questionTestSnapshot() {
     source: { name: "Synthetic coordinates NOT real PDF", sourceId: source.sourceId, period: source.period, url: source.url, size: 0, pageCount: 14, mode: "sample" },
     result, candidates: extractCandidates(result).map(item => ({ ...item, reviewStatus: "accepted" })) });
 }
-export const providerResponse = (output, patch = {}) => Response.json({ id: "response-question-test-NOT-LIVE", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }], ...patch });
+const syntheticContext = await buildMemoContext(questionTestSnapshot());
+// Fixture serialization only: select an enum only if all of its IDs were already
+// chosen in this synthetic example. Never complete a missing citation or prose.
+export function syntheticQuestionWire(output) {
+  if (!output || typeof output !== "object" || !Object.hasOwn(output, "sufficiency")) return output;
+  const wire = structuredClone(output);
+  for (const key of QUESTION_POINTS) {
+    const point = wire[key];
+    if (!point || !Array.isArray(point.citations) || point.citations.some(id => typeof id !== "string")) return output;
+    const selected = new Set(point.citations);
+    const choices = questionCitationChoices(syntheticContext, key);
+    const tokens = point.citations.map(id => choices.find(token => token.split("|")[0] === id && token.split("|").every(dep => selected.has(dep))));
+    if (tokens.some(token => !token)) return output;
+    point.citations = tokens;
+  }
+  return wire;
+}
+export const providerResponse = (output, patch = {}) => Response.json({ id: "response-question-test-NOT-LIVE", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(syntheticQuestionWire(output)) }] }], ...patch });
 export const questionTestCookie = `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(questionTestConfig.accessToken)}`;
 export const questionRequest = (body, headers = {}) => new Request("http://localhost/api/research-question", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", ...(Object.hasOwn(headers, "authorization") ? {} : { cookie: questionTestCookie }), ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });

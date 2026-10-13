@@ -1,3 +1,5 @@
+import { assertArchiveSafe } from "../lib/archive-safety.ts";
+export { assertArchiveSafe };
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
 import { spawn } from "node:child_process";
@@ -13,7 +15,7 @@ import { canonicalJson, buildMemoContext } from "../lib/research-memo.ts";
 import { parseMemoJson } from "../lib/research-memo.server.ts";
 import {
   QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION, QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION,
-  validateQuestionPlan, makeResearchContract, resolveQuestionEvidence, validateQuestionExplanation, questionMarkdown,
+  validateQuestionPlan, makeResearchContract, resolveQuestionEvidence, validateQuestionOutput, questionMarkdown,
 } from "../lib/research-question.ts";
 
 export const QUESTION_BATCH_AUTHORIZATION = "question-acceptance-2026-09-20";
@@ -145,7 +147,7 @@ export async function verifyLiveQuestionPhase({ phase, spec, response, snapshot,
     check(run.requestId === draft.run.requestId && canonicalJson(run.contract) === canonicalJson(draft.run.contract), "PLAN_BINDING_MISMATCH");
     const expected = await resolveQuestionEvidence(run.contract, snapshot);
     check(expected.status === "READY" && canonicalJson(run.answer.evidence) === canonicalJson(expected.evidence), "EVIDENCE_REPLAY_MISMATCH");
-    const explanation = validateQuestionExplanation(parseMemoJson(a.rawOutput), expected.evidence.context);
+    const explanation = validateQuestionOutput(parseMemoJson(a.rawOutput), expected.evidence.context, a.promptVersion, run.contract);
     check(canonicalJson(explanation) === canonicalJson(run.answer.explanation), "EXPLANATION_REPLAY_MISMATCH");
     check(run.answer.formalRecommendation === null && run.answer.verification.professional === "pending", "PROFESSIONAL_BOUNDARY_MISMATCH");
     check(run.answerSha256 === digest(canonicalJson(run.answer)), "ANSWER_DIGEST_MISMATCH");
@@ -236,37 +238,5 @@ async function main() {
     if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; }
   }
 }
-export function assertArchiveSafe(value, secrets) {
-  let text;
-  try { text = JSON.stringify(value); } catch { throw new Error("ARCHIVE_SERIALIZATION_FAILED"); }
-  if (typeof text !== "string") throw new Error("ARCHIVE_SERIALIZATION_FAILED");
-  if (secrets.some(secret => typeof secret === "string" && secret.length && (text.includes(secret) || text.includes(JSON.stringify(secret).slice(1, -1))))) throw new Error("ARCHIVE_SECRET_BLOCKED");
-  const forbidden = new Set(["cookie", "authorization", "ticket", "apikey", "sessionsecret"]);
-  const credentialKey = key => forbidden.has(key.normalize("NFKC").replace(/[\s_.\p{Pd}\p{Cf}]/gu, "").toLowerCase());
-  const queue = [{ value, depth: 0 }];
-  for (let i = 0; i < queue.length; i++) {
-    const current = queue[i];
-    if (current.depth > 64 || queue.length > 100000) throw new Error("ARCHIVE_STRUCTURE_LIMIT");
-    const item = current.value;
-    if (typeof item === "number" && !Number.isFinite(item)) throw new Error("ARCHIVE_INVALID_NUMBER");
-    if (typeof item === "string") {
-      if (secrets.some(secret => typeof secret === "string" && secret.length && item.includes(secret))) throw new Error("ARCHIVE_SECRET_BLOCKED");
-      // Decode complete nested JSON strings/objects; also catch quoted fields in surrounding diagnostic prose.
-      for (const match of item.matchAll(/(?:\\*["'])([^"'\n]{1,80})(?:\\*["'])\s*:/g)) {
-        let key = match[1].replace(/\\+$/g, "");
-        try { key = JSON.parse('"' + key + '"'); } catch { /* Literal key still receives the same normalization. */ }
-        if (credentialKey(key)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
-      }
-      if (/^\s*[\[{\"]/.test(item)) {
-        try { const decoded = JSON.parse(item); if (decoded !== item) queue.push({ value: decoded, depth: current.depth + 1 }); }
-        catch { /* Non-JSON prose has already had its quoted keys and secret values checked. */ }
-      }
-    } else if (item && typeof item === "object") {
-      for (const [key, child] of Object.entries(item)) {
-        if (credentialKey(key)) throw new Error("ARCHIVE_CREDENTIAL_FIELD_BLOCKED");
-        queue.push({ value: child, depth: current.depth + 1 });
-      }
-    }
-  }
-}
+
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) await main();

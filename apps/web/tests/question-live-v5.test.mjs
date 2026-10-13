@@ -55,8 +55,8 @@ test("three independent citation omissions remain blocked under both original an
 });
 
 test("v5 selects paragraph evidence before text without adding output fields or weakening checks", () => {
-  assert.equal(QUESTION_ANSWER_PROMPT_VERSION, "question-explanation.v5");
-  const prompt = questionPromptInstructions(QUESTION_ANSWER_PROMPT_VERSION);
+  assert.equal(questionPromptInstructions("question-explanation.v5").includes("先选citations再写text"), true);
+  const prompt = questionPromptInstructions("question-explanation.v5");
   assert.match(prompt, /先选citations再写text/); assert.match(prompt, /勿引用别段代替本段/);
   assert.match(prompt, /条件\/否定句/); assert.match(prompt, /派生引用补citationDependencies/);
   assert.match(prompt, /输入缺失不等于报告未披露/); assert.match(prompt, /必引A-03/);
@@ -84,7 +84,7 @@ test("actual omitted-citation response stops after two mock calls and replay can
       return { ok, failureCode: data.run.reasons[0], data, audit: data.run.calls[0], record: { run: data.run } };
     } });
   assert.equal(calls, 2); assert.equal(manifest.requests.length, 2); assert.equal(manifest.status, "stopped-after-failure");
-  assert.deepEqual(failed.run.reasons, ["PARAGRAPH_EVIDENCE_OMITTED"]); assert.equal(failed.run.answer, null);
+  assert.deepEqual(failed.run.reasons, ["ANSWER_CITATION_OR_TEXT_INVALID"]); assert.equal(failed.run.answer, null);
   assert.equal(failed.run.calls[0].rawOutput, run.calls[0].rawOutput);
   assert.deepEqual(await (await handler.POST(req(executeBody))).json(), failed); assert.equal(calls, 2);
 });
