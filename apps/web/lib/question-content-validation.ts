@@ -16,9 +16,24 @@ function statementScopes(text: string) {
   });
 }
 
+// A leading premise governs its consequence until a sentence/contrast boundary.
+// Keep it as metadata: it qualifies a core-profit hypothesis, never a separate
+// growth fact, spread trend or unsupported economic attribution.
+function financialScopes(text: string) {
+  return text.split(/[；。！？\n]|但是|然而|不过|可是|但|却/u).flatMap(statement => {
+    const clauses = statement.split(/[，,]/u).map(clause => clause.trim());
+    const conditional = /^(?:如果|假如|倘若|若)/.test(clauses[0]) ||
+      /^在.+(?:前提|条件)下$/.test(clauses[0]);
+    return clauses.map((clause, i) => ({ clause, assumptionConditional: conditional && i > 0 }));
+  });
+}
+export function hasExplicitPremise(text: string) {
+  return financialScopes(text).some(scope => scope.assumptionConditional);
+}
+
 // Conservative checks for known unsupported claims; not a general semantic proof.
 // Unrecognised reasoning still requires human content review and professional gates.
-export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false, independentClaims = false, financialBoundaries = false) {
+export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false, independentClaims = false, financialBoundaries = false, premiseScope = false) {
   const prefix = `EV-${context.source.sourceId}-C04-`;
   const dependencies = questionCitationDependencies(context);
   const nr = context.references.find(r => r.id === prefix + "NR");
@@ -56,8 +71,20 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
       if (/连续可比|连续.{0,6}期间|失效条件/.test(point.text)) requireCitations(["K-07"]);
       if (/估值|股数|倍数/.test(point.text)) requireCitations(["Valuation-B5"]);
     }
-    for (const clause of currentContract ? statementScopes(point.text) : point.text.split(/[；。！？\n]/u)) {
+    const scopes = premiseScope ? financialScopes(point.text) : (currentContract ? statementScopes(point.text) : point.text.split(/[；。！？\n]/u)).map(clause => ({ clause, assumptionConditional: false }));
+    let previousClaim: 'fact' | 'hypothesis' | null = null;
+    for (const { clause, assumptionConditional } of scopes) {
       const qualified = /不能|无法|未能|尚未|尚无|不代表|不等于|不足|并非|待|可能|假设|如果|假如|倘若|若/.test(clause);
+      if (premiseScope) {
+        if (previousClaim === 'fact' && /^(?:该判断|该事实|上述事实|这一事实)/.test(clause)) {
+          for (const match of clause.matchAll(/(?:以|依赖).*(?:核心经营|假设|会计).*(?:条件|前提|成立)/g)) {
+            if (!assertionNegated(clause, match.index!) && !/(?:是否|可能|或许)[^，,]*$/.test(clause.slice(0, match.index!)))
+              throw new Error('VERIFIED_FACT_CONDITIONED_ON_ASSUMPTION');
+          }
+        }
+        if (/(?:扣非.{0,12}同比|调整后口径).{0,16}(?:上升|增长|改善|为正)/.test(clause)) previousClaim = 'fact';
+        else if (/核心经营|假设/.test(clause)) previousClaim = 'hypothesis';
+      }
       if (extendedContract) {
         // A condition on the accounting assumption cannot establish a change
         // in the spread across periods: only this period's spread is supplied.
@@ -65,7 +92,7 @@ export function validateQuestionContent(answer: QuestionExplanation, context: Me
           if (!/不能|无法|未|并非|是否|可能|或许/.test(match[1]) && !assertionNegated(clause, match.index!) &&
               !/^(?:若|如果|假如|倘若)(?:未来|后续)?(?:增速差|增长速度差)/.test(clause)) throw new Error('UNSUPPORTED_SPREAD_TREND');
         }
-        if (/扣非.{0,24}(?:是|代表|属于|只限于|可视为|即为).{0,8}(?:核心经营|核心盈利|核心利润|核心口径)/.test(clause) && !qualified)
+        if (/扣非.{0,24}(?:是|代表|属于|只限于|可视为|即为).{0,8}(?:核心经营|核心盈利|核心利润|核心口径)/.test(clause) && !qualified && !assumptionConditional)
           throw new Error('ASSUMPTION_PROMOTED');
       }
       if (independentClaims) {
