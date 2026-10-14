@@ -65,6 +65,15 @@ export async function hasReviewSession(request: Request, accessCode: string, now
   return secureEqual(signature, await sessionSignature(`${version}.${issued}.${expires}.${nonce}`, accessCode, secret));
 }
 
+// An access code is shared admission, never identity. Only a verified,
+// server-issued session nonce can own a paid research operation.
+export async function reviewSessionOwner(request: Request, accessCode: string, now = Date.now()): Promise<string | null> {
+  if (!await hasReviewSession(request, accessCode, now)) return null;
+  const nonce = cookieValue(request, REVIEW_ACCESS_COOKIE).split(".")[3];
+  const key = await crypto.subtle.importKey("raw", encoder.encode(process.env.REVIEW_SESSION_SECRET!), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(`beacon-operation-owner.v1\n${accessCode}\n${nonce}`)));
+}
+
 export function hasReviewBearer(request: Request, accessCode: string, now = Date.now()) {
   if (!reviewAccessOpen(now) || accessCode.length < 16) return false;
   return secureEqual(request.headers.get("authorization") ?? "", `Bearer ${accessCode}`);

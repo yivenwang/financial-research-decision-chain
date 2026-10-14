@@ -9,6 +9,9 @@ import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 import { appendVersion, createRollbackSnapshot, readStoredVersions, storageKeys } from "../lib/research-versions.ts";
 
+// Synthetic HTTP tests have their own open window; production deadline is unchanged.
+process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+
 // Transport stubs are only test dependencies, never a production fallback.
 const config = { provider: "deepseek", apiKey: "unit-test-key-not-a-real-key", accessToken: "unit-test-access-code-long", model: "deepseek-v4-pro" };
 function snapshot() {

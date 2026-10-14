@@ -31,6 +31,7 @@ export type StoredEvidence = {
   period?: string;
   location: string;
   snippet: string;
+  sourceExcerpt?: string;
   reviewStatus: "pending" | "accepted" | "rejected";
 };
 
@@ -127,6 +128,8 @@ export function readStoredVersions(scope: WorkspaceScope = "research") {
 
 export function writeStoredVersions(versions: ResearchVersion[], scope: WorkspaceScope = "research") {
   requireResearchBrowserCapabilities();
+  const existing = JSON.parse(window.localStorage.getItem(storageKeys(scope).versions) ?? "[]");
+  if (!Array.isArray(existing) || !existing.every(isResearchVersion) || !versions.every(isResearchVersion) || new Set(versions.map(v => v.versionId)).size !== versions.length || versions.length < existing.length || existing.some((v, i) => JSON.stringify(v) !== JSON.stringify(versions[i]))) throw new Error("版本历史只允许追加，禁止删除、重排或覆盖旧版本。");
   window.localStorage.setItem(storageKeys(scope).versions, JSON.stringify(versions));
   window.dispatchEvent(new Event(VERSION_UPDATED_EVENT));
 }
@@ -165,6 +168,12 @@ export function appendVersion(version: ResearchVersion, scope: WorkspaceScope = 
   }
   writeStoredVersions([...raw, version], scope);
   setActiveVersionId(version.versionId, scope);
+}
+
+export async function withVersionWriteLock<T>(scope: WorkspaceScope, operation: () => T): Promise<T> {
+  requireResearchBrowserCapabilities();
+  // Hold across ID allocation, historical-prefix verification, append and active pointer.
+  return window.navigator.locks.request(storageKeys(scope).versions, operation);
 }
 
 export function createRollbackSnapshot(selected: ResearchVersion, current: ResearchVersion[], activeId: string, scope: WorkspaceScope): ResearchVersion {

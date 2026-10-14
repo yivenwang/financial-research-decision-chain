@@ -12,6 +12,12 @@ on:
         type: choice
         options:
           - question-acceptance-2026-09-20
+      budget_acknowledgement:
+        description: Estimated USD 0.33660 incl. reserve; not a monetary hard cap. Owner must approve this SHA before dispatch.
+        required: true
+        type: choice
+        options:
+          - estimated-usd-0.33660-not-hard-cap-v1
 permissions:
   contents: read
 concurrency:
@@ -58,6 +64,7 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           EXPECTED_COMMIT_SHA: ${{ inputs.expected_commit }}
           QUESTION_ACCEPTANCE_APPROVAL: ${{ inputs.authorization }}
+          QUESTION_BUDGET_ACKNOWLEDGEMENT: ${{ inputs.budget_acknowledgement }}
         run: node --experimental-strip-types scripts/run-question-batch.mjs
       - name: Preserve successes, partial results and first failures
         if: always()

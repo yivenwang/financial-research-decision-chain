@@ -1,4 +1,5 @@
 "use client";
+import { PDF_LIMITS, validatePdfFile, validatePdfHeader, validatePdfResources } from "@/lib/pdf-import";
 
 import { type ChangeEvent, type DragEvent, useMemo, useRef, useState } from "react";
 import {
@@ -37,6 +38,7 @@ import {
   readStoredVersions,
   readActiveVersionId,
   appendVersion,
+  withVersionWriteLock,
 } from "@/lib/research-versions";
 import {
   getSourceRecord,
@@ -106,9 +108,14 @@ async function extractPdfItems(file: File): Promise<PdfExtraction> {
   const buffer = await file.arrayBuffer();
   const sha256 = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", buffer)), (byte) => byte.toString(16).padStart(2, "0")).join("");
   const data = new Uint8Array(buffer);
+  validatePdfHeader(data);
   const loadingTask = pdfjs.getDocument({ data });
+  let expired = false;
+  const timer = setTimeout(() => { expired = true; void loadingTask.destroy(); }, PDF_LIMITS.timeoutMs);
   try {
     const document = await loadingTask.promise;
+    validatePdfResources(document.numPages, 0, 0);
+    let characters = 0;
     const items: PdfTextItem[] = [];
     const titleParts: string[] = [];
 
@@ -127,6 +134,8 @@ async function extractPdfItems(file: File): Promise<PdfExtraction> {
         const x = Number(item.transform[4]);
         const y = Number(item.transform[5]);
         if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+        characters += item.str.length;
+        validatePdfResources(document.numPages, items.length + 1, characters);
         items.push({
           str: item.str,
           x,
@@ -137,13 +146,18 @@ async function extractPdfItems(file: File): Promise<PdfExtraction> {
         if (pageNumber <= 3) titleParts.push(item.str);
       }
     }
+    if (expired) throw new Error("PDF 本机解析超时，未生成研究证据。");
     return {
       items,
       pageCount: document.numPages,
       documentTitle: titleParts.join(" "),
       sha256,
     };
+  } catch (error) {
+    if (expired) throw new Error("PDF 本机解析超时，未生成研究证据。");
+    throw error;
   } finally {
+    clearTimeout(timer);
     await loadingTask.destroy();
   }
 }
@@ -250,7 +264,7 @@ export function UpdateWorkflow() {
         mode: "sample",
       }),
     );
-    setCandidates(extractCandidates(result));
+    setCandidates(extractCandidates(result, verifiedSampleItems));
     setMessage(
       result.blockers.length
         ? "已载入样例，但解析 Gate 阻断：" + summarizeBlockers(result.blockers)
@@ -261,18 +275,7 @@ export function UpdateWorkflow() {
   }
 
   async function processFile(file: File) {
-    if (/s[-_ ]?0?7(?:\b|[_.-])/i.test(file.name)) {
-      setMessage("该文件不在当前允许的 S-05/S-06 导入范围内。");
-      return;
-    }
-    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
-      setMessage("当前只接受 PDF。请上传正式披露文件，或先载入 S-05 已验证样例。");
-      return;
-    }
-    if (file.size > 25 * 1024 * 1024) {
-      setMessage("文件超过 25 MB。请先压缩 PDF，再重新导入。");
-      return;
-    }
+    try { validatePdfFile(file); } catch (error) { setMessage(error instanceof Error ? error.message : "PDF 校验失败。"); return; }
 
     setIsParsing(true);
     setStep("upload");
@@ -292,7 +295,7 @@ export function UpdateWorkflow() {
       }
 
       const result = parseResearchReport(extraction.items, record);
-      const extracted = extractCandidates(result);
+      const extracted = extractCandidates(result, extraction.items);
       setParserResult(result);
       setSource(
         sourceFileFromRecord(record, {
@@ -362,7 +365,7 @@ export function UpdateWorkflow() {
     setStep("diff");
   }
 
-  function saveVersion() {
+  async function saveVersion() {
     if (!canPromoteToEvidence || !source || !parserResult) {
       setMessage(
         "存在 blocker，不能保存正式研究版本：" +
@@ -371,24 +374,26 @@ export function UpdateWorkflow() {
       return;
     }
     try {
-      const current = readStoredVersions(workspace);
-      const versionId = nextVersionId(current);
-      const snapshot = createResearchSnapshot({
-        versionId,
-        parentVersionId: readActiveVersionId(current, workspace),
-        createdAt: new Date().toISOString(),
-        reviewer,
-        source: {
-          name: source.name, size: source.size, pageCount: source.pageCount,
-          mode: source.mode, sourceId: source.sourceId, period: source.period, url: source.url, sha256: source.sha256,
-        },
-        result: parserResult,
-        candidates,
-        scope: workspace,
+      await withVersionWriteLock(workspace, () => {
+        const current = readStoredVersions(workspace);
+        const versionId = nextVersionId(current);
+        const snapshot = createResearchSnapshot({
+          versionId,
+          parentVersionId: readActiveVersionId(current, workspace),
+          createdAt: new Date().toISOString(),
+          reviewer,
+          source: {
+            name: source.name, size: source.size, pageCount: source.pageCount,
+            mode: source.mode, sourceId: source.sourceId, period: source.period, url: source.url, sha256: source.sha256,
+          },
+          result: parserResult,
+          candidates,
+          scope: workspace,
       });
       appendVersion(snapshot, workspace);
       setSavedVersion(versionId);
       setStep("saved");
+      });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "版本保存失败，请检查浏览器存储空间。");
     }
@@ -649,7 +654,7 @@ export function UpdateWorkflow() {
 
                   <div className="mt-3 rounded-xl border border-white/8 bg-slate-950/35 px-3 py-2.5">
                     <p className="text-[13px] leading-6 text-slate-400">
-                      <a href={`${source.url}#page=${parserResult?.metrics[item.metricKey]?.page ?? 1}`} target="_blank" rel="noreferrer" className="text-cyan-200 underline underline-offset-4">{item.location}</a> · {item.snippet} · 系统方向：{item.systemDirection}
+                      <a href={`${source.url}#page=${parserResult?.metrics[item.metricKey]?.page ?? 1}`} target="_blank" rel="noreferrer" className="text-cyan-200 underline underline-offset-4">{item.location}</a> · 标准化数值：{item.snippet} · 系统方向：{item.systemDirection}{item.sourceExcerpt && <details><summary>{source.mode === "sample" ? "样例文本（合成坐标，非 PDF 原文）" : "原文摘录（本机提取）"}</summary><blockquote className="whitespace-pre-wrap break-words">{item.sourceExcerpt}</blockquote></details>}
                     </p>
                   </div>
 
