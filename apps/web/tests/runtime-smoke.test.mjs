@@ -126,3 +126,67 @@ test("production app serves the access gate, Beacon workspace, CSS and matching 
     }
   }
 });
+
+test("competition open mode skips the code form and transparently authorizes the research API", { timeout: 60000 }, async () => {
+  const port = 4324;
+  const origin = `http://127.0.0.1:${port}`;
+  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", String(port), "-H", "127.0.0.1"], {
+    cwd: new URL("..", import.meta.url),
+    stdio: ["ignore", "pipe", "pipe"],
+    env: {
+      ...process.env,
+      NEXT_TELEMETRY_DISABLED: "1",
+      REVIEW_ACCESS_MODE: "open",
+      RESEARCH_DEMO_TOKEN: accessCode,
+      REVIEW_SESSION_SECRET: "NOT_A_REAL_SESSION_SECRET_RUNTIME_TEST_ONLY",
+      REVIEW_ACCESS_DEADLINE: "2099-01-01T00:00:00Z",
+      RESEARCH_APP_ORIGIN: origin,
+      MODEL_PROVIDER: "deepseek",
+      DEEPSEEK_MODEL: "deepseek-v4-pro",
+      DEEPSEEK_API_KEY: "NOT_A_REAL_PROVIDER_KEY_RUNTIME_TEST_ONLY",
+      OPENAI_API_KEY: "",
+    },
+  });
+  let logs = "";
+  server.stdout.on("data", (chunk) => { logs += chunk; });
+  server.stderr.on("data", (chunk) => { logs += chunk; });
+  const exited = new Promise((resolve) => server.once("close", resolve));
+  try {
+    let response;
+    for (let i = 0; i < 80; i++) {
+      try { response = await fetch(`${origin}/questions`, { redirect: "manual", signal: AbortSignal.timeout(1000) }); } catch {}
+      if (response?.status === 200) break;
+      assert.equal(server.exitCode, null, logs);
+      await delay(250);
+    }
+    assert.equal(response?.status, 200, logs);
+    assert.match(response.headers.get("set-cookie") ?? "", /beacon_review_access=v2\./);
+    assert.doesNotMatch(await response.text(), /内部审验入口/);
+
+    const access = await fetch(`${origin}/api/access`);
+    assert.deepEqual(await access.json(), {
+      configured: true,
+      mode: "open",
+      session: true,
+      deadline: "2099-01-01T00:00:00.000Z",
+      expired: false,
+    });
+    const directApi = await fetch(`${origin}/api/research-question`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: origin },
+      body: JSON.stringify({ phase: "invalid" }),
+    });
+    assert.equal(directApi.status, 400, "open mode must reach input validation without a login request or provider call");
+    assert.equal((await directApi.json()).code, "CONFIRMATION_REQUIRED");
+    const accessPage = await fetch(`${origin}/access`, { redirect: "manual" });
+    assert.equal(accessPage.status, 307);
+    assert.equal(new URL(accessPage.headers.get("location"), origin).pathname, "/");
+  } finally {
+    server.kill("SIGTERM");
+    await Promise.race([exited, delay(3000)]);
+    if (server.exitCode === null && server.signalCode === null) {
+      server.kill("SIGKILL");
+      await exited;
+    }
+  }
+});
