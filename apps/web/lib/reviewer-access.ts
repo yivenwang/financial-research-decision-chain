@@ -34,6 +34,14 @@ export function reviewSessionConfigured(secret = process.env.REVIEW_SESSION_SECR
   return secret.length >= 32;
 }
 
+export function openReviewAccessConfigured(
+  accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "",
+  mode = process.env.REVIEW_ACCESS_MODE?.trim().toLowerCase(),
+  now = Date.now(),
+) {
+  return mode === "open" && accessCode.length >= 16 && reviewSessionConfigured() && reviewAccessOpen(now);
+}
+
 async function sessionSignature(payload: string, accessCode: string, secret: string) {
   const key = await crypto.subtle.importKey("raw", encoder.encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(`beacon-review-session.v2\n${accessCode}\n${payload}`)));

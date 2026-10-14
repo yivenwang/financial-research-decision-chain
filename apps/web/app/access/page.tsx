@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
-import { REVIEW_ACCESS_DEADLINE_LABEL } from "@/lib/reviewer-access";
+import { redirect } from "next/navigation";
+import { REVIEW_ACCESS_DEADLINE_LABEL, openReviewAccessConfigured } from "@/lib/reviewer-access";
 import { AccessForm } from "./access-form";
 
 export const metadata: Metadata = { title: "内部审验 · Beacon｜研灯", robots: { index: false, follow: false, nocache: true } };
+export const dynamic = "force-dynamic";
 
 export default function AccessPage() {
+  if (openReviewAccessConfigured()) redirect("/");
   return <main className="flex min-h-screen items-center justify-center bg-slate-950 px-5 py-12 text-white">
     <section className="w-full max-w-md rounded-2xl border border-cyan-300/20 bg-slate-900/90 p-7 shadow-2xl shadow-cyan-950/30">
       <p className="text-xs font-semibold tracking-[0.22em] text-cyan-300">BEACON · INTERNAL REVIEW</p>

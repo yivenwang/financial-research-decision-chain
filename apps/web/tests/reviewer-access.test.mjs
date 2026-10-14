@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createHash } from "node:crypto";
-import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_ISO, authorizedReviewer, hasReviewBearer, hasReviewSession, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionSeconds, reviewSessionValue } from "../lib/reviewer-access.ts";
+import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_ISO, authorizedReviewer, hasReviewBearer, hasReviewSession, openReviewAccessConfigured, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionSeconds, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 process.env.REVIEW_SESSION_SECRET = "NOT_A_REAL_SESSION_SECRET_UNIT_TEST_ONLY";
 delete process.env.REVIEW_ACCESS_DEADLINE;
@@ -41,6 +41,18 @@ test("short or missing server access codes never authorize", async () => {
   const request = new Request("https://example.test", { headers: { authorization: "Bearer short" } });
   assert.equal(await authorizedReviewer(request, "short", beforeDeadline), false);
   assert.equal(await authorizedReviewer(request, "", beforeDeadline), false);
+});
+
+test("open mode is explicit and fails closed without the existing session controls", () => {
+  assert.equal(openReviewAccessConfigured(accessCode, "open", beforeDeadline), true);
+  assert.equal(openReviewAccessConfigured(accessCode, "code", beforeDeadline), false);
+  assert.equal(openReviewAccessConfigured("short", "open", beforeDeadline), false);
+  assert.equal(openReviewAccessConfigured(accessCode, "open", afterDeadline), false);
+  const secret = process.env.REVIEW_SESSION_SECRET;
+  try {
+    delete process.env.REVIEW_SESSION_SECRET;
+    assert.equal(openReviewAccessConfigured(accessCode, "open", beforeDeadline), false);
+  } finally { process.env.REVIEW_SESSION_SECRET = secret; }
 });
 
 test("signed sessions reject old hashes, expiry tampering, future issue times and key/code rotation", async () => {

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_LABEL, hasReviewBearer, hasReviewSession, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionConfigured, reviewSessionSeconds, reviewSessionValue } from "@/lib/reviewer-access";
+import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_LABEL, hasReviewBearer, hasReviewSession, openReviewAccessConfigured, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionConfigured, reviewSessionSeconds, reviewSessionValue } from "@/lib/reviewer-access";
 import { readBoundedJson } from "@/lib/request-body";
 import { createAccessLimiter } from "@/lib/review-security";
 
@@ -30,11 +30,13 @@ function response(value: unknown, status = 200) {
 
 export async function GET(request: Request) {
   const accessCode = process.env.RESEARCH_DEMO_TOKEN ?? "";
+  const open = openReviewAccessConfigured(accessCode);
   return response({
     configured: accessCode.length >= 16 && reviewSessionConfigured(),
-    session: await hasReviewSession(request, accessCode),
+    mode: open ? "open" : "code",
+    session: open || await hasReviewSession(request, accessCode),
     deadline: new Date(reviewAccessDeadlineMs()).toISOString(),
-    expired: !reviewAccessOpen(),
+    expired: !open && !reviewAccessOpen(),
   });
 }
 
