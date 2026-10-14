@@ -23,7 +23,6 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body className="antialiased">
         {children}
-        <div aria-hidden="true" className="pointer-events-none fixed bottom-3 right-3 z-[9999] rounded-md border border-amber-300/25 bg-slate-950/85 px-3 py-1.5 text-[11px] font-semibold tracking-[0.14em] text-amber-100 shadow-lg backdrop-blur">内部审验 · 禁止转发复制</div>
       </body>
     </html>
   );
