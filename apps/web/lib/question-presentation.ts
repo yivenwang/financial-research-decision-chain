@@ -9,6 +9,7 @@ export function questionReason(code: string) {
     PROVIDER_INCOMPLETE: "模型返回了不完整输出，已保留失败记录，不能作为成功分析。",
     MODEL_JSON_INVALID: "模型返回的结构无法读取，已保留原始阻断记录。",
     ANSWER_SCHEMA_INVALID: "模型返回的研究结构不符合约定，草稿已阻断。",
+    ANSWER_CONTRACT_MISMATCH: "模型输出超出本次受控陈述，草稿已阻断；原始记录已保留，不能作为可接受的研究答案。",
     CONTRACT_SCHEMA_INVALID: "模型返回的任务结构、指标或证据引用 ID 不符合约定，请核对运行详情。",
     PARAGRAPH_EVIDENCE_OMITTED: "段落缺少事实、比较双方或派生计算的底层引用，草稿已阻断。",
     UNSUPPORTED_YOY_ATTRIBUTION: "模型把本期勾稽当成同比原因，证据不足，草稿已阻断。",

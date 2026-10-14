@@ -4,12 +4,16 @@ import { readFileSync } from "node:fs";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { validateQuestionRun } from "../lib/research-question-storage.ts";
 import { canonicalJson, sha256Text, buildMemoContext } from "../lib/research-memo.ts";
-import { questionReferenceIds, questionPlanSchema, validateQuestionPlan, validateQuestionExplanation, resolveQuestionEvidence, makeResearchContract,
+import { questionReferenceIds, questionPlanSchema, validateQuestionPlan, validateQuestionExplanation as validateV10Explanation, resolveQuestionEvidence, makeResearchContract,
   questionPromptInstructions, QUESTION_INTENTS } from "../lib/research-question.ts";
 import { QUESTION_BUDGET_VERSION, checkQuestionInputBudget } from "../lib/question-batch-budget.ts";
 import { QUESTION_LIVE_CASES } from "../scripts/run-question-batch.mjs";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, schemaAnswerOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
 import { extractCandidates, createResearchSnapshot } from "../lib/research-engine.ts";
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 // Immutable historical failures are replay inputs, never a positive synthetic fallback.
 const fixtureText = n => readFileSync(new URL(`./fixtures/question-live-38047109824/request-0${n}.json`, import.meta.url), "utf8").trimEnd();
@@ -115,7 +119,7 @@ test("registered real-PDF snapshot fits exact unchanged wire budget for all thre
       const handler = createQuestionHandler(() => config, { fetcher: async (_url, init) => {
         calls++; const body = JSON.parse(init.body); receipts.push({ intent, ...checkQuestionInputBudget(init.body) });
         assert.equal(body.model, "deepseek-v4-pro"); assert.equal(body.max_output_tokens, 6000);
-        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent, referenceIds: questionReferenceIds("2026Q1"), reason: "字".repeat(160) }) : repaired());
+        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent, referenceIds: questionReferenceIds("2026Q1"), reason: "字".repeat(160) }) : schemaAnswerOutput(body, {sufficiency:"partial"}));
       } });
       const draft = await (await handler.POST(req({ phase: "plan", question: QUESTION_LIVE_CASES[i].question }))).json();
       assert.equal(draft.run.status, "CONTRACT_DRAFTED", JSON.stringify(draft.run.reasons));

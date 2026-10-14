@@ -1,6 +1,7 @@
 import type { MemoContext } from "./research-memo.ts";
 import type { QuestionExplanation } from "./research-question.ts";
 import { questionCitationPolicy } from "./question-citation-policy.ts";
+import type { QuestionContentPolicy } from "./question-explanation-contract.ts";
 
 export function questionCitationDependencies(context: MemoContext): Record<string, string[]> {
   return Object.fromEntries(questionCitationPolicy(context).filter(r => r.requires.length).map(r => [r.id, r.requires]));
@@ -33,7 +34,8 @@ export function hasExplicitPremise(text: string) {
 
 // Conservative checks for known unsupported claims; not a general semantic proof.
 // Unrecognised reasoning still requires human content review and professional gates.
-export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, strictCounter = false, currentContract = false, extendedContract = false, independentClaims = false, financialBoundaries = false, premiseScope = false) {
+export function validateQuestionContent(answer: QuestionExplanation, context: MemoContext, policy: QuestionContentPolicy) {
+  const { strictCounter, currentContract, extendedContract, independentClaims, financialBoundaries, premiseScope } = policy;
   const prefix = `EV-${context.source.sourceId}-C04-`;
   const dependencies = questionCitationDependencies(context);
   const nr = context.references.find(r => r.id === prefix + "NR");

@@ -6,6 +6,7 @@ import { parseResearchReport, extractCandidates, createResearchSnapshot } from "
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { buildMemoContext } from "../lib/research-memo.ts";
 import { QUESTION_POINTS, questionCitationChoices } from "../lib/question-citation-policy.ts";
+import { controlledQuestionPoints } from "../lib/question-explanation-contract.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 
 // Synthetic HTTP tests have their own open window; production deadline is unchanged.
@@ -17,7 +18,7 @@ process.env.RESEARCH_RUN_DIRECTORY = mkdtempSync(join(tmpdir(), "beacon-question
 export const questionTestConfig = { provider: "deepseek", apiKey: "question-test-NOT-A-REAL-KEY", accessToken: "question-test-access-code", model: "deepseek-v4-pro" };
 export const mainQuestion = "安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？";
 export const planOutput = (patch = {}) => ({ intent: "CHANGE_EXPLAIN", company: "安克创新", period: "2026Q1", comparisonPeriod: "2025Q1", metricKeys: ["attributable_np", "adjusted_np", "non_recurring_total"], referenceIds: ["C-04", "F-02"], reason: "仅核验本期利润结构。", ...patch });
-export const answerOutput = (patch = {}) => ({
+export const legacyAnswerOutput = (patch = {}) => ({
   sufficiency: "complete",
   directAnswer: { text: "归母下滑与扣非增长应拆开核对，不能单凭一个指标认定核心经营恶化。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "A-03"] },
   inference: { text: "负向调整可能影响表面利润，但扣非能否代表核心经营仍是待复核假设。", citations: ["EV-S-05-C04-NR", "A-03", "F-02", "EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ"] },
@@ -32,16 +33,29 @@ export function questionTestSnapshot() {
     result, candidates: extractCandidates(result).map(item => ({ ...item, reviewStatus: "accepted" })) });
 }
 const syntheticContext = await buildMemoContext(questionTestSnapshot());
+export function answerOutput(patch = {}, contract) {
+  const definitions = controlledQuestionPoints(syntheticContext, contract);
+  return { sufficiency: "complete", ...Object.fromEntries(QUESTION_POINTS.map(point => [point,
+    {text:definitions[point].texts[0],citations:definitions[point].citationGroup.split('|')} ])), ...patch };
+}
+// Labelled fixture transport chooses from the request's actual schema. This is
+// not a provider fallback or evidence of model compliance; adversarial outputs
+// and original live fixtures are sent separately, byte-for-byte.
+export function schemaAnswerOutput(body, patch = {}) {
+  const properties=body.text.format.schema.properties;
+  return {sufficiency:properties.sufficiency.enum[0],...Object.fromEntries(QUESTION_POINTS.map(point=>[point,
+    {text:properties[point].properties.text.enum[0],citations:[properties[point].properties.citations.items.enum[0]]}])),...patch};
+}
 // Fixture serialization only: select an enum only if all of its IDs were already
 // chosen in this synthetic example. Never complete a missing citation or prose.
-export function syntheticQuestionWire(output) {
+export function syntheticQuestionWire(output, version = "question-explanation.v11") {
   if (!output || typeof output !== "object" || !Object.hasOwn(output, "sufficiency")) return output;
   const wire = structuredClone(output);
   for (const key of QUESTION_POINTS) {
     const point = wire[key];
     if (!point || !Array.isArray(point.citations) || point.citations.some(id => typeof id !== "string")) return output;
     const selected = new Set(point.citations);
-    const choices = questionCitationChoices(syntheticContext, key);
+    const choices = [...questionCitationChoices(syntheticContext, key),...(version === "question-explanation.v11" ? [controlledQuestionPoints(syntheticContext)[key].citationGroup] : [])];
     const eligible = choices.filter(token => token.split('|').every(id => selected.has(id))).sort((a,b) => b.split('|').length-a.split('|').length);
     const covered = new Set(), tokens = [];
     for (const token of eligible) if (token.split('|').some(id => !covered.has(id))) { tokens.push(token); token.split('|').forEach(id => covered.add(id)); }

@@ -4,6 +4,7 @@ import { reviewSessionOwner } from "./reviewer-access.ts";
 import { checkQuestionInputBudget, QUESTION_BUDGET_VERSION } from "./question-batch-budget.ts";
 import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
+import { questionAnswerState } from "./question-explanation-contract.ts";
 import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
   QUESTION_ANSWER_INSTRUCTIONS, QUESTION_ANSWER_PROMPT_VERSION, questionSources, questionPlanSchema, questionReferenceIds, questionExplanationInput,
@@ -167,9 +168,10 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       try {
         const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context, run.contract!), config, dependencies);
         const explanation = validateQuestionOutput(output, evidence.context, QUESTION_ANSWER_PROMPT_VERSION, run.contract!);
-        run.answer = { answerStatus: explanation.sufficiency === "partial" ? "PARTIAL" : "PASS", explanation, evidence,
+        const state = questionAnswerState(explanation.sufficiency);
+        run.answer = { answerStatus: state.answerStatus, explanation, evidence,
           verification: { evidence: "PASS", professional: "pending" }, recommendedHumanAction: "核对解释及引用后接受或退回研究草稿；会计、估值和最终投资判断仍待人工专业复核。", formalRecommendation: null };
-        run.status = explanation.sufficiency === "partial" ? "PARTIAL" : "ANSWER_READY";
+        run.status = state.status;
         run.answerSha256 = await sha256Text(canonicalJson(run.answer));
         await addQuestionEvent(run, "answer_generated", { answerSha256: run.answerSha256, status: run.status, snapshotSha256: evidence.context.snapshotSha256 });
       } catch (error) {

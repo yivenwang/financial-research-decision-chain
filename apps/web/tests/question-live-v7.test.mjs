@@ -2,13 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { canonicalJson, sha256Text } from '../lib/research-memo.ts';
-import { QUESTION_ANSWER_PROMPT_VERSION, questionPromptInstructions, resolveQuestionEvidence,
-  validateQuestionExplanation, validateQuestionOutput } from '../lib/research-question.ts';
+import { questionPromptInstructions, resolveQuestionEvidence,
+  validateQuestionExplanation as validateV10Explanation, validateQuestionOutput } from '../lib/research-question.ts';
 import { questionCitationChoices } from '../lib/question-citation-policy.ts';
 import { validateQuestionRun } from '../lib/research-question-storage.ts';
 import { createQuestionHandler } from '../lib/research-question.server.ts';
 import { assertArchiveSafe, runBoundedQuestionBatch } from '../scripts/run-question-batch.mjs';
 import { questionTestConfig, questionRequest, providerResponse, planOutput, answerOutput } from './question-test-helpers.mjs';
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, '1');
 const raw = readFileSync(new URL('./fixtures/question-live-38381793600/request-02.json', import.meta.url), 'utf8');
@@ -41,7 +45,7 @@ test('actual v6 output, first failure, two successful HTTP calls and cost receip
 
 test('raw counter paragraph lacks its own adjusted-profit evidence; current wire never fills the omitted ID', () => {
   assert.throws(() => validateQuestionOutput(original, context, 'question-explanation.v6', run.contract), /PARAGRAPH_EVIDENCE_OMITTED/);
-  assert.throws(() => validateQuestionOutput(original, context, QUESTION_ANSWER_PROMPT_VERSION, run.contract), /ANSWER_CITATION_OR_TEXT_INVALID/);
+  assert.throws(() => validateQuestionOutput(original, context, "question-explanation.v10", run.contract), /ANSWER_CITATION_OR_TEXT_INVALID/);
   const before = canonicalJson(original);
   assert.throws(() => validateQuestionExplanation(flatten(original), context, 'question-explanation.v6', run.contract), /PARAGRAPH_EVIDENCE_OMITTED/);
   assert.equal(canonicalJson(original), before);
@@ -85,7 +89,7 @@ test('v6 content rules remain historical while a new v7 acceptance rejects the k
   const answer = answerOutput({ sufficiency: 'partial' });
   answer.inference = { text: original.inference.text, citations: ['EV-S-05-C04-ADJ','EV-S-05-C04-ATTR','A-03','K-07','EV-S-05-C04-SPREAD'] };
   assert.doesNotThrow(() => validateQuestionExplanation(answer, context, 'question-explanation.v6', run.contract));
-  assert.throws(() => validateQuestionExplanation(answer, context, QUESTION_ANSWER_PROMPT_VERSION, run.contract), /UNSUPPORTED_SPREAD_TREND/);
+  assert.throws(() => validateQuestionExplanation(answer, context, "question-explanation.v10", run.contract), /UNSUPPORTED_SPREAD_TREND/);
 });
 
 test('original failed wire replays twice through the batch, blocks and cannot be resent under its operation ID', async () => {

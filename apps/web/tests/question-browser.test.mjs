@@ -9,7 +9,7 @@ import test from "node:test";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { storageKeys } from "../lib/research-versions.ts";
-import { questionTestConfig, planOutput, answerOutput, providerResponse } from "./question-test-helpers.mjs";
+import { questionTestConfig, planOutput, schemaAnswerOutput, providerResponse } from "./question-test-helpers.mjs";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 // Public synthetic signing secret, never a runtime credential.
@@ -36,7 +36,7 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     const body = JSON.parse(init.body); calls.push(body.text.format.name);
     const input = JSON.parse(body.input[1].content);
     const plan = planOutput({ intent: input.queryRaw?.includes("来源") ? "EVIDENCE_AUDIT" : input.queryRaw?.includes("影响") ? "DECISION_IMPACT" : "CHANGE_EXPLAIN" });
-    return providerResponse(body.text.format.name.endsWith("plan") ? plan : answerOutput());
+    return providerResponse(body.text.format.name.endsWith("plan") ? plan : schemaAnswerOutput(body));
   } });
   try {
     for (let i = 0; i < 80; i++) {

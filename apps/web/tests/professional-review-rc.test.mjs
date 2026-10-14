@@ -7,9 +7,14 @@ import { reviewAndRun, createResearchSnapshot, extractCandidates } from '../lib/
 import { buildMemoContext, canonicalJson } from '../lib/research-memo.ts';
 import { createRollbackSnapshot } from '../lib/research-versions.ts';
 import { validateQuestionRun } from '../lib/research-question-storage.ts';
-import { validateQuestionExplanation, validateQuestionOutput, questionExplanationSchema, questionPromptInstructions } from '../lib/research-question.ts';
+import { validateQuestionExplanation as validateV10Explanation, validateQuestionOutput, questionExplanationSchema, questionPromptInstructions } from '../lib/research-question.ts';
 import { questionTestSnapshot, answerOutput, syntheticQuestionWire } from './question-test-helpers.mjs';
+import { controlledQuestionPoints } from '../lib/question-explanation-contract.ts';
 import { assertArchiveSafe } from '../scripts/run-question-batch.mjs';
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, '1');
 const snapshot = questionTestSnapshot();
@@ -109,6 +114,7 @@ test('future opinion snapshot and rollback preserve provenance while V0.2 and al
   assert.equal(supported.chain.killCriterion.accountingState,'triggered');
   const supportedContext=await buildMemoContext(supported);
   assert.match(supportedContext.references.find(row=>row.id==='A-03').excerpt,/状态：不认可/);
+  assert.match(controlledQuestionPoints(supportedContext).inference.texts[0],/不认可核心经营代理假设/);
   assert.match(supportedContext.references.find(row=>row.id==='K-07').excerpt,/会计认定经常性/);
   assert.deepEqual(supported.chain.professionalGates,{eg01:'approved',eg02:'pending'});
   const old=structuredClone(snapshot);old.chainVersion=K07_B_VERSION;
@@ -136,8 +142,8 @@ test('current financial negative examples remain blocked without repairing text 
   ];
   for(const [text,code] of examples) {
     const answer=answerOutput();answer.directAnswer={text,citations:['EV-S-05-C04-ATTR','EV-S-05-C04-ADJ','EV-S-05-C04-NR','F-02','Valuation-B5','A-03']};
-    const wire=syntheticQuestionWire(answer),before=canonicalJson(wire);
-    assert.throws(()=>validateQuestionOutput(wire,context),new RegExp(code));
+    const wire=syntheticQuestionWire(answer,'question-explanation.v10'),before=canonicalJson(wire);
+    assert.throws(()=>validateQuestionOutput(wire,context,'question-explanation.v10'),new RegExp(code));
     assert.equal(canonicalJson(wire),before);
   }
   for(const text of ['税前项目范围差不能归因于所得税或少数股东。','机械年化不是盈利预测，估值仍待复核。']) {

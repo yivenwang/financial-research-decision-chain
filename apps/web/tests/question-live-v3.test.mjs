@@ -5,10 +5,14 @@ import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { validateQuestionRun } from "../lib/research-question-storage.ts";
 import { QUESTION_ANSWER_PROMPT_VERSION, QUESTION_PLAN_PROMPT_VERSION, questionPromptInstructions, questionAnswerConstraints, questionExplanationSchema,
-  questionExplanationInput, resolveQuestionEvidence, validateQuestionExplanation, questionReferenceIds } from "../lib/research-question.ts";
+  questionExplanationInput, resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation, questionReferenceIds } from "../lib/research-question.ts";
 import { QUESTION_BUDGET_VERSION, checkQuestionInputBudget } from "../lib/question-batch-budget.ts";
 import { QUESTION_LIVE_CASES, assertArchiveSafe, verifyLiveQuestionPhase, runBoundedQuestionBatch } from "../scripts/run-question-batch.mjs";
-import { questionTestConfig as config, planOutput, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, planOutput, schemaAnswerOutput, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "v3 regression uses synthetic transport only");
 const bytes = readFileSync(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8");
@@ -90,7 +94,7 @@ test("model input preserves semantic contract and engine outputs while making co
   assert.doesNotThrow(() => validateQuestionExplanation(a, reverse));
   const none = structuredClone(context); none.references.forEach(r => r.direction = null);
   assert.deepEqual(questionAnswerConstraints(none).counterEvidenceIds, []);
-  assert.ok(questionExplanationSchema(none).properties.counterEvidence.properties.citations.items.enum.includes("A-03"));
+  assert.ok(questionExplanationSchema(none, undefined, "question-explanation.v10").properties.counterEvidence.properties.citations.items.enum.includes("A-03"));
 });
 
 test("six request rehearsal uses real snapshot, all intents, maximal references and original budget with synthetic transport", async t => {
@@ -101,7 +105,7 @@ test("six request rehearsal uses real snapshot, all intents, maximal references 
     executePhase: async ({ spec, phase, draft }) => {
       const handler = createQuestionHandler(() => config, { fetcher: async (_url, init) => {
         calls++; receipts.push({ intent: spec.intent, phase, ...checkQuestionInputBudget(init.body) });
-        return providerResponse(phase === "plan" ? planOutput({ intent: spec.intent, company: "Anker Innovations", referenceIds: questionReferenceIds("2026Q1"), reason: "💡".repeat(160) }) : safeLiveAnswer(spec.intent));
+        return providerResponse(phase === "plan" ? planOutput({ intent: spec.intent, company: "Anker Innovations", referenceIds: questionReferenceIds("2026Q1"), reason: "💡".repeat(160) }) : schemaAnswerOutput(JSON.parse(init.body), {sufficiency:"partial"}));
       } });
       const response = await handler.POST(req(phase === "plan" ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot }));
       const data = await response.json(); await validateQuestionRun(data.run);

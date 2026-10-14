@@ -6,7 +6,7 @@ import { REVIEW_CHAIN_VERSION } from '../../../lib/chain-professional-review.ts'
 import { runC04ChainK07B } from '../../../lib/chain-k07-b.ts';
 import { buildMemoContext, canonicalJson } from '../lib/research-memo.ts';
 import { resolveQuestionEvidence } from '../lib/research-question.ts';
-import { questionTestSnapshot, questionTestConfig, questionRequest, planOutput, answerOutput, providerResponse } from './question-test-helpers.mjs';
+import { questionTestSnapshot, questionTestConfig, questionRequest, planOutput, schemaAnswerOutput, providerResponse } from './question-test-helpers.mjs';
 import { createRollbackSnapshot } from '../lib/research-versions.ts';
 import { extractCandidates, reviewAndRun } from '../lib/research-engine.ts';
 import { createQuestionHandler } from '../lib/research-question.server.ts';
@@ -83,7 +83,7 @@ test('future snapshot supports all six synthetic phases inside the existing wire
         receipts.push({ intent: spec.intent, phase, ...checkQuestionInputBudget(init.body) });
         return providerResponse(phase === 'plan' ? planOutput({ intent: spec.intent,
           referenceIds: questionReferenceIds('2026Q1'), company: 'Anker Innovations', reason: '💡'.repeat(160) }) :
-          answerOutput({ sufficiency: spec.intent === 'CHANGE_EXPLAIN' ? 'partial' : 'complete' }));
+          schemaAnswerOutput(JSON.parse(init.body), { sufficiency: spec.intent === 'CHANGE_EXPLAIN' ? 'partial' : 'complete' }));
       } });
       const response = await handler.POST(questionRequest(phase === 'plan' ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot }));
       const data = await response.json();

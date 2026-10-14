@@ -2,11 +2,15 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { canonicalJson, sha256Text } from '../lib/research-memo.ts';
-import { validateQuestionOutput, validateQuestionExplanation, questionPromptInstructions, resolveQuestionEvidence } from '../lib/research-question.ts';
+import { validateQuestionOutput, validateQuestionExplanation as validateV10Explanation, questionPromptInstructions, resolveQuestionEvidence } from '../lib/research-question.ts';
 import { validateQuestionRun } from '../lib/research-question-storage.ts';
 import { createQuestionHandler } from '../lib/research-question.server.ts';
 import { answerOutput, questionTestConfig, questionRequest, providerResponse, planOutput } from './question-test-helpers.mjs';
 import { assertArchiveSafe, runBoundedQuestionBatch } from '../scripts/run-question-batch.mjs';
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E,'1');
 const files=['manifest.json','request-01.json','request-02.json'].map(name=>readFileSync(new URL('./fixtures/question-live-38501083398/'+name,import.meta.url),'utf8'));
@@ -47,7 +51,7 @@ test('v10 replay preserves the original response, stops the mock batch at the in
       return {ok:data.run.status!=='BLOCKED',failureCode:data.run.reasons[0],data,audit:data.run.calls[0],record:{run:data.run}};
     }});
   assert.equal(calls,2);assert.equal(result.requests.length,2);assert.equal(result.status,'stopped-after-failure');
-  assert.equal(result.requests[1].failureCode,'VERIFIED_FACT_CONDITIONED_ON_ASSUMPTION');
+  assert.equal(result.requests[1].failureCode,'ANSWER_CONTRACT_MISMATCH');
   assert.equal(failure.run.answer,null);assert.equal(failure.run.calls[0].rawOutput,run.calls[0].rawOutput);
   assert.deepEqual(await(await handler.POST(questionRequest(executeBody))).json(),failure);assert.equal(calls,2);
 });
@@ -82,7 +86,7 @@ test('a premise is not permission for independent unsupported claims or a later 
 
 test('the original counter conditions a verified fact on a proxy; scope repair never repairs the archived output into success',()=>{
   const before=canonicalJson(original);
-  assert.throws(()=>validateQuestionOutput(original,context,undefined,run.contract),/VERIFIED_FACT_CONDITIONED_ON_ASSUMPTION/);
+  assert.throws(()=>validateQuestionOutput(original,context,'question-explanation.v10',run.contract),/VERIFIED_FACT_CONDITIONED_ON_ASSUMPTION/);
   assert.equal(canonicalJson(original),before);
   const answer=answerOutput({sufficiency:'partial'});
   answer.counterEvidence.text='归母同比下降仍是反向事实；扣非同比为正是独立披露事实，不依赖核心经营假设。';

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { makeResearchContract, resolveQuestionEvidence, validateQuestionExplanation, validateQuestionOutput,
+import { makeResearchContract, resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation, validateQuestionOutput,
   questionExplanationSchema, questionAnswerConstraints, questionPromptInstructions } from "../lib/research-question.ts";
 import { QUESTION_POINTS, questionCitationPolicy, questionCitationChoices, expandQuestionCitationChoices } from "../lib/question-citation-policy.ts";
 import { answerOutput, planOutput, mainQuestion, questionTestSnapshot, syntheticQuestionWire,
@@ -9,6 +9,10 @@ import { answerOutput, planOutput, mainQuestion, questionTestSnapshot, synthetic
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { validateQuestionRun, appendQuestionReview, readQuestionLedger, QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { storageKeys } from "../lib/research-versions.ts";
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1");
 const contract = makeResearchContract(mainQuestion, planOutput(), crypto.randomUUID(), new Date().toISOString());
@@ -41,7 +45,7 @@ test("an explicitly year-on-year question cannot execute a plan without its comp
 
 
 test("all provider citation enums are closed selections with actual counter and professional limits", () => {
-  const schema = questionExplanationSchema(context);
+  const schema = questionExplanationSchema(context,undefined,"question-explanation.v10");
   for (const point of QUESTION_POINTS) {
     const choices = questionCitationChoices(context, point);
     assert.deepEqual(schema.properties[point].properties.citations.items.enum, choices);

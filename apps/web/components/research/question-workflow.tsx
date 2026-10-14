@@ -210,6 +210,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       {draft && <><p className="text-sm text-slate-400">{snapshot ? "执行前仍会复核材料、审核记录及冻结计算。" : "缺少已审核 S-05（2026Q1）：请先到材料更新导入、审核并保存，再返回确认。此时确认只检查材料，不调用解释模型。"}</p><Button disabled={!!busy || !!pending || !!browserIssue} onClick={() => reviewGuard.protect(() => {void request("execute");})}>确认并执行</Button></>}
     </section>}
     {shown && <section className={panel} data-testid="question-result">
+      {shown.calls.some(call => call.promptVersion === "question-explanation.v11") && <p className="text-sm text-slate-500" data-testid="controlled-explanation-notice">AI 在当前快照的受控陈述中选择解释；数字来自冻结引擎，经济解释限于证据和会计意见范围，草稿仍须人工审核。</p>}
       {shown.calls.some(call => call.promptVersion !== (call.phase === "plan" ? QUESTION_PLAN_PROMPT_VERSION : QUESTION_ANSWER_PROMPT_VERSION)) && <p className="text-sm text-amber-200" data-testid="historical-validation-notice">这份历史记录按当时的校验规则生成。当前已明确任务目标分类、反证陈述、逐段引用、专业限制引用和同比归因要求，历史状态与审核记录未重新评定；请人工核验原文，不将历史技术完成视为内容或专业认可。</p>}
       <div className="flex flex-wrap justify-between gap-3"><h2 className="text-lg font-semibold">{statusLabel[shown.status]}</h2><div className="flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => {void exportRecord("json");}}>导出完整记录</Button>

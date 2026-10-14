@@ -4,10 +4,14 @@ import { readFileSync } from "node:fs";
 import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { validateQuestionRun } from "../lib/research-question-storage.ts";
-import { QUESTION_ANSWER_PROMPT_VERSION, questionPromptInstructions, questionExplanationSchema,
-  resolveQuestionEvidence, validateQuestionExplanation } from "../lib/research-question.ts";
+import { questionPromptInstructions, questionExplanationSchema,
+  resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation } from "../lib/research-question.ts";
 import { assertArchiveSafe, runBoundedQuestionBatch } from "../scripts/run-question-batch.mjs";
 import { questionTestConfig as config, planOutput, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "Historical v4 replay uses synthetic transport only");
 const bytes = readFileSync(new URL("./fixtures/question-live-38138604171/request-02.json", import.meta.url), "utf8");
@@ -43,7 +47,7 @@ test("real v4 failure preserves exact bytes, prompt hash, two calls and first-fa
 });
 
 test("three independent citation omissions remain blocked under both original and current contracts", () => {
-  for (const version of ["question-explanation.v4", QUESTION_ANSWER_PROMPT_VERSION]) {
+  for (const version of ["question-explanation.v4", "question-explanation.v10"]) {
     assert.throws(() => validateQuestionExplanation(original, context, version), /PARAGRAPH_EVIDENCE_OMITTED/);
     assert.doesNotThrow(() => validateQuestionExplanation(completeCitations(), context, version));
     for (const key of ["inference", "counterEvidence", "uncertainty"]) {
@@ -84,7 +88,7 @@ test("actual omitted-citation response stops after two mock calls and replay can
       return { ok, failureCode: data.run.reasons[0], data, audit: data.run.calls[0], record: { run: data.run } };
     } });
   assert.equal(calls, 2); assert.equal(manifest.requests.length, 2); assert.equal(manifest.status, "stopped-after-failure");
-  assert.deepEqual(failed.run.reasons, ["ANSWER_CITATION_OR_TEXT_INVALID"]); assert.equal(failed.run.answer, null);
+  assert.deepEqual(failed.run.reasons, ["ANSWER_CONTRACT_MISMATCH"]); assert.equal(failed.run.answer, null);
   assert.equal(failed.run.calls[0].rawOutput, run.calls[0].rawOutput);
   assert.deepEqual(await (await handler.POST(req(executeBody))).json(), failed); assert.equal(calls, 2);
 });

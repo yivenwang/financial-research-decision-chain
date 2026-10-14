@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
-import { makeResearchContract, validateQuestionPlan, resolveQuestionEvidence, validateQuestionExplanation, questionMarkdown, QUESTION_INTENTS } from "../lib/research-question.ts";
+import { makeResearchContract, validateQuestionPlan, resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation, questionMarkdown, QUESTION_INTENTS } from "../lib/research-question.ts";
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, validateQuestionRun, QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { storageKeys, createRollbackSnapshot } from "../lib/research-versions.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, schemaAnswerOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req } from "./question-test-helpers.mjs";
 
-function harness(plan = planOutput(), answer = answerOutput()) {
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
+
+function harness(plan = planOutput(), answer) {
   const calls = [];
-  const handler = createQuestionHandler(() => config, { fetcher: async (url, init) => { const body = JSON.parse(init.body); calls.push({ url, body }); return providerResponse(body.text.format.name.endsWith("plan") ? plan : answer); } });
+  const handler = createQuestionHandler(() => config, { fetcher: async (url, init) => { const body = JSON.parse(init.body); calls.push({ url, body }); return providerResponse(body.text.format.name.endsWith("plan") ? plan : (answer ?? schemaAnswerOutput(body))); } });
   const draft = async (question = mainQuestion) => (await handler.POST(req({ phase: "plan", question }))).json();
   const execute = async (d, snapshot = questionTestSnapshot(), extra = {}) => handler.POST(req({ phase: "execute", draft: d, snapshot, confirmed: true, ...extra }));
   return { calls, handler, draft, execute };

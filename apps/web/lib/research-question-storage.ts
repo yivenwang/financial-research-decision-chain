@@ -4,6 +4,7 @@ import { readActiveVersionId, readStoredVersions } from "./research-versions.ts"
 import { QUESTION_SCHEMA_VERSION, resolveQuestionEvidence, validateQuestionOutput, validateQuestionExplanation, validateQuestionPlan, makeResearchContract,
   questionPromptInstructions, type QuestionRun } from "./research-question.ts";
 import { parseMemoJson } from "./model-json.ts";
+import { questionAnswerState, QUESTION_ANSWER_PROMPT_VERSION } from "./question-explanation-contract.ts";
 
 export const QUESTION_STORAGE_KEY = "financial-research-questions-v1";
 export type QuestionReview = { id: string; runId: string; answerSha256: string; snapshotSha256: string;
@@ -64,9 +65,9 @@ export async function validateQuestionRun(run: QuestionRun) {
     if (!call?.rawOutput || call.failureCode) throw new Error("解释原文缺失。");
     // Historical versions keep their own original validation, without changing their reviews.
     const explanation = validateQuestionOutput(parseMemoJson(call.rawOutput), resolved.evidence.context, call.promptVersion, run.contract);
+    const state = questionAnswerState(explanation.sufficiency);
     if (canonicalJson(explanation) !== canonicalJson(run.answer.explanation) ||
-      run.status !== (explanation.sufficiency === "partial" ? "PARTIAL" : "ANSWER_READY") ||
-      run.answer.answerStatus !== (explanation.sufficiency === "partial" ? "PARTIAL" : "PASS")) throw new Error("解释与原始输出或状态不一致。");
+      run.status !== state.status || run.answer.answerStatus !== state.answerStatus) throw new Error("解释与原始输出或状态不一致。");
     if (run.answer.formalRecommendation !== null || run.answer.verification.professional !== "pending" || run.answer.verification.evidence !== "PASS") throw new Error("专业边界被修改。");
   } else if (["ANSWER_READY", "PARTIAL"].includes(run.status)) throw new Error("有效结果缺失。");
 }
@@ -97,7 +98,8 @@ export async function appendQuestionReview(runId: string, status: QuestionReview
     if (!current || await sha256Text(canonicalJson(current)) !== run.answer.evidence.context.snapshotSha256) throw new Error("当前研究版本已变化；历史答案仅供查看，请重新运行后审核。");
     // Reading a historical run preserves its original rules and reviews. A new
     // acceptance must satisfy current content rules; rejection remains available.
-    if (status === "accepted") validateQuestionExplanation(run.answer.explanation, run.answer.evidence.context, undefined, run.contract!);
+    if (status === "accepted") validateQuestionExplanation(run.answer.explanation, run.answer.evidence.context,
+      run.calls[0].promptVersion === QUESTION_ANSWER_PROMPT_VERSION ? QUESTION_ANSWER_PROMPT_VERSION : "question-explanation.v10", run.contract!);
     const review: QuestionReview = { id: crypto.randomUUID(), runId, answerSha256: run.answerSha256,
       snapshotSha256: run.answer.evidence.context.snapshotSha256, status, reviewer: reviewer.trim(), note: note.trim(),
       reviewedAt: new Date().toISOString(), scope: "question-draft-only", identityVerified: false };

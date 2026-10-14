@@ -2,12 +2,16 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { canonicalJson, sha256Text } from '../lib/research-memo.ts';
-import { QUESTION_ANSWER_PROMPT_VERSION, questionPromptInstructions, questionExplanationSchema,
-  resolveQuestionEvidence, validateQuestionExplanation, validateQuestionOutput } from '../lib/research-question.ts';
+import { questionPromptInstructions, questionExplanationSchema,
+  resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation, validateQuestionOutput } from '../lib/research-question.ts';
 import { validateQuestionRun } from '../lib/research-question-storage.ts';
 import { createQuestionHandler } from '../lib/research-question.server.ts';
 import { assertArchiveSafe, runBoundedQuestionBatch } from '../scripts/run-question-batch.mjs';
 import { questionTestConfig, questionRequest, providerResponse, planOutput, answerOutput } from './question-test-helpers.mjs';
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 assert.notEqual(process.env.LIVE_MODEL_E2E, '1');
 const files = ['manifest.json', 'request-01.json', 'request-02.json'].map(name =>
@@ -42,7 +46,7 @@ test('wire schema rejects numeric identifiers in prose while citations retain th
     assert.ok(pattern.test('会计假设待复核，连续可比历史未知。'));
     for (const text of ['会计 A-03 待复核。','本次 S-05 C-04 比较。','K-07 待核验。','利润１增长５％。','<b>文字</b>']) assert.ok(!pattern.test(text));
   }
-  for (const version of ['question-explanation.v7', QUESTION_ANSWER_PROMPT_VERSION]) {
+  for (const version of ['question-explanation.v7', "question-explanation.v10"]) {
     assert.throws(() => validateQuestionOutput(original, context, version, run.contract), /ANSWER_CITATION_OR_TEXT_INVALID/);
   }
   assert.ok(schema.properties.uncertainty.properties.citations.items.enum.some(id => id.includes('K-07')));

@@ -8,7 +8,7 @@ import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {setTimeout as delay} from 'node:timers/promises';
 import {createQuestionHandler} from '../lib/research-question.server.ts';
-import {questionTestConfig,planOutput,answerOutput,providerResponse} from './question-test-helpers.mjs';
+import {questionTestConfig,planOutput,schemaAnswerOutput,providerResponse} from './question-test-helpers.mjs';
 import {REVIEW_ACCESS_COOKIE,reviewSessionValue} from '../lib/reviewer-access.ts';
 import {QUESTION_STORAGE_KEY} from '../lib/research-question-storage.ts';
 import {storageKeys,baselineVersion} from '../lib/research-versions.ts';
@@ -35,7 +35,7 @@ test('RC task closure, guards, recovery, export and keyboard at 1440 / 1366 / 76
   await context.addCookies([{name:REVIEW_ACCESS_COOKIE,value:await reviewSessionValue(questionTestConfig.accessToken),url:origin,httpOnly:true,secure:false,sameSite:'Strict'}]);
   await context.route('**/*',async route=>{if(new URL(route.request().url()).origin===origin)await route.continue();else{externalRequests.push(route.request().url());await route.abort();}});
   const root=await mkdtemp(join(tmpdir(),'beacon-rc-mock-'));
-  const handler=createQuestionHandler(()=>({...questionTestConfig,appOrigin:origin}),{runDirectory:root,fetcher:async(_url,init)=>{syntheticCalls++;const body=JSON.parse(init.body);const question=body.input[0]?.content?.[0]?.text??JSON.stringify(body);return providerResponse(body.text.format.name.endsWith('plan')?planOutput(question.includes('范围外')?{intent:'OUT_OF_SCOPE'}:{}):answerOutput());}});
+  const handler=createQuestionHandler(()=>({...questionTestConfig,appOrigin:origin}),{runDirectory:root,fetcher:async(_url,init)=>{syntheticCalls++;const body=JSON.parse(init.body);const question=body.input[0]?.content?.[0]?.text??JSON.stringify(body);return providerResponse(body.text.format.name.endsWith('plan')?planOutput(question.includes('范围外')?{intent:'OUT_OF_SCOPE'}:{}):schemaAnswerOutput(body));}});
   let pendingMode=null;const posts=[];
   await context.route('**/api/research-question**',async route=>{
    const request=route.request(),url=new URL(request.url());

@@ -4,7 +4,7 @@ import { assertQuestionBatchEnvironment, runBoundedQuestionBatch, verifyLiveQues
 import { QUESTION_BUDGET_ACK, QUESTION_BUDGET_VERSION, checkQuestionInputBudget, budgetSummary } from "../lib/question-batch-budget.ts";
 process.env.QUESTION_ACCEPTANCE_BUDGET_MODE = QUESTION_BUDGET_VERSION; // Isolated NOT-LIVE test worker only.
 import { createQuestionHandler } from "../lib/research-question.server.ts";
-import { questionTestConfig, planOutput, answerOutput, providerResponse, questionRequest, questionTestSnapshot, questionTestCookie } from "./question-test-helpers.mjs";
+import { questionTestConfig, planOutput, schemaAnswerOutput, providerResponse, questionRequest, questionTestSnapshot, questionTestCookie } from "./question-test-helpers.mjs";
 
 const commitSha = "a".repeat(40);
 test("archive guards reject unknown credentials in string encodings and non-finite values while allowing safe approval receipts", () => {
@@ -84,7 +84,7 @@ test("actual initial manifest and all six handler archives pass the production a
         transportCalls++;
         const body = JSON.parse(init.body);
         checkQuestionInputBudget(init.body);
-        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput({ sufficiency: "partial" }),
+        return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : schemaAnswerOutput(body, { sufficiency: "partial" }),
           { id: "NOT-LIVE-manifest-regression", model: "deepseek-v4-pro" });
       } });
       const body = phase === "plan" ? { phase, question: spec.question } : { phase, draft, confirmed: true, snapshot };
@@ -167,7 +167,7 @@ test("acceptance verifier replays actual handler outputs for three intents and r
     const handler = createQuestionHandler(() => questionTestConfig, { fetcher: async (_url, init) => {
       calls++;
       const body = JSON.parse(init.body);
-      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : answerOutput({ sufficiency: "partial" }),
+      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput({ intent: spec.intent }) : schemaAnswerOutput(body, { sufficiency: "partial" }),
         { id: "NOT-LIVE-verifier-fixture", model: "deepseek-v4-pro" });
     } });
     const planResponse = await handler.POST(questionRequest({ phase: "plan", question: spec.question }));
