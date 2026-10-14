@@ -71,10 +71,11 @@ test("refresh and two tabs recover one persisted execution; safe replay, histori
   assert.deepEqual(attack, [404, 422]); assert.equal(calls, 1);
   await page.getByRole("button", { name: "确认并执行", exact: true }).click(); await entered;
   assert.equal(calls, 2);
-  await page.reload(); await page.getByRole("button", { name: "读取任务状态", exact: true }).waitFor();
+  await page.reload(); await page.getByRole("button", { name: "检查任务状态", exact: true }).waitFor();
   const second = await context.newPage(); second.on("pageerror", e => errors.push(e.message)); await second.goto(origin + "/questions");
-  await second.getByRole("button", { name: "读取任务状态", exact: true }).waitFor();
+  await second.getByRole("button", { name: "检查任务状态", exact: true }).waitFor();
   assert.equal(calls, 2); releaseExplain();
+  for (const tab of [page, second]) {await tab.getByRole("button", {name:"检查任务状态",exact:true}).click();}
   for (const tab of [page, second]) await tab.getByRole("heading", { name: "研究草稿待审核", exact: true }).waitFor();
   const ledger = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), QUESTION_STORAGE_KEY);
   assert.equal(ledger.runs.length, 2); assert.equal(calls, 2);
@@ -83,6 +84,7 @@ test("refresh and two tabs recover one persisted execution; safe replay, histori
   assert.equal(JSON.stringify((await replay.json()).run), original);
   await page.getByLabel("问题审核人", { exact: true }).fill("Synthetic human reviewer");
   await page.getByRole("button", { name: "退回研究草稿", exact: true }).click(); await page.getByText("研究草稿已退回", { exact: true }).waitFor();
+  await page.getByLabel("问题审核人", { exact: true }).fill("Synthetic human reviewer");
   await page.getByRole("button", { name: "接受研究草稿", exact: true }).click(); await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
   const after = await second.evaluate(key => JSON.parse(localStorage.getItem(key)), QUESTION_STORAGE_KEY);
   assert.deepEqual(after.reviews.map(r => r.status), ["rejected", "accepted"]); assert.equal(JSON.stringify(after.runs.at(-1)), original);

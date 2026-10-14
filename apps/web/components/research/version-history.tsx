@@ -249,6 +249,7 @@ export function VersionHistory() {
                 <button
                   key={version.versionId}
                   type="button"
+                  data-research-switch="version"
                   onClick={() => {
                     setSelected(version.versionId);
                     setNotice(null);

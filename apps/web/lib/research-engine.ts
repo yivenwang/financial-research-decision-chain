@@ -1,5 +1,8 @@
+import { finiteChange, isFiniteNumber } from "../../../lib/financial-numbers.ts";
 import { parseFinancialReportV06Strict } from "../../../lib/parser-v06-strict.ts";
-import { runC04Chain, type C04ChainResult, type EvidenceDirection } from "../../../lib/chain-v01.ts";
+import { runC04Chain, type C04ChainResult, type EvidenceDirection, type ChainContext } from "../../../lib/chain-v01.ts";
+import { K07_B_VERSION, runC04ChainK07B, type K07Period } from "../../../lib/chain-k07-b.ts";
+import { REVIEW_CHAIN_VERSION, runC04ChainReviewed, type ProfessionalReview } from "../../../lib/chain-professional-review.ts";
 import type { ParseIssueV06, ParseResultV06 } from "../../../lib/parser-v06.ts";
 import type { MetricKey, PdfTextItem, SourceMeta } from "../../../lib/parser-v04.ts";
 import type { ResearchVersion, StoredFormula } from "./research-versions.ts";
@@ -10,7 +13,8 @@ export type ParseResult = ParseResultV06;
 export type ParseIssue = ParseIssueV06;
 export type RequiredMetricKey = "attributable_np" | "adjusted_np" | "non_recurring_total";
 export const REQUIRED_METRICS: RequiredMetricKey[] = ["attributable_np", "adjusted_np", "non_recurring_total"];
-export const ENGINE_VERSIONS = { parser: "V0.6-strict", chain: "V0.1" } as const;
+export const ENGINE_VERSIONS = { parser: "V0.6-strict", chain: REVIEW_CHAIN_VERSION } as const;
+export type SupportedChainVersion = 'V0.1' | typeof K07_B_VERSION | typeof REVIEW_CHAIN_VERSION;
 export const METRIC_CONFIG = {
   attributable_np: { suffix: "ATTR", label: "归母净利润" },
   adjusted_np: { suffix: "ADJ", label: "扣非归母净利润" },
@@ -92,7 +96,9 @@ export type ReviewedRun = {
   reviewedMetrics: ParseResult["metrics"];
 };
 
-export function reviewAndRun(result: ParseResult, candidates: CandidateEvidence[], runId: string): ReviewedRun {
+export function reviewAndRun(result: ParseResult, candidates: CandidateEvidence[], runId: string, chainVersion: SupportedChainVersion = ENGINE_VERSIONS.chain, professionalReview?: ProfessionalReview, professionalGates?: ChainContext['gates']): ReviewedRun {
+  if (!['V0.1', K07_B_VERSION, REVIEW_CHAIN_VERSION].includes(chainVersion)) throw new Error('CHAIN_VERSION_UNSUPPORTED');
+  if ((professionalReview || professionalGates) && chainVersion !== REVIEW_CHAIN_VERSION) throw new Error('PROFESSIONAL_REVIEW_REQUIRES_NEW_VERSION');
   const blockers: ParseIssue[] = [...result.blockers];
   const metrics = structuredClone(result.metrics);
   const fail = (field: MetricKey, message: string) => blockers.push({ code: "REQUIRED_FIELD_MISSING", severity: "FAIL", field, message });
@@ -114,9 +120,9 @@ export function reviewAndRun(result: ParseResult, candidates: CandidateEvidence[
       fail(key, `${METRIC_CONFIG[key].label} 必须是有效数字。`);
       continue;
     }
-    if (candidate.comparisonMn !== null && candidate.disclosedChange !== null) {
-      const change = (candidate.valueMn - candidate.comparisonMn) / Math.abs(candidate.comparisonMn);
-      if (!Number.isFinite(change) || Math.abs(change - candidate.disclosedChange) > 0.005) {
+    if (key !== "non_recurring_total") {
+      const change = finiteChange(candidate.valueMn, candidate.comparisonMn);
+      if (change === null || !isFiniteNumber(candidate.disclosedChange) || Math.abs(change - candidate.disclosedChange) > 0.005) {
         blockers.push({ code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, message: `${METRIC_CONFIG[key].label} 的修改值与披露同比不一致。` });
       }
     }
@@ -128,7 +134,17 @@ export function reviewAndRun(result: ParseResult, candidates: CandidateEvidence[
   if (!result.canPromoteToEvidence || blockers.length) {
     return { canPromoteToEvidence: false, blockers, chain: null, formula: null, reviewedMetrics: metrics };
   }
-  const chain = runC04Chain({ ...result, metrics }, context(runId));
+  // Registered Q1 is unambiguously single-quarter. A Q2/Q3 label alone can
+  // mean cumulative results and must never be inferred as a single quarter.
+  const periodBasis: K07Period['periodBasis'] | null = /Q1$/.test(result.source.period) ? 'single-quarter' : /H1$/.test(result.source.period) ? 'cumulative-half-year' : /FY$/.test(result.source.period) ? 'full-year' : null;
+  const currentPeriod: K07Period | null = periodBasis && isFiniteNumber(metrics.adjusted_np?.disclosedChange) ? {
+    companyId: '300866.SZ', period: result.source.period, periodBasis, profitBasis: 'adjusted-attributable', unit: 'CNY_mn',
+    yoy: metrics.adjusted_np.disclosedChange, evidenceId: `EV-${result.source.sourceId}-C04-ADJ`,
+    review: { status: 'accepted', scope: 'evidence-only' },
+  } : null;
+  const chain = chainVersion === 'V0.1' ? runC04Chain({ ...result, metrics }, context(runId)) :
+    chainVersion === K07_B_VERSION ? runC04ChainK07B({ ...result, metrics }, { ...context(runId), currentPeriod, priorPeriods: [] }) :
+    runC04ChainReviewed({ ...result, metrics }, { ...context(runId), ...(professionalGates ? { gates: professionalGates } : {}), currentPeriod, priorPeriods: [], professionalReview });
   if (chain.status === "blocked" || !chain.formula?.consistent) {
     blockers.push({ code: "BRIDGE_RECONCILIATION_FAIL", severity: "FAIL", field: "adjusted_np", message: "F-02 利润桥未闭合，禁止生成变化和保存。" });
   }
@@ -146,8 +162,10 @@ export function createResearchSnapshot(input: {
   result: ParseResult;
   candidates: CandidateEvidence[];
   scope: "research" | "regression";
+  professionalReview?: ProfessionalReview;
+  professionalGates?: ChainContext['gates'];
 }): ResearchVersion {
-  const reviewed = reviewAndRun(input.result, input.candidates, input.versionId);
+  const reviewed = reviewAndRun(input.result, input.candidates, input.versionId, ENGINE_VERSIONS.chain, input.professionalReview, input.professionalGates);
   if (!reviewed.canPromoteToEvidence || !reviewed.chain) throw new Error("证据或计算未通过，不能保存。");
   if (!input.reviewer.trim()) throw new Error("请填写本次证据审核人。");
   if (input.source.sourceId !== input.result.source.sourceId || input.source.period !== input.result.source.period || input.source.url !== input.result.source.url) {

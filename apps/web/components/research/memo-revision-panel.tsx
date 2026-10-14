@@ -9,6 +9,8 @@ import { MEMO_UPDATED_EVENT } from "@/lib/research-memo-storage";
 import { appendMemoRevision, appendMemoRevisionReview, exportMemoRevision, MEMO_REVISIONS_UPDATED_EVENT, memoRevisionChanges, readBoundMemoRevisions, type MemoRevision, type MemoRevisionReview } from "@/lib/research-memo-revisions";
 import { VERSION_UPDATED_EVENT, type WorkspaceScope } from "@/lib/research-versions";
 
+import { useUnsavedGuard } from "./use-unsaved-guard";
+
 const errors: Record<string, string> = {
   MEMO_POINT_SCHEMA: "每段填写正文，最多一百六十字符，并选择一至八个引用。",
   MEMO_SECTION_SCHEMA: "请保留完整的六段内容。",
@@ -70,6 +72,7 @@ export function MemoRevisionPanel({ run, workspace }: { run: MemoRun; workspace:
   const draftErrors = draft ? validateMemo(draft.memo, run.context, run.audit.promptVersion).errors : [];
   const staleDraft = !!draft && draft.parentRevisionId !== (latest?.id ?? null);
   const draftChanged = !!draft && canonicalJson(draft.memo) !== canonicalJson(latest?.memo ?? run.memo);
+  const guard = useUnsavedGuard(!!draft || !!reviewer || !!note, () => {setDraft(null);setAuthor("");setReason("");setReviewer("");setNote("");});
   const canWrite = !!records && !storageError && !busy;
 
   async function act(operation: () => Promise<void>) {
@@ -101,6 +104,7 @@ export function MemoRevisionPanel({ run, workspace }: { run: MemoRun; workspace:
   const reviewDraft = (status: MemoRevisionReview["status"]) => act(async () => {
     if (!selected) return;
     await appendMemoRevisionReview({ ...binding, revisionId: selected.id, contentSha256: selected.contentSha256, status, reviewer, note }, workspace);
+    setReviewer("");setNote("");
     setNotice(status === "accepted" ? "已接受当前修订稿；专业关卡仍待复核。" : "已追加退回意见；可从这份稿件继续修订。");
   });
   const exportDraft = (format: "markdown" | "audit") => act(async () => {
@@ -142,9 +146,9 @@ export function MemoRevisionPanel({ run, workspace }: { run: MemoRun; workspace:
       </div>
       {draftErrors.length > 0 && <ul className="space-y-1 text-sm text-amber-100" aria-label="修订校验问题">{draftErrors.map((code) => <li key={code}>{errors[code] ?? "请检查正文格式与引用。"}</li>)}</ul>}
       {staleDraft && <p role="alert" className="text-sm text-amber-100">已出现更新的修订稿。请先保留正在编辑的内容，核对最新稿后继续。</p>}
-      <div className="flex flex-wrap gap-3"><Button onClick={save} disabled={!canWrite || !author.trim() || !reason.trim() || draftErrors.length > 0 || staleDraft || !draftChanged} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200"><Save />保存人工修订</Button><Button variant="outline" disabled={busy} onClick={() => { setDraft(null); setNotice(null); }} className="border-white/15 bg-transparent text-slate-200">放弃未保存修改</Button></div>
+      <div className="flex flex-wrap gap-3"><Button onClick={save} disabled={!canWrite || !author.trim() || !reason.trim() || draftErrors.length > 0 || staleDraft || !draftChanged} className="bg-cyan-300 text-slate-950 hover:bg-cyan-200"><Save />保存人工修订</Button><Button variant="outline" disabled={busy} onClick={() => guard.protect(() => { setDraft(null); setNotice(null); }, true)} className="border-white/15 bg-transparent text-slate-200">放弃未保存修改</Button></div>
     </div> : selected && <div className="space-y-4" data-testid="memo-revision-reader">
-      <label className="block space-y-2 text-sm text-slate-300"><span>查看修订历史</span><select aria-label="选择人工修订版本" value={selected.id} onChange={(event) => { setSelectedId(event.target.value); setReviewer(""); setNote(""); setNotice(null); }} className="block w-full rounded-lg border border-white/15 bg-slate-950 p-2">{revisions.map((item, index) => <option key={item.id} value={item.id}>修订 {index + 1} · {item.author} · {item.createdAt}</option>)}</select></label>
+      <label className="block space-y-2 text-sm text-slate-300"><span>查看修订历史</span><select aria-label="选择人工修订版本" value={selected.id} onChange={(event) => { const id=event.target.value;guard.protect(() => { setSelectedId(id); setReviewer(""); setNote(""); setNotice(null); }); }} className="block w-full rounded-lg border border-white/15 bg-slate-950 p-2">{revisions.map((item, index) => <option key={item.id} value={item.id}>修订 {index + 1} · {item.author} · {item.createdAt}</option>)}</select></label>
       <p className="text-sm font-medium text-cyan-100" data-testid="memo-revision-status">{review?.status === "accepted" ? "人工已接受修订稿" : review?.status === "rejected" ? "修订稿已退回" : "修订稿待复核"}{selected.id !== latest?.id ? " · 历史版本，仅供查看" : ""}</p>
       <p className="text-sm leading-6 text-slate-300">修订者：{selected.author}（自行填写、身份未核验）。修改理由：{selected.reason}</p>
       <div className="space-y-4">{MEMO_SECTIONS.map(({ key }) => <div key={key} className="space-y-2"><h5 className="text-sm font-medium text-white">{memoSectionLabel(key, run.audit.promptVersion)}</h5>{(key === "summary" ? [selected.memo.summary] : selected.memo[key]).map((point, index) => <Point key={index} point={point} runId={run.runId} />)}</div>)}</div>
@@ -158,5 +162,6 @@ export function MemoRevisionPanel({ run, workspace }: { run: MemoRun; workspace:
       {selectedReviews.length > 0 && <details className="rounded-lg border border-white/10 p-3"><summary className="cursor-pointer text-sm text-slate-300">本稿审核历史 · {selectedReviews.length} 条</summary><ul className="mt-3 space-y-2 text-sm leading-6 text-slate-400">{selectedReviews.map((item) => <li key={item.id}>{item.status === "accepted" ? "接受" : "退回"} · {item.reviewer}（身份未核验）· {item.reviewedAt}：{item.note}</li>)}</ul></details>}
       <div className="flex flex-wrap gap-3"><Button variant="outline" disabled={!canWrite} onClick={() => exportDraft("markdown")} className="border-white/15 bg-transparent text-slate-200"><Download />导出人工修订稿</Button><Button variant="outline" disabled={!canWrite} onClick={() => exportDraft("audit")} className="border-white/15 bg-transparent text-slate-200"><Download />导出修订与原始记录</Button></div>
     </div>}
+    {guard.dialog}
   </section>;
 }

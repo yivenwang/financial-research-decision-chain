@@ -1,0 +1,23 @@
+{
+  "type": "AI-assisted-financial-review-input-index",
+  "baselineSha": "99a531b374b4f9b36afa188fc34bdfc7a1020f27",
+  "reviewIdentity": "ChatGPT / AI assistance, not a professor or licensed institution",
+  "gateEffect": "none; EG-01 and EG-02 remain pending",
+  "files": [
+    {
+      "name": "Beacon_20261013_专业复核包.md",
+      "bytes": 12294,
+      "sha256": "26f2078984bad76a7003ee17e5241d76db895ad8c50f5885f553309918249cc6"
+    },
+    {
+      "name": "Beacon_20261013_专业意见回收表_已填写_AI审核.md",
+      "bytes": 13344,
+      "sha256": "de2c3b2d26a230815df87208f22634142dbde5aa9d9944c4e75c051df1eff34b"
+    },
+    {
+      "name": "Beacon_20261013_AI金融审核结论与整改清单.md",
+      "bytes": 6797,
+      "sha256": "5a13491c5188989876f29f4830e80478c4ccab63859ae511e0fd8add37cc177a"
+    }
+  ]
+}

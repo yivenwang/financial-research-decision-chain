@@ -44,6 +44,8 @@ test("aborted body reads stop promptly", async () => {
   controller.abort();
   await assert.rejects(reading, /BODY_ABORTED/);
   await assert.rejects(readBoundedJson(Response.json({}), 100, { signal: controller.signal }), /BODY_ABORTED/);
+  const closed = new Response(new ReadableStream({ start(c) { c.close(); } }));
+  await assert.rejects(readBoundedJson(closed, 100, { signal: controller.signal }), /BODY_ABORTED/);
 });
 
 test("slow bodies release both handler locks without any provider request", async () => {
@@ -70,4 +72,15 @@ test("HTTP and missing browser primitives block research generation before spend
   const ready = { secure: true, hashing: true, ids: true, locks: true };
   assert.equal(researchBrowserIssue(ready), null);
   for (const key of Object.keys(ready)) assert.match(researchBrowserIssue({ ...ready, [key]: false }), /未调用模型/);
+});
+
+
+test("early oversized and failed body reads cancel the underlying response without awaiting cancellation", async () => {
+  for (const headers of [{ "content-length": "101" }, {}]) {
+    let cancelled = 0;
+    const body = new ReadableStream({ start(controller) { if (!headers["content-length"]) controller.enqueue(new Uint8Array(101)); }, cancel() { cancelled++; return new Promise(() => {}); } });
+    await assert.rejects(readBoundedJson(new Response(body, { headers }), 100), /BODY_TOO_LARGE/);
+    assert.equal(cancelled, 1);
+    assert.equal(body.locked, false);
+  }
 });

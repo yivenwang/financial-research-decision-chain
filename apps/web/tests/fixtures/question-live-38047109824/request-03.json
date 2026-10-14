@@ -1,0 +1,257 @@
+{
+  "caseId": "Q-LIVE-02",
+  "phase": "plan",
+  "record": {
+    "httpStatus": 200,
+    "run": {
+      "schemaVersion": "research-question.v1",
+      "runId": "41e882ba-142f-4a1f-995f-552e587e50bc",
+      "requestId": "bfafd4be-8059-4e91-a777-854618019aff",
+      "phase": "plan",
+      "queryRaw": "请核验安克创新2026年第一季度的归母净利润、扣非归母净利润和非经常性损益：原文依据在哪里，三个数之间是否一致？",
+      "status": "OUT_OF_SCOPE",
+      "createdAt": "2026-10-10T11:08:01.825Z",
+      "contract": {
+        "schemaVersion": "research-question.v1",
+        "requestId": "bfafd4be-8059-4e91-a777-854618019aff",
+        "queryRaw": "请核验安克创新2026年第一季度的归母净利润、扣非归母净利润和非经常性损益：原文依据在哪里，三个数之间是否一致？",
+        "createdAt": "2026-10-10T11:08:01.825Z",
+        "capabilityVersion": "anker-c04.v1",
+        "intent": "EVIDENCE_AUDIT",
+        "company": "安克创新",
+        "ticker": "300866.SZ",
+        "period": "2026Q1",
+        "comparablePeriod": null,
+        "requiredSourceIds": [
+          "S-05"
+        ],
+        "requiredMetrics": [
+          "attributable_np",
+          "adjusted_np",
+          "non_recurring_total"
+        ],
+        "requestedReferences": [
+          "S-05"
+        ],
+        "requestedOutputs": [
+          "verified_facts",
+          "deterministic_calculations",
+          "inferences",
+          "counter_evidence",
+          "graph_diff",
+          "uncertainties",
+          "source_citations",
+          "run_log"
+        ],
+        "allowedTools": [
+          "source_registry",
+          "snapshot_validator",
+          "frozen_chain",
+          "evidence_resolver"
+        ],
+        "forbiddenActions": [
+          "modify_financial_rules",
+          "write_decision",
+          "invent_values",
+          "external_search"
+        ],
+        "status": "OUT_OF_SCOPE",
+        "reasons": [
+          "请求的指标或节点不在能力范围内。"
+        ]
+      },
+      "calls": [
+        {
+          "phase": "plan",
+          "provider": "deepseek",
+          "requestedModel": "deepseek-v4-pro",
+          "returnedModel": "deepseek-v4-pro",
+          "promptVersion": "question-contract.v1",
+          "promptSha256": "2a16d1a201dd0c401a48b1f44b68c6f14359329b5375fc8274fc45a700d8a5e0",
+          "requestSha256": "ea696f06e7bcaf6ceb8e9fad0b1c17ac8690ce8d9a7f0964de5e9933d2970ea3",
+          "responseSha256": "cc39d9e1efe016a9605c6de5a020d4b7b11164fe44ba580ce98919355456ddf4",
+          "responseId": "56663986-3d6c-4742-b833-9c8672e64dff",
+          "startedAt": "2026-10-10T11:08:01.825Z",
+          "finishedAt": "2026-10-10T11:08:32.899Z",
+          "durationMs": 31074,
+          "requestLimits": {
+            "maxOutputTokens": 6000,
+            "timeoutMs": 150000
+          },
+          "usage": {
+            "inputTokens": 592,
+            "outputTokens": 2538,
+            "totalTokens": 3130
+          },
+          "rawOutput": "{\"intent\":\"EVIDENCE_AUDIT\",\"company\":\"安克创新\",\"period\":\"2026Q1\",\"comparisonPeriod\":null,\"metricKeys\":[\"attributable_np\",\"adjusted_np\",\"non_recurring_total\"],\"referenceIds\":[\"S-05\"],\"reason\":\"核验2026Q1三个利润指标及原始依据与勾稽一致性，属证据核验范围。\"}",
+          "failureCode": null,
+          "inputBudget": {
+            "version": "question-live-budget.v1",
+            "wireBytes": 2429,
+            "estimatedInputTokens": 6525,
+            "reservedOutputTokens": 6000,
+            "estimatedCostUsdMicros": 32373
+          }
+        }
+      ],
+      "events": [
+        {
+          "sequence": 1,
+          "event": "query_received",
+          "at": "2026-10-10T11:08:01.825Z",
+          "details": {
+            "queryRaw": "请核验安克创新2026年第一季度的归母净利润、扣非归母净利润和非经常性损益：原文依据在哪里，三个数之间是否一致？",
+            "capability": {
+              "version": "anker-c04.v1",
+              "company": "安克创新",
+              "ticker": "300866.SZ",
+              "aliases": [
+                "安克创新",
+                "300866.SZ",
+                "300866",
+                "Anker Innovations"
+              ],
+              "sourceIds": [
+                "S-05"
+              ],
+              "metricKeys": [
+                "attributable_np",
+                "adjusted_np",
+                "non_recurring_total"
+              ],
+              "nodeIds": [
+                "C-04",
+                "A-03",
+                "K-07",
+                "F-02",
+                "Valuation-B5",
+                "Decision"
+              ]
+            },
+            "sourceRegistry": [
+              {
+                "sourceId": "S-05",
+                "period": "2026Q1",
+                "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF"
+              }
+            ]
+          },
+          "detailsSha256": "85b3afbe59b79e625dd982333c9302ff5f40c9093de1c6c4b30db5dc65754efa"
+        },
+        {
+          "sequence": 2,
+          "event": "model_requested",
+          "at": "2026-10-10T11:08:01.825Z",
+          "details": {
+            "phase": "plan",
+            "promptVersion": "question-contract.v1",
+            "requestSha256": "ea696f06e7bcaf6ceb8e9fad0b1c17ac8690ce8d9a7f0964de5e9933d2970ea3",
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            }
+          },
+          "detailsSha256": "160cd587d62c49f7f42e0ea09337b67a9455630b9731fe9a40735d99a60571c0"
+        },
+        {
+          "sequence": 3,
+          "event": "model_returned",
+          "at": "2026-10-10T11:08:32.899Z",
+          "details": {
+            "phase": "plan",
+            "provider": "deepseek",
+            "requestedModel": "deepseek-v4-pro",
+            "returnedModel": "deepseek-v4-pro",
+            "promptVersion": "question-contract.v1",
+            "promptSha256": "2a16d1a201dd0c401a48b1f44b68c6f14359329b5375fc8274fc45a700d8a5e0",
+            "requestSha256": "ea696f06e7bcaf6ceb8e9fad0b1c17ac8690ce8d9a7f0964de5e9933d2970ea3",
+            "responseSha256": "cc39d9e1efe016a9605c6de5a020d4b7b11164fe44ba580ce98919355456ddf4",
+            "responseId": "56663986-3d6c-4742-b833-9c8672e64dff",
+            "startedAt": "2026-10-10T11:08:01.825Z",
+            "finishedAt": "2026-10-10T11:08:32.899Z",
+            "durationMs": 31074,
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            },
+            "usage": {
+              "inputTokens": 592,
+              "outputTokens": 2538,
+              "totalTokens": 3130
+            },
+            "failureCode": null,
+            "inputBudget": {
+              "version": "question-live-budget.v1",
+              "wireBytes": 2429,
+              "estimatedInputTokens": 6525,
+              "reservedOutputTokens": 6000,
+              "estimatedCostUsdMicros": 32373
+            }
+          },
+          "detailsSha256": "989260f787b7b3b10a8d9c53eae0e437d92911b9f3cd3a747474da856b4012c6"
+        },
+        {
+          "sequence": 4,
+          "event": "scope_gate_result",
+          "at": "2026-10-10T11:08:32.899Z",
+          "details": {
+            "schemaVersion": "research-question.v1",
+            "requestId": "bfafd4be-8059-4e91-a777-854618019aff",
+            "queryRaw": "请核验安克创新2026年第一季度的归母净利润、扣非归母净利润和非经常性损益：原文依据在哪里，三个数之间是否一致？",
+            "createdAt": "2026-10-10T11:08:01.825Z",
+            "capabilityVersion": "anker-c04.v1",
+            "intent": "EVIDENCE_AUDIT",
+            "company": "安克创新",
+            "ticker": "300866.SZ",
+            "period": "2026Q1",
+            "comparablePeriod": null,
+            "requiredSourceIds": [
+              "S-05"
+            ],
+            "requiredMetrics": [
+              "attributable_np",
+              "adjusted_np",
+              "non_recurring_total"
+            ],
+            "requestedReferences": [
+              "S-05"
+            ],
+            "requestedOutputs": [
+              "verified_facts",
+              "deterministic_calculations",
+              "inferences",
+              "counter_evidence",
+              "graph_diff",
+              "uncertainties",
+              "source_citations",
+              "run_log"
+            ],
+            "allowedTools": [
+              "source_registry",
+              "snapshot_validator",
+              "frozen_chain",
+              "evidence_resolver"
+            ],
+            "forbiddenActions": [
+              "modify_financial_rules",
+              "write_decision",
+              "invent_values",
+              "external_search"
+            ],
+            "status": "OUT_OF_SCOPE",
+            "reasons": [
+              "请求的指标或节点不在能力范围内。"
+            ]
+          },
+          "detailsSha256": "1f4f2e8db59cd8132850eab2a2eee86c14759c14c318d9ce7fd0dfcecf65e0ea"
+        }
+      ],
+      "answer": null,
+      "answerSha256": null,
+      "reasons": [
+        "请求的指标或节点不在能力范围内。"
+      ]
+    },
+    "code": null
+  }
+}

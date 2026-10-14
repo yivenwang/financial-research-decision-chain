@@ -1,0 +1,1120 @@
+{
+  "caseId": "Q-LIVE-01",
+  "phase": "execute",
+  "record": {
+    "httpStatus": 200,
+    "run": {
+      "schemaVersion": "research-question.v1",
+      "runId": "38efe900-5f7c-4fb5-8c15-745f1d77dc56",
+      "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+      "phase": "execute",
+      "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+      "status": "BLOCKED",
+      "createdAt": "2026-10-14T02:30:13.363Z",
+      "contract": {
+        "schemaVersion": "research-question.v1",
+        "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+        "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+        "createdAt": "2026-10-14T02:30:03.764Z",
+        "capabilityVersion": "anker-c04.v1",
+        "intent": "CHANGE_EXPLAIN",
+        "company": "安克创新",
+        "ticker": "300866.SZ",
+        "period": "2026Q1",
+        "comparablePeriod": "2025Q1",
+        "requiredSourceIds": [
+          "S-05"
+        ],
+        "requiredMetrics": [
+          "attributable_np",
+          "adjusted_np",
+          "non_recurring_total"
+        ],
+        "requestedReferences": [],
+        "requestedOutputs": [
+          "verified_facts",
+          "deterministic_calculations",
+          "inferences",
+          "counter_evidence",
+          "graph_diff",
+          "uncertainties",
+          "source_citations",
+          "run_log"
+        ],
+        "allowedTools": [
+          "source_registry",
+          "snapshot_validator",
+          "frozen_chain",
+          "evidence_resolver"
+        ],
+        "forbiddenActions": [
+          "modify_financial_rules",
+          "write_decision",
+          "invent_values",
+          "external_search"
+        ],
+        "status": "CONTRACT_DRAFTED",
+        "reasons": [
+          "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。"
+        ]
+      },
+      "calls": [
+        {
+          "phase": "explain",
+          "provider": "deepseek",
+          "requestedModel": "deepseek-v4-pro",
+          "returnedModel": "deepseek-v4-pro",
+          "promptVersion": "question-explanation.v9",
+          "promptSha256": "dd9b93531042738559723045c3c1cff260167106482aa5c04714164e5689c071",
+          "requestSha256": "9dd6300d2f27d91d694afd2cb151d7ff9d540ce20b7cfbd027ea19a4e10c435c",
+          "responseSha256": "acf19c4720a6f29b07611d2216f30d1b503d9e13c73510f2893c78d414c799f0",
+          "responseId": "e70d36c2-1795-4279-8dea-1c9793cdba43",
+          "startedAt": "2026-10-14T02:30:13.367Z",
+          "finishedAt": "2026-10-14T02:30:57.683Z",
+          "durationMs": 44316,
+          "requestLimits": {
+            "maxOutputTokens": 6000,
+            "timeoutMs": 150000
+          },
+          "usage": {
+            "inputTokens": 3489,
+            "outputTokens": 3515,
+            "totalTokens": 7004
+          },
+          "rawOutput": "{\n  \"sufficiency\": \"partial\",\n  \"directAnswer\": {\n    \"citations\": [\n      \"EV-S-05-C04-ATTR\",\n      \"EV-S-05-C04-ADJ\",\n      \"EV-S-05-C04-NR\",\n      \"F-02|EV-S-05-C04-ATTR|EV-S-05-C04-ADJ|EV-S-05-C04-NR\",\n      \"EV-S-05-C04-SPREAD|EV-S-05-C04-ATTR|EV-S-05-C04-ADJ\"\n    ],\n    \"text\": \"归母净利润同比下降、扣非归母净利润同比上升均为披露事实；本期非经常性损益为负，利润桥显示归母减非经常等于扣非，故本季两口径水平可由负非经常项勾稽分开。跨期分化的原因需上年非经常项及明细，尚不能据此归因。\"\n  },\n  \"inference\": {\n    \"citations\": [\n      \"A-03\",\n      \"EV-S-05-C04-ADJ\",\n      \"EV-S-05-C04-ATTR\",\n      \"EV-S-05-C04-NR\",\n      \"F-02|EV-S-05-C04-ATTR|EV-S-05-C04-ADJ|EV-S-05-C04-NR\"\n    ],\n    \"text\": \"在非经常性损益分类经复核且口径可比的前提下，扣非可视为核心经营代理；若本期非经常项为负且扣非上升，可能指向核心经营改善，但该假设仍待披露明细和上年调整项复核。\"\n  },\n  \"counterEvidence\": {\n    \"citations\": [\n      \"A-03|EV-S-05-C04-ADJ|EV-S-05-C04-ATTR|EV-S-05-C04-NR|F-02\"\n    ],\n    \"text\": \"不能仅凭归母同比下降推定核心经营同步转弱；扣非同比为正且利润桥闭合，显示调整后口径改善，但该判断以扣非作为核心经营代理为条件，须经会计复核。\"\n  },\n  \"uncertainty\": {\n    \"citations\": [\n      \"A-03\",\n      \"K-07|A-03\",\n      \"Valuation-B5|A-03\",\n      \"F-02|EV-S-05-C04-ATTR|EV-S-05-C04-ADJ|EV-S-05-C04-NR|A-03\"\n    ],\n    \"text\": \"上年非经常性损益与分项明细缺失，无法核验跨期分化；非经常项分类及持续性须专业会计复核，AI审核非专业通过；估值因股数、盈利时点与倍数缺证而受阻。\"\n  }\n}",
+          "failureCode": null,
+          "inputBudget": {
+            "version": "question-live-budget.v1",
+            "wireBytes": 11264,
+            "estimatedInputTokens": 15360,
+            "reservedOutputTokens": 6000,
+            "estimatedCostUsdMicros": 44036
+          },
+          "providerHttpStatus": 200
+        }
+      ],
+      "events": [
+        {
+          "sequence": 1,
+          "event": "contract_confirmed",
+          "at": "2026-10-14T02:30:13.363Z",
+          "details": {
+            "planRunId": "82721d44-999e-42fd-b232-ce6e83788dd8",
+            "planSha256": "887390fe654dcb1e905209ad9e4250bb1ba69a3787afbdce775bb3e9573c7aab",
+            "contract": {
+              "schemaVersion": "research-question.v1",
+              "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+              "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+              "createdAt": "2026-10-14T02:30:03.764Z",
+              "capabilityVersion": "anker-c04.v1",
+              "intent": "CHANGE_EXPLAIN",
+              "company": "安克创新",
+              "ticker": "300866.SZ",
+              "period": "2026Q1",
+              "comparablePeriod": "2025Q1",
+              "requiredSourceIds": [
+                "S-05"
+              ],
+              "requiredMetrics": [
+                "attributable_np",
+                "adjusted_np",
+                "non_recurring_total"
+              ],
+              "requestedReferences": [],
+              "requestedOutputs": [
+                "verified_facts",
+                "deterministic_calculations",
+                "inferences",
+                "counter_evidence",
+                "graph_diff",
+                "uncertainties",
+                "source_citations",
+                "run_log"
+              ],
+              "allowedTools": [
+                "source_registry",
+                "snapshot_validator",
+                "frozen_chain",
+                "evidence_resolver"
+              ],
+              "forbiddenActions": [
+                "modify_financial_rules",
+                "write_decision",
+                "invent_values",
+                "external_search"
+              ],
+              "status": "CONTRACT_DRAFTED",
+              "reasons": [
+                "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。"
+              ]
+            },
+            "identityVerified": false,
+            "sessionOwnershipVerified": true
+          },
+          "detailsSha256": "10e4ac857d86047d9326b2bbc3480e53855b4eea591e5c0927c00848020e0b1c"
+        },
+        {
+          "sequence": 2,
+          "event": "plan_record",
+          "at": "2026-10-14T02:30:13.363Z",
+          "details": {
+            "schemaVersion": "research-question.v1",
+            "runId": "82721d44-999e-42fd-b232-ce6e83788dd8",
+            "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+            "phase": "plan",
+            "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+            "status": "CONTRACT_DRAFTED",
+            "createdAt": "2026-10-14T02:30:03.764Z",
+            "contract": {
+              "schemaVersion": "research-question.v1",
+              "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+              "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+              "createdAt": "2026-10-14T02:30:03.764Z",
+              "capabilityVersion": "anker-c04.v1",
+              "intent": "CHANGE_EXPLAIN",
+              "company": "安克创新",
+              "ticker": "300866.SZ",
+              "period": "2026Q1",
+              "comparablePeriod": "2025Q1",
+              "requiredSourceIds": [
+                "S-05"
+              ],
+              "requiredMetrics": [
+                "attributable_np",
+                "adjusted_np",
+                "non_recurring_total"
+              ],
+              "requestedReferences": [],
+              "requestedOutputs": [
+                "verified_facts",
+                "deterministic_calculations",
+                "inferences",
+                "counter_evidence",
+                "graph_diff",
+                "uncertainties",
+                "source_citations",
+                "run_log"
+              ],
+              "allowedTools": [
+                "source_registry",
+                "snapshot_validator",
+                "frozen_chain",
+                "evidence_resolver"
+              ],
+              "forbiddenActions": [
+                "modify_financial_rules",
+                "write_decision",
+                "invent_values",
+                "external_search"
+              ],
+              "status": "CONTRACT_DRAFTED",
+              "reasons": [
+                "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。"
+              ]
+            },
+            "calls": [
+              {
+                "phase": "plan",
+                "provider": "deepseek",
+                "requestedModel": "deepseek-v4-pro",
+                "returnedModel": "deepseek-v4-pro",
+                "promptVersion": "question-contract.v4",
+                "promptSha256": "17693fe8de9f0f7e976c7259c596726718d7ce9839baf32a5c549fba6d56a133",
+                "requestSha256": "868e79f5b2d78a93cff7daf59512b4f3ae52df0f104a55ef7a2c552a5429b2bc",
+                "responseSha256": "bdcfcdfdea19f0e2b8f9ffdcc71a16f52e3d3e401c1898c2f84c2aba03fde5e0",
+                "responseId": "c9bedb55-563d-4506-a62f-d48aae501624",
+                "startedAt": "2026-10-14T02:30:03.764Z",
+                "finishedAt": "2026-10-14T02:30:13.317Z",
+                "durationMs": 9553,
+                "requestLimits": {
+                  "maxOutputTokens": 6000,
+                  "timeoutMs": 150000
+                },
+                "usage": {
+                  "inputTokens": 1135,
+                  "outputTokens": 692,
+                  "totalTokens": 1827
+                },
+                "rawOutput": "{\n  \"intent\": \"CHANGE_EXPLAIN\",\n  \"company\": \"安克创新\",\n  \"period\": \"2026Q1\",\n  \"comparisonPeriod\": \"2025Q1\",\n  \"metricKeys\": [\"attributable_np\", \"adjusted_np\", \"non_recurring_total\"],\n  \"referenceIds\": [],\n  \"reason\": \"解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。\"\n}",
+                "failureCode": null,
+                "inputBudget": {
+                  "version": "question-live-budget.v1",
+                  "wireBytes": 4308,
+                  "estimatedInputTokens": 8404,
+                  "reservedOutputTokens": 6000,
+                  "estimatedCostUsdMicros": 34854
+                },
+                "providerHttpStatus": 200
+              }
+            ],
+            "events": [
+              {
+                "sequence": 1,
+                "event": "query_received",
+                "at": "2026-10-14T02:30:03.764Z",
+                "details": {
+                  "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+                  "capability": {
+                    "version": "anker-c04.v1",
+                    "company": "安克创新",
+                    "ticker": "300866.SZ",
+                    "aliases": [
+                      "安克创新",
+                      "300866.SZ",
+                      "300866",
+                      "Anker Innovations"
+                    ],
+                    "sourceIds": [
+                      "S-05"
+                    ],
+                    "metricKeys": [
+                      "attributable_np",
+                      "adjusted_np",
+                      "non_recurring_total"
+                    ],
+                    "nodeIds": [
+                      "C-04",
+                      "A-03",
+                      "K-07",
+                      "F-02",
+                      "Valuation-B5",
+                      "Decision"
+                    ]
+                  },
+                  "sourceRegistry": [
+                    {
+                      "sourceId": "S-05",
+                      "period": "2026Q1",
+                      "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF"
+                    }
+                  ]
+                },
+                "detailsSha256": "d35e2871c624ad35a11db8b6a3667de3d1af84d461c20f983cfdafe5c7d0caa1"
+              },
+              {
+                "sequence": 2,
+                "event": "model_requested",
+                "at": "2026-10-14T02:30:03.765Z",
+                "details": {
+                  "phase": "plan",
+                  "promptVersion": "question-contract.v4",
+                  "requestSha256": "868e79f5b2d78a93cff7daf59512b4f3ae52df0f104a55ef7a2c552a5429b2bc",
+                  "requestLimits": {
+                    "maxOutputTokens": 6000,
+                    "timeoutMs": 150000
+                  }
+                },
+                "detailsSha256": "ac6b4506dcc5e78e7ef290abed2b10953477b798cee3515ac0a46f6da5943de5"
+              },
+              {
+                "sequence": 3,
+                "event": "model_returned",
+                "at": "2026-10-14T02:30:13.317Z",
+                "details": {
+                  "phase": "plan",
+                  "provider": "deepseek",
+                  "requestedModel": "deepseek-v4-pro",
+                  "returnedModel": "deepseek-v4-pro",
+                  "promptVersion": "question-contract.v4",
+                  "promptSha256": "17693fe8de9f0f7e976c7259c596726718d7ce9839baf32a5c549fba6d56a133",
+                  "requestSha256": "868e79f5b2d78a93cff7daf59512b4f3ae52df0f104a55ef7a2c552a5429b2bc",
+                  "responseSha256": "bdcfcdfdea19f0e2b8f9ffdcc71a16f52e3d3e401c1898c2f84c2aba03fde5e0",
+                  "responseId": "c9bedb55-563d-4506-a62f-d48aae501624",
+                  "startedAt": "2026-10-14T02:30:03.764Z",
+                  "finishedAt": "2026-10-14T02:30:13.317Z",
+                  "durationMs": 9553,
+                  "requestLimits": {
+                    "maxOutputTokens": 6000,
+                    "timeoutMs": 150000
+                  },
+                  "usage": {
+                    "inputTokens": 1135,
+                    "outputTokens": 692,
+                    "totalTokens": 1827
+                  },
+                  "failureCode": null,
+                  "inputBudget": {
+                    "version": "question-live-budget.v1",
+                    "wireBytes": 4308,
+                    "estimatedInputTokens": 8404,
+                    "reservedOutputTokens": 6000,
+                    "estimatedCostUsdMicros": 34854
+                  },
+                  "providerHttpStatus": 200
+                },
+                "detailsSha256": "0dfc34da6ad866cfee602410eaabf92bacaf697f943b287e386138bc9600a0d1"
+              },
+              {
+                "sequence": 4,
+                "event": "scope_gate_result",
+                "at": "2026-10-14T02:30:13.318Z",
+                "details": {
+                  "schemaVersion": "research-question.v1",
+                  "requestId": "4fa0e0b1-65ca-4ca7-932a-45c963f31fb5",
+                  "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+                  "createdAt": "2026-10-14T02:30:03.764Z",
+                  "capabilityVersion": "anker-c04.v1",
+                  "intent": "CHANGE_EXPLAIN",
+                  "company": "安克创新",
+                  "ticker": "300866.SZ",
+                  "period": "2026Q1",
+                  "comparablePeriod": "2025Q1",
+                  "requiredSourceIds": [
+                    "S-05"
+                  ],
+                  "requiredMetrics": [
+                    "attributable_np",
+                    "adjusted_np",
+                    "non_recurring_total"
+                  ],
+                  "requestedReferences": [],
+                  "requestedOutputs": [
+                    "verified_facts",
+                    "deterministic_calculations",
+                    "inferences",
+                    "counter_evidence",
+                    "graph_diff",
+                    "uncertainties",
+                    "source_citations",
+                    "run_log"
+                  ],
+                  "allowedTools": [
+                    "source_registry",
+                    "snapshot_validator",
+                    "frozen_chain",
+                    "evidence_resolver"
+                  ],
+                  "forbiddenActions": [
+                    "modify_financial_rules",
+                    "write_decision",
+                    "invent_values",
+                    "external_search"
+                  ],
+                  "status": "CONTRACT_DRAFTED",
+                  "reasons": [
+                    "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。"
+                  ]
+                },
+                "detailsSha256": "f6ac3f64da47c7270d0a4528d2f32cab0dbc295146e64f7d7a933fe6cdd5ecc8"
+              }
+            ],
+            "answer": null,
+            "answerSha256": null,
+            "reasons": [
+              "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的分化原因，需覆盖三个利润指标，不含核验结论。"
+            ]
+          },
+          "detailsSha256": "887390fe654dcb1e905209ad9e4250bb1ba69a3787afbdce775bb3e9573c7aab"
+        },
+        {
+          "sequence": 3,
+          "event": "snapshot_supplied",
+          "at": "2026-10-14T02:30:13.363Z",
+          "details": {
+            "versionId": "V-02",
+            "parentVersionId": "V-01",
+            "createdAt": "2026-10-14T02:29:33.681Z",
+            "kind": "update",
+            "workspace": "research",
+            "source": {
+              "name": "official-S-05.pdf",
+              "size": 1270057,
+              "pageCount": 14,
+              "mode": "pdf",
+              "sourceId": "S-05",
+              "period": "2026Q1",
+              "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF",
+              "sha256": "88d2ab7c603a94b7e0943ef07e219235ee59b9048e1dfa8e38bd6ebac99b6d03"
+            },
+            "evidence": [
+              {
+                "id": "EV-S-05-C04-ATTR",
+                "metricKey": "attributable_np",
+                "label": "归母净利润",
+                "valueMn": 471.59418970999997,
+                "originalValueMn": 471.59418970999997,
+                "comparisonMn": 495.76120529,
+                "changePct": -4.87,
+                "disclosedChange": -0.0487,
+                "direction": "反证",
+                "systemDirection": "反证",
+                "claimId": "C-04",
+                "sourceId": "S-05",
+                "period": "2026Q1",
+                "location": "S-05 · P2",
+                "snippet": "归属于上市公司股东的净利润 · 471.59418971 CNY mn · 同比 -4.87%",
+                "sourceExcerpt": "471,594,189.71 |   | 495,761,205.29 |   | -4.87%",
+                "reviewStatus": "accepted"
+              },
+              {
+                "id": "EV-S-05-C04-ADJ",
+                "metricKey": "adjusted_np",
+                "label": "扣非归母净利润",
+                "valueMn": 546.7588969,
+                "originalValueMn": 546.7588969,
+                "comparisonMn": 439.55840722000005,
+                "changePct": 24.39,
+                "disclosedChange": 0.2439,
+                "direction": "支持",
+                "systemDirection": "支持",
+                "claimId": "C-04",
+                "sourceId": "S-05",
+                "period": "2026Q1",
+                "location": "S-05 · P2",
+                "snippet": "归属于上市公司股东的扣除非经常性损益的净利润 · 546.75889690 CNY mn · 同比 24.39%",
+                "sourceExcerpt": "非经常性损益的净利润 |  | 546,758,896.90 |   | 439,558,407.22 |   | 24.39%",
+                "reviewStatus": "accepted"
+              },
+              {
+                "id": "EV-S-05-C04-NR",
+                "metricKey": "non_recurring_total",
+                "label": "非经常性损益",
+                "valueMn": -75.16470719,
+                "originalValueMn": -75.16470719,
+                "comparisonMn": null,
+                "changePct": null,
+                "disclosedChange": null,
+                "direction": "支持",
+                "systemDirection": "支持",
+                "claimId": "C-04",
+                "sourceId": "S-05",
+                "period": "2026Q1",
+                "location": "S-05 · P3",
+                "snippet": "非经常性损益合计 · -75.16470719 CNY mn",
+                "sourceExcerpt": " | 合计 |   | -75,164,707.19 |   | --",
+                "reviewStatus": "accepted"
+              }
+            ],
+            "claim": {
+              "id": "C-04",
+              "before": "成立",
+              "after": "成立",
+              "systemSignal": "增强"
+            },
+            "formula": {
+              "attributable": 471.59418970999997,
+              "nonRecurring": -75.16470719,
+              "reportedAdjusted": 546.7588969,
+              "calculated": 546.7588969,
+              "difference": 0,
+              "consistent": true
+            },
+            "decision": "继续研究",
+            "blockedGates": [
+              "EG-01",
+              "EG-02"
+            ],
+            "parser": {
+              "version": "V0.6-strict",
+              "canPromoteToEvidence": true,
+              "blockers": [],
+              "originalMetrics": {
+                "revenue": {
+                  "key": "revenue",
+                  "label": "营业收入",
+                  "current": 7607.6455456700005,
+                  "comparison": 5993.38110611,
+                  "disclosedChange": 0.2693,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "attributable_np": {
+                  "key": "attributable_np",
+                  "label": "归属于上市公司股东的净利润",
+                  "current": 471.59418970999997,
+                  "comparison": 495.76120529,
+                  "disclosedChange": -0.0487,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "adjusted_np": {
+                  "key": "adjusted_np",
+                  "label": "归属于上市公司股东的扣除非经常性损益的净利润",
+                  "current": 546.7588969,
+                  "comparison": 439.55840722000005,
+                  "disclosedChange": 0.2439,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "operating_cash_flow": {
+                  "key": "operating_cash_flow",
+                  "label": "经营活动产生的现金流量净额",
+                  "current": -450.63180874,
+                  "comparison": -287.6569709,
+                  "disclosedChange": -0.5666,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "basic_eps": {
+                  "key": "basic_eps",
+                  "label": "基本每股收益",
+                  "current": 0.8796,
+                  "comparison": 0.9329,
+                  "disclosedChange": -0.0571,
+                  "unit": "CNY_share",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "diluted_eps": {
+                  "key": "diluted_eps",
+                  "label": "稀释每股收益",
+                  "current": 0.8714,
+                  "comparison": 0.9312,
+                  "disclosedChange": -0.0642,
+                  "unit": "CNY_share",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "roe": {
+                  "key": "roe",
+                  "label": "加权平均净资产收益率",
+                  "current": 0.0435,
+                  "comparison": 0.0541,
+                  "disclosedChange": -0.0106,
+                  "unit": "ratio",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "total_assets": {
+                  "key": "total_assets",
+                  "label": "总资产",
+                  "current": 20228.35775174,
+                  "comparison": 20066.89245386,
+                  "disclosedChange": 0.008,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "attributable_equity": {
+                  "key": "attributable_equity",
+                  "label": "归属于上市公司股东的权益",
+                  "current": 11170.909982809999,
+                  "comparison": 10527.60326538,
+                  "disclosedChange": 0.0611,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "non_recurring_total": {
+                  "key": "non_recurring_total",
+                  "label": "非经常性损益合计",
+                  "current": -75.16470719,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 3,
+                  "confidence": 1
+                }
+              },
+              "reviewedMetrics": {
+                "revenue": {
+                  "key": "revenue",
+                  "label": "营业收入",
+                  "current": 7607.6455456700005,
+                  "comparison": 5993.38110611,
+                  "disclosedChange": 0.2693,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "attributable_np": {
+                  "key": "attributable_np",
+                  "label": "归属于上市公司股东的净利润",
+                  "current": 471.59418970999997,
+                  "comparison": 495.76120529,
+                  "disclosedChange": -0.0487,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "adjusted_np": {
+                  "key": "adjusted_np",
+                  "label": "归属于上市公司股东的扣除非经常性损益的净利润",
+                  "current": 546.7588969,
+                  "comparison": 439.55840722000005,
+                  "disclosedChange": 0.2439,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "operating_cash_flow": {
+                  "key": "operating_cash_flow",
+                  "label": "经营活动产生的现金流量净额",
+                  "current": -450.63180874,
+                  "comparison": -287.6569709,
+                  "disclosedChange": -0.5666,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "basic_eps": {
+                  "key": "basic_eps",
+                  "label": "基本每股收益",
+                  "current": 0.8796,
+                  "comparison": 0.9329,
+                  "disclosedChange": -0.0571,
+                  "unit": "CNY_share",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "diluted_eps": {
+                  "key": "diluted_eps",
+                  "label": "稀释每股收益",
+                  "current": 0.8714,
+                  "comparison": 0.9312,
+                  "disclosedChange": -0.0642,
+                  "unit": "CNY_share",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "roe": {
+                  "key": "roe",
+                  "label": "加权平均净资产收益率",
+                  "current": 0.0435,
+                  "comparison": 0.0541,
+                  "disclosedChange": -0.0106,
+                  "unit": "ratio",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "total_assets": {
+                  "key": "total_assets",
+                  "label": "总资产",
+                  "current": 20228.35775174,
+                  "comparison": 20066.89245386,
+                  "disclosedChange": 0.008,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "attributable_equity": {
+                  "key": "attributable_equity",
+                  "label": "归属于上市公司股东的权益",
+                  "current": 11170.909982809999,
+                  "comparison": 10527.60326538,
+                  "disclosedChange": 0.0611,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "confidence": 1
+                },
+                "non_recurring_total": {
+                  "key": "non_recurring_total",
+                  "label": "非经常性损益合计",
+                  "current": -75.16470719,
+                  "unit": "CNY_mn",
+                  "sourceId": "S-05",
+                  "page": 3,
+                  "confidence": 1
+                }
+              }
+            },
+            "chain": {
+              "runId": "V-02",
+              "sourceId": "S-05",
+              "status": "ready-for-human-review",
+              "evidence": [
+                {
+                  "id": "EV-S-05-C04-ATTR",
+                  "kind": "source",
+                  "metricKey": "attributable_np",
+                  "description": "归母净利润同比",
+                  "direction": "反证",
+                  "claimId": "C-04",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "value": -0.0487
+                },
+                {
+                  "id": "EV-S-05-C04-ADJ",
+                  "kind": "source",
+                  "metricKey": "adjusted_np",
+                  "description": "扣非归母净利润同比",
+                  "direction": "支持",
+                  "claimId": "C-04",
+                  "sourceId": "S-05",
+                  "page": 2,
+                  "value": 0.2439
+                },
+                {
+                  "id": "EV-S-05-C04-NR",
+                  "kind": "source",
+                  "metricKey": "non_recurring_total",
+                  "description": "非经常性损益对归母利润的影响方向",
+                  "direction": "支持",
+                  "claimId": "C-04",
+                  "sourceId": "S-05",
+                  "page": 3,
+                  "value": -75.16470719
+                },
+                {
+                  "id": "EV-S-05-C04-SPREAD",
+                  "kind": "derived",
+                  "description": "扣非利润同比相对归母利润同比的增速差",
+                  "direction": "支持",
+                  "claimId": "C-04",
+                  "sourceId": "S-05",
+                  "value": 0.2926
+                }
+              ],
+              "claim": {
+                "id": "C-04",
+                "baselineState": "成立",
+                "systemSignal": "增强",
+                "humanFinalState": "成立",
+                "humanSignoffRequired": true
+              },
+              "assumption": {
+                "id": "A-03",
+                "text": "若调整分类与持续性经核验，扣非可作核心经营代理；不是已证实判断。",
+                "status": "pending-review",
+                "gate": "EG-01"
+              },
+              "killCriterion": {
+                "id": "K-07",
+                "text": "首次扣非归母净利润同比≤0%进入观察并削弱 C-04 系统信号；连续两个经核验且口径可比的期间非正时触发并取消归一化调整；专业会计复核认定调整项为经常性时立即触发。人工状态与正式投资动作仍需独立审核。",
+                "quantitativeState": "clear",
+                "accountingState": "unknown",
+                "currentState": "unknown",
+                "consecutiveNonPositivePeriods": 0,
+                "policyVersion": "V0.2-K07-B",
+                "sequenceStatus": "missing",
+                "reviewNote": "本期扣非同比为正，已中断以本期结束的连续非正序列；历史缺口仅影响历史判断。"
+              },
+              "formula": {
+                "id": "F-02",
+                "attributable": 471.59418970999997,
+                "nonRecurring": -75.16470719,
+                "reportedAdjusted": 546.7588969,
+                "calculatedAdjusted": 546.7588969,
+                "difference": 0,
+                "consistent": true
+              },
+              "valuation": {
+                "status": "blocked",
+                "earningsBasis": "adjusted_np",
+                "periodEarnings": 546.7588969,
+                "annualizationFactor": 4,
+                "annualizedEarnings": null,
+                "scenarios": null,
+                "blockedGates": [
+                  "EG-01",
+                  "EG-02",
+                  "VALUATION_SHARE_COUNT_MISSING",
+                  "VALUATION_MULTIPLES_MISSING",
+                  "VALUATION_INPUT_INVALID",
+                  "VALUATION_EVIDENCE_UNVERIFIED"
+                ],
+                "publishable": false
+              },
+              "decision": {
+                "action": "继续研究",
+                "formalRecommendation": null,
+                "reviewNote": "系统信号=增强；专业关卡未关闭，不形成买卖建议。",
+                "blockedGates": [
+                  "EG-01",
+                  "EG-02"
+                ]
+              },
+              "graphDiff": {
+                "changedNodeIds": [
+                  "EV-S-05-C04-ATTR",
+                  "EV-S-05-C04-ADJ",
+                  "EV-S-05-C04-NR",
+                  "EV-S-05-C04-SPREAD",
+                  "C-04",
+                  "A-03",
+                  "K-07",
+                  "F-02",
+                  "Valuation-B5",
+                  "Decision"
+                ],
+                "unchangedNodeIds": [
+                  "C-01",
+                  "C-02",
+                  "C-03",
+                  "C-05",
+                  "C-06"
+                ],
+                "reasons": {
+                  "C-04": "由扣非同比、归母同比、两者增速差与非经常性损益方向生成系统信号：增强。",
+                  "A-03": "假设=pending-review；扣非增长事实独立，系统信号非经营结论。",
+                  "K-07": "V0.2-K07-B：定量=clear；会计=unknown；连续非正期间=0。缺少经核验的连续可比历史序列，不能排除或确认连续触发；本期单独判断。 本期扣非同比为正，已中断以本期结束的连续非正序列；历史缺口仅影响历史判断。",
+                  "F-02": "归母净利润−非经常性损益与扣非归母净利润闭合。",
+                  "Valuation-B5": "机械年化非预测；盈利、股数/稀释、信息时点与倍数缺证，估值受阻。",
+                  "Decision": "保持“继续研究”；系统不自动生成买卖建议。"
+                }
+              }
+            },
+            "chainVersion": "V0.3-K07-B-Review",
+            "humanReview": {
+              "reviewer": "CI evidence reviewer",
+              "confirmedAt": "2026-10-14T02:29:33.681Z",
+              "scope": "evidence-only",
+              "identityVerified": false
+            }
+          },
+          "detailsSha256": "a7276a8e614d994d78ab5f12eb549b0c8f0ceec7378b72dcf6c23cc4d08e09a6"
+        },
+        {
+          "sequence": 4,
+          "event": "source_resolved",
+          "at": "2026-10-14T02:30:13.365Z",
+          "details": {
+            "sourceId": "S-05",
+            "period": "2026Q1",
+            "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF",
+            "mode": "pdf",
+            "sha256": "88d2ab7c603a94b7e0943ef07e219235ee59b9048e1dfa8e38bd6ebac99b6d03",
+            "snapshotSha256": "a7276a8e614d994d78ab5f12eb549b0c8f0ceec7378b72dcf6c23cc4d08e09a6",
+            "versionId": "V-02"
+          },
+          "detailsSha256": "81be146d18bf4c3aa37cb695d8372e8a979bf8f91bf7c1cfc41a2f618315b69c"
+        },
+        {
+          "sequence": 5,
+          "event": "tools_completed",
+          "at": "2026-10-14T02:30:13.365Z",
+          "details": {
+            "tools": [
+              "source_registry",
+              "snapshot_validator",
+              "frozen_chain",
+              "evidence_resolver"
+            ],
+            "facts": [
+              {
+                "id": "EV-S-05-C04-ATTR",
+                "metricKey": "attributable_np",
+                "label": "归母净利润",
+                "value": 471.59418970999997,
+                "originalValue": 471.59418970999997,
+                "unit": "CNY_mn",
+                "period": "2026Q1",
+                "comparisonPeriod": "2025Q1",
+                "comparisonValue": 495.76120529,
+                "disclosedYoy": -0.0487,
+                "sourceId": "S-05",
+                "page": 2,
+                "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF#page=2"
+              },
+              {
+                "id": "EV-S-05-C04-ADJ",
+                "metricKey": "adjusted_np",
+                "label": "扣非归母净利润",
+                "value": 546.7588969,
+                "originalValue": 546.7588969,
+                "unit": "CNY_mn",
+                "period": "2026Q1",
+                "comparisonPeriod": "2025Q1",
+                "comparisonValue": 439.55840722000005,
+                "disclosedYoy": 0.2439,
+                "sourceId": "S-05",
+                "page": 2,
+                "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF#page=2"
+              },
+              {
+                "id": "EV-S-05-C04-NR",
+                "metricKey": "non_recurring_total",
+                "label": "非经常性损益",
+                "value": -75.16470719,
+                "originalValue": -75.16470719,
+                "unit": "CNY_mn",
+                "period": "2026Q1",
+                "comparisonPeriod": null,
+                "comparisonValue": null,
+                "disclosedYoy": null,
+                "sourceId": "S-05",
+                "page": 3,
+                "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF#page=3"
+              }
+            ],
+            "calculations": [
+              {
+                "id": "F-02",
+                "version": "V0.3-K07-B-Review",
+                "expression": "attributable_np - non_recurring_total = adjusted_np",
+                "inputEvidenceIds": [
+                  "EV-S-05-C04-ATTR",
+                  "EV-S-05-C04-ADJ",
+                  "EV-S-05-C04-NR"
+                ],
+                "result": {
+                  "id": "F-02",
+                  "attributable": 471.59418970999997,
+                  "nonRecurring": -75.16470719,
+                  "reportedAdjusted": 546.7588969,
+                  "calculatedAdjusted": 546.7588969,
+                  "difference": 0,
+                  "consistent": true
+                }
+              },
+              {
+                "id": "YOY-attributable_np",
+                "version": "V0.6-strict",
+                "expression": "(current - comparable) / abs(comparable)",
+                "inputEvidenceIds": [
+                  "EV-S-05-C04-ATTR"
+                ],
+                "result": {
+                  "current": 471.59418970999997,
+                  "comparable": 495.76120529,
+                  "comparisonPeriod": "2025Q1",
+                  "calculatedRatio": -0.048747290675685964,
+                  "disclosedRatio": -0.0487
+                }
+              },
+              {
+                "id": "YOY-adjusted_np",
+                "version": "V0.6-strict",
+                "expression": "(current - comparable) / abs(comparable)",
+                "inputEvidenceIds": [
+                  "EV-S-05-C04-ADJ"
+                ],
+                "result": {
+                  "current": 546.7588969,
+                  "comparable": 439.55840722000005,
+                  "comparisonPeriod": "2025Q1",
+                  "calculatedRatio": 0.2438822416297132,
+                  "disclosedRatio": 0.2439
+                }
+              }
+            ],
+            "graphDiff": {
+              "changedNodeIds": [
+                "EV-S-05-C04-ATTR",
+                "EV-S-05-C04-ADJ",
+                "EV-S-05-C04-NR",
+                "EV-S-05-C04-SPREAD",
+                "C-04",
+                "A-03",
+                "K-07",
+                "F-02",
+                "Valuation-B5",
+                "Decision"
+              ],
+              "unchangedNodeIds": [
+                "C-01",
+                "C-02",
+                "C-03",
+                "C-05",
+                "C-06"
+              ],
+              "reasons": {
+                "C-04": "由扣非同比、归母同比、两者增速差与非经常性损益方向生成系统信号：增强。",
+                "A-03": "假设=pending-review；扣非增长事实独立，系统信号非经营结论。",
+                "K-07": "V0.2-K07-B：定量=clear；会计=unknown；连续非正期间=0。缺少经核验的连续可比历史序列，不能排除或确认连续触发；本期单独判断。 本期扣非同比为正，已中断以本期结束的连续非正序列；历史缺口仅影响历史判断。",
+                "F-02": "归母净利润−非经常性损益与扣非归母净利润闭合。",
+                "Valuation-B5": "机械年化非预测；盈利、股数/稀释、信息时点与倍数缺证，估值受阻。",
+                "Decision": "保持“继续研究”；系统不自动生成买卖建议。"
+              }
+            }
+          },
+          "detailsSha256": "c87dba2d9b171eab9d104c73bb094e149add57e3e055a07d1111ae9ab49fb72d"
+        },
+        {
+          "sequence": 6,
+          "event": "verification_result",
+          "at": "2026-10-14T02:30:13.366Z",
+          "details": {
+            "evidence": "PASS",
+            "professional": "pending",
+            "formalRecommendation": null
+          },
+          "detailsSha256": "d0c2aadc10c29b42806dbaf8fd63e02cbfbfb2138a22fe1785d98922dcae704e"
+        },
+        {
+          "sequence": 7,
+          "event": "model_requested",
+          "at": "2026-10-14T02:30:13.367Z",
+          "details": {
+            "phase": "explain",
+            "promptVersion": "question-explanation.v9",
+            "requestSha256": "9dd6300d2f27d91d694afd2cb151d7ff9d540ce20b7cfbd027ea19a4e10c435c",
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            }
+          },
+          "detailsSha256": "85bca63ed30d71d2aed73495d4cea4fb4c010096cc302b29d6741fac3e542439"
+        },
+        {
+          "sequence": 8,
+          "event": "model_returned",
+          "at": "2026-10-14T02:30:57.683Z",
+          "details": {
+            "phase": "explain",
+            "provider": "deepseek",
+            "requestedModel": "deepseek-v4-pro",
+            "returnedModel": "deepseek-v4-pro",
+            "promptVersion": "question-explanation.v9",
+            "promptSha256": "dd9b93531042738559723045c3c1cff260167106482aa5c04714164e5689c071",
+            "requestSha256": "9dd6300d2f27d91d694afd2cb151d7ff9d540ce20b7cfbd027ea19a4e10c435c",
+            "responseSha256": "acf19c4720a6f29b07611d2216f30d1b503d9e13c73510f2893c78d414c799f0",
+            "responseId": "e70d36c2-1795-4279-8dea-1c9793cdba43",
+            "startedAt": "2026-10-14T02:30:13.367Z",
+            "finishedAt": "2026-10-14T02:30:57.683Z",
+            "durationMs": 44316,
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            },
+            "usage": {
+              "inputTokens": 3489,
+              "outputTokens": 3515,
+              "totalTokens": 7004
+            },
+            "failureCode": null,
+            "inputBudget": {
+              "version": "question-live-budget.v1",
+              "wireBytes": 11264,
+              "estimatedInputTokens": 15360,
+              "reservedOutputTokens": 6000,
+              "estimatedCostUsdMicros": 44036
+            },
+            "providerHttpStatus": 200
+          },
+          "detailsSha256": "422b8a4170f2faeec9e148371f1138bd65cf3fc860f7db02a047901d0533c15c"
+        },
+        {
+          "sequence": 9,
+          "event": "explanation_failed",
+          "at": "2026-10-14T02:30:57.687Z",
+          "details": {
+            "reasons": [
+              "ASSUMPTION_PROMOTED"
+            ],
+            "evidenceSha256": "f647c3959fe2e5d929d913fcd7bf7d126fcf3937fa6f55aaff06c65a9c63a0bc"
+          },
+          "detailsSha256": "2c42e6bbdb7a1f5a8f3272bbf72cffac3cc704b0e6eeaf97e3c53e36dba67b60"
+        }
+      ],
+      "answer": null,
+      "answerSha256": null,
+      "reasons": [
+        "ASSUMPTION_PROMOTED"
+      ]
+    },
+    "code": null
+  }
+}

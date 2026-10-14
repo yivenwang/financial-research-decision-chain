@@ -31,7 +31,7 @@ test("missing or invented counter citation stops before judge request", async ()
   const { context, explanation } = await input();
   explanation.counterEvidence.citations = ["A-03"];
   let calls = 0;
-  await assert.rejects(reviewCandidate(context, explanation, async () => { calls++; return verdict(); }), /COUNTER_EVIDENCE_OMITTED/);
+  await assert.rejects(reviewCandidate(context, explanation, async () => { calls++; return verdict(); }), /PARAGRAPH_EVIDENCE_OMITTED/);
   assert.equal(calls, 0);
 });
 

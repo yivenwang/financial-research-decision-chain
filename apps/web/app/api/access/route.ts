@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { REVIEW_ACCESS_COOKIE, REVIEW_ACCESS_DEADLINE_LABEL, hasReviewBearer, hasReviewSession, reviewAccessDeadlineMs, reviewAccessOpen, reviewSessionConfigured, reviewSessionSeconds, reviewSessionValue } from "@/lib/reviewer-access";
-import { BodyReadError, readBoundedJson } from "@/lib/request-body";
+import { readBoundedJson } from "@/lib/request-body";
 import { createAccessLimiter } from "@/lib/review-security";
 
 export const runtime = "nodejs";
@@ -55,7 +55,8 @@ export async function POST(request: Request) {
     const body = await readBoundedJson(request, 4096) as { code?: unknown };
     if (typeof body.code === "string" && Object.keys(body).length === 1) code = body.code;
   } catch (error) {
-    return response({ error: "请求内容无效、过大或读取超时。" }, error instanceof BodyReadError ? error.code === "BODY_TOO_LARGE" ? 413 : error.code === "BODY_TIMEOUT" ? 408 : 400 : 400);
+    const code = error instanceof Error && "code" in error ? error.code : null;
+    return response({ error: "请求内容无效、过大或读取超时。" }, code === "BODY_TOO_LARGE" ? 413 : code === "BODY_TIMEOUT" ? 408 : 400);
   }
 
   if (!hasReviewBearer(new Request(request.url, { headers: { authorization: `Bearer ${code}` } }), accessCode)) {

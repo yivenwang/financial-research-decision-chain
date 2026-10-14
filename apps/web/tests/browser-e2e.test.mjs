@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash, randomBytes } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { spawn } from "node:child_process";
 import { setTimeout as delay } from "node:timers/promises";
 import { pathToFileURL } from "node:url";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { tmpdir } from "node:os";
+import { createQuestionHandler } from "../lib/research-question.server.ts";
+import { QUESTION_STORAGE_KEY, validateQuestionRun } from "../lib/research-question-storage.ts";
 import test, { before, after } from "node:test";
 import { getSourceRecord } from "../lib/source-records.ts";
 import { storageKeys } from "../lib/research-versions.ts";
@@ -29,6 +32,96 @@ const liveProvider = process.env.MODEL_PROVIDER === "openai" ? "openai" : "deeps
 const liveApiKey = liveProvider === "openai" ? process.env.OPENAI_API_KEY : process.env.DEEPSEEK_API_KEY;
 const liveModel = (liveProvider === "openai" ? process.env.OPENAI_MODEL : process.env.DEEPSEEK_MODEL) || (liveProvider === "openai" ? "gpt-5.6-sol" : "deepseek-v4-pro");
 const accessCode = liveMemo ? randomBytes(24).toString("hex") : "ci-access-code-not-a-real-secret";
+
+// Runs inside the same uploaded/reviewed S-05 browser session, never a seeded ledger.
+async function exerciseQuestionChain(page, snapshot, uploadWidth = 1440) {
+  assert.equal(liveMemo, false, "This extension is exclusively synthetic");
+  const directory = await mkdtemp(join(tmpdir(), "beacon-chain-NOT-LIVE-"));
+  const checks = [], calls = [];
+  let intent = "CHANGE_EXPLAIN", invalid = false;
+  const handler = createQuestionHandler(() => ({ provider: "deepseek", model: "deepseek-v4-pro", apiKey: "system-chain-NOT-A-REAL-KEY", accessToken: accessCode, appOrigin: origin }), {
+    runDirectory: directory,
+    fetcher: async (url, init) => {
+      assert.equal(url, "https://api.deepseek.com/responses");
+      const body = JSON.parse(init.body); calls.push(body.text.format.name);
+      const input = JSON.parse(body.input[1].content);
+      let output;
+      if (body.text.format.name.endsWith("plan")) output = { intent, company: "安克创新", period: "2026Q1", comparisonPeriod: "2025Q1", metricKeys: ["attributable_np", "adjusted_np", "non_recurring_total"], referenceIds: ["F-02"], reason: "按主要研究目标规划，保留人工专业复核。" };
+      else {
+        output = { sufficiency: input.constraints.sufficiency[0] };
+        for (const key of ["directAnswer","inference","counterEvidence","uncertainty"]) {
+          const definition=body.text.format.schema.properties[key].properties;
+          output[key]={citations:[definition.citations.items.enum[0]],text:definition.text.enum[0]};
+        }
+        if (invalid) output.inference.text = "不应给出交易建议，但现在建议买入。仍待核验。";
+      }
+      return Response.json({ id: "system-chain-response-NOT-LIVE", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] });
+    },
+  });
+  try {
+    await page.route("**/api/research-question*", async route => {
+      const request = route.request();
+      const response = request.method() === "GET" ? await handler.GET(new Request(request.url(), { headers: request.headers() })) : await handler.POST(new Request(request.url(), { method: "POST", headers: request.headers(), body: request.postData() }));
+      await route.fulfill({ status: response.status, contentType: "application/json", body: await response.text() });
+    });
+    await page.goto(`${origin}/questions`);
+    for (const [nextIntent, question] of [["CHANGE_EXPLAIN", "请解释安克创新归母与扣非同比变化的原因。"], ["EVIDENCE_AUDIT", "核验本期三个利润指标的原文依据和勾稽关系。"], ["DECISION_IMPACT", "材料更新对既有论点和专业复核有哪些影响？"]]) {
+      intent = nextIntent;
+      await page.getByLabel("研究问题", { exact: true }).fill(question);
+      await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+      await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+      await page.getByTestId("question-result").getByRole("heading", { name: /^(研究草稿|部分回答)待审核$/ }).waitFor();
+      const ledger = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), QUESTION_STORAGE_KEY);
+      const run = ledger.runs.at(-1); await validateQuestionRun(run);
+      assert.equal(run.calls[0].promptVersion,"question-explanation.v11");
+      await page.getByTestId("controlled-explanation-notice").waitFor();
+      assert.equal(run.contract.intent, intent);
+      assert.deepEqual(run.answer.evidence.snapshot, snapshot);
+      assert.deepEqual(run.answer.evidence.graphDiff, snapshot.chain.graphDiff);
+      assert.equal(run.answer.formalRecommendation, null); assert.equal(run.answer.verification.professional, "pending");
+      await page.getByLabel("问题审核人", { exact: true }).fill("CI chain reviewer NOT-LIVE");
+      await page.getByLabel("问题审核意见", { exact: true }).fill("仅验收引用、绑定和交互；不是专业签认。");
+      await page.getByRole("button", { name: "接受研究草稿", exact: true }).click();
+      await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
+      checks.push({ intent, runId: run.runId, status: run.status, snapshotSha256: run.answer.evidence.context.snapshotSha256 });
+    }
+    for (const width of [1440, 1366, 768, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+      await page.screenshot({ path: new URL(`system-chain-${width}.png`, artifacts).pathname, fullPage: true });
+    }
+    invalid = true;
+    await page.getByLabel("研究问题", { exact: true }).fill("核验本期利润的原文依据并保留限制。");
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByTestId("question-result").getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    const ledger = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), QUESTION_STORAGE_KEY);
+    const failed = ledger.runs.at(-1); await validateQuestionRun(failed);
+    assert.deepEqual(failed.reasons, ["ANSWER_CONTRACT_MISMATCH"]); assert.equal(failed.answer, null);
+    await page.reload();
+    assert.equal(calls.length, 8, "Reloading does not generate or repair a model answer");
+    assert.equal(ledger.reviews.length, 3); assert.equal(ledger.runs.length, 8);
+    // Append a synthetic hostile note via the actual review UI. It must remain
+    // local, produce no public download and never alter the original run bytes.
+    await page.getByRole("button", { name: /^研究草稿待审核 · 材料更新对既有论点/ }).click();
+    await page.getByLabel("问题审核人", { exact: true }).fill("CI export fault NOT-LIVE");
+    await page.getByLabel("问题审核意见", { exact: true }).fill('{"ticket":"synthetic-not-a-signed-ticket"}');
+    await page.getByRole("button", { name: "退回研究草稿", exact: true }).click();
+    await page.getByText("研究草稿已退回", { exact: true }).waitFor();
+    const originalLedgerBytes = await page.evaluate(key => localStorage.getItem(key), QUESTION_STORAGE_KEY);
+    let downloads = 0; const observeDownload = () => downloads++;
+    page.on("download", observeDownload);
+    await page.getByRole("button", { name: "导出完整记录", exact: true }).click();
+    await page.getByRole("alert").filter({ hasText: "已阻止导出" }).waitFor();
+    assert.equal(downloads, 0);
+    assert.equal(await page.evaluate(key => localStorage.getItem(key), QUESTION_STORAGE_KEY), originalLedgerBytes);
+    page.off("download", observeDownload);
+    // Do not archive the hostile note itself, even though it is synthetic.
+    await writeFile(new URL(`system-chain-upload-${uploadWidth}-NOT-LIVE.json`, artifacts), JSON.stringify({ uploadWidth, transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticProviderCalls: calls.length, sourceSha256: snapshot.source.sha256, checks, failedRun: failed,
+      reviewsBeforeExportFault: ledger.reviews, archiveBlocked: true, archivePreservedBytes: true }, null, 2));
+    await page.goto(`${origin}/versions`);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}
 
 async function authorizeContext(context) {
   await context.addCookies([{
@@ -169,7 +262,7 @@ async function stubMemoTransport(page) {
   };
   await page.route("**/api/research-memo", async (route) => {
     if (route.request().method() === "GET") { await route.fulfill({ json: { configured: true, provider: "deepseek", model: "deepseek-v4-pro" } }); return; }
-    const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "test-transport-not-live", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
+    const run = await createMemoRun(route.request().postDataJSON(), { provider: "deepseek", apiKey: "ci-stub-not-real", accessToken: accessCode, model: "deepseek-v4-pro" }, { fetcher: async () => Response.json({ id: "resp_test_transport_not_live", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(output) }] }] }) });
     await route.fulfill({ json: { run } });
   });
 }
@@ -241,9 +334,10 @@ async function exerciseMemoRevisions(page, modelRun, scope) {
   await writeFile(new URL("S-05-human-revision-history-NOT-LIVE.json", artifacts), JSON.stringify({ evaluation: "synthetic-browser-revision-flow-NOT-live-content-review", ...stored }, null, 2));
 }
 
-for (const fixture of cases) {
-  test(`real ${fixture.id} upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+const viewportCases = cases.flatMap(f => (!liveMemo && f.id === "S-05" ? [1440,1366,768,390] : [1440]).map(viewportWidth => ({...f,viewportWidth})));
+for (const fixture of viewportCases) {
+  test(`real ${fixture.id} ${fixture.viewportWidth}px upload → review → frozen chain → save → reload → rollback`, { timeout: liveMemo && liveProvider === "deepseek" ? 300000 : 180000 }, async () => {
+    const context = await browser.newContext({ viewport: { width: fixture.viewportWidth, height: 1000 } });
     await authorizeContext(context);
     const page = await context.newPage();
     let modelRequests = 0;
@@ -257,7 +351,7 @@ for (const fixture of cases) {
         close(Number(await card.getByRole("spinbutton").inputValue()), expected);
         await card.getByRole("button", { name: "接受证据", exact: true }).click();
       }
-      await page.getByRole("button", { name: "生成 Graph Diff" }).click();
+      await page.getByRole("button", { name: "预览研究影响" }).click();
       await page.getByTestId("chain-result").waitFor();
       assert.equal(await page.getByRole("button", { name: "保存为新版本" }).isDisabled(), true);
       await page.getByLabel("证据审核人（自行填写）").fill("CI evidence reviewer");
@@ -362,7 +456,7 @@ for (const fixture of cases) {
         assert.equal(typeof modelRun.audit.responseId, "string");
         assert.ok(modelRun.audit.responseId.trim().length > 0);
         if (liveMemo) { assert.notEqual(modelRun.audit.responseId, "resp_test_transport_not_live"); assert.ok(!/test|stub/i.test(modelRun.audit.returnedModel)); }
-        else assert.equal(modelRun.audit.returnedModel, "test-transport-not-live");
+        else assert.equal(modelRun.audit.returnedModel, "deepseek-v4-pro");
         assert.ok(modelRun.audit.usage.inputTokens > 0);
         assert.ok(modelRun.audit.usage.outputTokens > 0);
         assert.equal(modelRun.context.source.mode, "pdf");
@@ -384,6 +478,8 @@ for (const fixture of cases) {
         await page.screenshot({ path: new URL(`${prefix}-memo.png`, artifacts).pathname, fullPage: true });
         if (!liveMemo) await exerciseMemoRevisions(page, modelRun, fixture.scope);
       }
+      if (!liveMemo && fixture.id === "S-05") await exerciseQuestionChain(page, snapshot, fixture.viewportWidth);
+      await page.setViewportSize({width:fixture.viewportWidth,height:1000});
       await page.getByRole("button").filter({ hasText: "V-01" }).click();
       await page.getByRole("button", { name: "回滚到此版本" }).click();
       await page.getByRole("button", { name: "确认并创建回滚版本" }).click();
@@ -401,6 +497,9 @@ for (const fixture of cases) {
       assert.deepEqual(restored[2].chain, snapshot.chain);
       assert.deepEqual(restored[0], snapshot);
       assert.deepEqual(errors, []);
+      assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+      await page.screenshot({path:new URL(`${fixture.id}-rollback-${fixture.viewportWidth}.png`,artifacts).pathname,fullPage:true});
+      await writeFile(new URL(`${fixture.id}-upload-chain-${fixture.viewportWidth}.json`,artifacts), JSON.stringify({viewportWidth:fixture.viewportWidth,transport:liveMemo ? "LIVE" : "synthetic-NOT-LIVE", snapshot, rollback:restored,errors},null,2));
       if (!liveMemo && fixture.id === "S-05") {
         assert.equal(await page.getByTestId("memo-revisions").count(), 0, "A new rollback snapshot must not inherit the previous memo or revision acceptance");
         const history = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), memoRevisionStorageKey(fixture.scope));
@@ -430,7 +529,7 @@ test("real upload rejects source mismatch and missing/rejected/invalid reviewed 
     assert.equal((await readLedger(page, "research")).length, 0);
     await upload(page, "S-05");
     await page.getByTestId("candidate-adjusted_np").waitFor({ timeout: 60000 });
-    const diff = page.getByRole("button", { name: "生成 Graph Diff" });
+    const diff = page.getByRole("button", { name: "预览研究影响" });
     assert.equal(await diff.isDisabled(), true);
     for (const key of ["attributable_np", "adjusted_np"]) await page.getByTestId(`candidate-${key}`).getByRole("button", { name: "接受证据", exact: true }).click();
     await page.getByTestId("candidate-non_recurring_total").getByRole("button", { name: "拒绝进入研究链" }).click();

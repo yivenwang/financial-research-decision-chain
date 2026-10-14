@@ -1,0 +1,96 @@
+{
+  "schemaVersion": "question-live-batch.v1",
+  "approvalReference": "question-acceptance-2026-09-20",
+  "commitSha": "08e65140972162a2ceb4414f172441d18ebb45f4",
+  "budget": {
+    "maxRequests": 6,
+    "maxInputEstimatePerRequest": 16000,
+    "maxOutputTokensPerRequest": 6000,
+    "maxInputEstimateTotal": 96000,
+    "maxOutputTokensTotal": 36000,
+    "framingReserve": 4096,
+    "inputUsdCentsPerMillion": 132,
+    "outputUsdCentsPerMillion": 396,
+    "priceCheckedAt": "2026-10-09",
+    "priceSource": "https://api-docs.deepseek.com/quick_start/pricing/",
+    "estimateCeilingUsdMicros": 350000,
+    "monetaryHardCap": false,
+    "estimatedMaximumUsdMicros": 269280,
+    "planningReserveUsdMicros": 336600,
+    "inputMethod": "full-wire-utf8-bytes-plus-4096-not-exact-tokenization"
+  },
+  "reservedInputEstimateTokens": 16000,
+  "evaluation": "live-provider-http",
+  "model": "deepseek-v4-pro",
+  "maxRequests": 6,
+  "maxOutputTokensPerRequest": 6000,
+  "maxPossibleOutputTokens": 36000,
+  "timeoutMsPerRequest": 150000,
+  "reasoningEffort": "low",
+  "startedAt": "2026-10-11T09:53:17.282Z",
+  "status": "stopped-after-failure",
+  "contentReview": "pending",
+  "cases": [
+    {
+      "id": "Q-LIVE-01",
+      "intent": "CHANGE_EXPLAIN",
+      "question": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+      "status": "failed",
+      "requestIndexes": [
+        1
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "index": 1,
+      "caseId": "Q-LIVE-01",
+      "phase": "plan",
+      "status": "failed",
+      "startedAt": "2026-10-11T09:53:17.284Z",
+      "usage": {
+        "inputTokens": 897,
+        "outputTokens": 1776,
+        "totalTokens": 2673
+      },
+      "finishedAt": "2026-10-11T09:53:36.065Z",
+      "failureCode": "INTENT_MISMATCH",
+      "audit": {
+        "phase": "plan",
+        "provider": "deepseek",
+        "requestedModel": "deepseek-v4-pro",
+        "returnedModel": "deepseek-v4-pro",
+        "promptVersion": "question-contract.v2",
+        "promptSha256": "6f7213ee573119ed2ae4236efc7114b52d026b4b397126f8bd78ce7e7775591d",
+        "requestSha256": "13e7c7eafacc8d0496e5d6de8d5d86ba49e2a9aecab56d92076bc9a4953f9841",
+        "responseSha256": "1f8fa78e9a235bae05b42726c0c8e0865f57dca8a76fdcb48e11a282bc1f7197",
+        "responseId": "e7dfe02d-c19e-4c8e-a397-b5b14621286c",
+        "startedAt": "2026-10-11T09:53:17.313Z",
+        "finishedAt": "2026-10-11T09:53:36.049Z",
+        "durationMs": 18736,
+        "requestLimits": {
+          "maxOutputTokens": 6000,
+          "timeoutMs": 150000
+        },
+        "usage": {
+          "inputTokens": 897,
+          "outputTokens": 1776,
+          "totalTokens": 2673
+        },
+        "failureCode": null,
+        "inputBudget": {
+          "version": "question-live-budget.v1",
+          "wireBytes": 3265,
+          "estimatedInputTokens": 7361,
+          "reservedOutputTokens": 6000,
+          "estimatedCostUsdMicros": 33477
+        }
+      }
+    }
+  ],
+  "knownInputTokens": 897,
+  "knownOutputTokens": 1776,
+  "requestsWithoutUsage": 0,
+  "estimatedKnownUsageUsdMicros": 8217,
+  "finishedAt": "2026-10-11T09:53:36.066Z"
+}

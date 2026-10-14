@@ -68,7 +68,6 @@
     "components/ui/tooltip.tsx": "a0784eb77831a799fad7991df4f1b666f876201565a80175e1aa68733574a2e4",
     "eslint.config.mjs": "f22a254df7d934bbf9be499d3c969a13abb7f7f64c03f5967d0095cad81dfe06",
     "hooks/use-mobile.ts": "ad0936f84f1df79d3697bfbff9c18f8ad58431c1cbaf2359c6a853b0fcc9f28b",
-    "lib/parser-v04.ts": "5cda943d9d6ad9bf0e5902ccf2d4166f6a23007e9072ab99c7fa2605b4577f06",
     "lib/utils.ts": "53f3d3d070f0a9082934da25b875f9499855c2b0693868dd28be8c23d8730f68",
     "next.config.ts": "614bce25b089c3f19b1e17a6346c74b858034040154c6621e7d35303004767cc",
     "postcss.config.mjs": "dfac7ac2d86d326a0e5adb024e7943c181393ed17a5fcb8f0315b24c7da6ddde",
@@ -140,6 +139,10 @@
     "app/layout.tsx": {
       "original_sha256": "1e548bbed43458e3bba323e7b4a92dfa17e31cc21b95365503c12143e81444fe",
       "reason": "Add review-only robots metadata and an internal-review watermark for the product UI; no research semantics or engine behavior changed."
+    },
+    "lib/parser-v04.ts": {
+      "original_sha256": "5cda943d9d6ad9bf0e5902ccf2d4166f6a23007e9072ab99c7fa2605b4577f06",
+      "reason": "2026-10-10 H-01: fail closed on zero/non-finite comparison; finite arithmetic and financial definitions unchanged."
     }
   }
 }

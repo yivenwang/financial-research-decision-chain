@@ -14,9 +14,11 @@ export default function ChangesPage() {
       description="上传已登记报告，核对来源与候选证据，再查看确定性计算和影响；由人确认后保存研究版本。"
     >
       <div className={suite.stepRail} aria-label="材料更新步骤">
-        <div><small>01 · SOURCE</small><strong>选择并读取材料</strong><p>核对公司、期间与登记来源</p></div>
-        <div><small>02 · EVIDENCE</small><strong>逐项审核证据</strong><p>保留原值、反证与阻断原因</p></div>
-        <div><small>03 · VERSION</small><strong>查看影响并保存</strong><p>版本留痕，专业关卡继续待复核</p></div>
+        <div><small>01</small><strong>提交材料</strong><p>核对公司、期间与来源</p></div>
+        <div><small>02</small><strong>人工核验</strong><p>逐条保留原值与审核记录</p></div>
+        <div><small>03</small><strong>预览影响</strong><p>查看冻结计算与阻断原因</p></div>
+        <div><small>04</small><strong>保存版本</strong><p>追加历史，专业门禁保留</p></div>
+        <div><small>05</small><strong>继续研究</strong><p>返回问题，由人确认执行</p></div>
       </div>
       <div className={styles.surface}>
         <UpdateWorkflow />

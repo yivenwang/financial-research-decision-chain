@@ -9,7 +9,7 @@ import test from "node:test";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { storageKeys } from "../lib/research-versions.ts";
-import { questionTestConfig, planOutput, answerOutput, providerResponse } from "./question-test-helpers.mjs";
+import { questionTestConfig, planOutput, schemaAnswerOutput, providerResponse } from "./question-test-helpers.mjs";
 import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 // Public synthetic signing secret, never a runtime credential.
@@ -36,7 +36,7 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     const body = JSON.parse(init.body); calls.push(body.text.format.name);
     const input = JSON.parse(body.input[1].content);
     const plan = planOutput({ intent: input.queryRaw?.includes("来源") ? "EVIDENCE_AUDIT" : input.queryRaw?.includes("影响") ? "DECISION_IMPACT" : "CHANGE_EXPLAIN" });
-    return providerResponse(body.text.format.name.endsWith("plan") ? plan : answerOutput());
+    return providerResponse(body.text.format.name.endsWith("plan") ? plan : schemaAnswerOutput(body));
   } });
   try {
     for (let i = 0; i < 80; i++) {
@@ -87,9 +87,10 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await jsonDownload.saveAs(new URL("question-answer-NOT-LIVE.json", artifacts).pathname);
     const saved = JSON.parse(await readFile(new URL("question-answer-NOT-LIVE.json", artifacts), "utf8"));
     assert.equal(saved.run.answer.evidence.context.source.sha256, prior.pdfSha256);
-    assert.equal(saved.reviews.length, 1); assert.equal(saved.run.calls[0].returnedModel, "question-test-NOT-LIVE");
+    assert.equal(saved.reviews.length, 1); assert.equal(saved.run.calls[0].returnedModel, "deepseek-v4-pro");
+    assert.equal(saved.run.calls[0].responseId, "response-question-test-NOT-LIVE");
     assert.ok(!JSON.stringify(saved).includes(questionTestConfig.accessToken));
-    const [mdDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出研究结果" }).click()]);
+    const [mdDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出已审核研究草稿" }).click()]);
     await mdDownload.saveAs(new URL("question-answer-NOT-LIVE.md", artifacts).pathname);
     await page.screenshot({ path: new URL("question-desktop-NOT-LIVE.png", artifacts).pathname, fullPage: true });
     await page.setViewportSize({ width: 390, height: 844 });

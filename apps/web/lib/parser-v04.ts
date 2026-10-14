@@ -1,3 +1,4 @@
+import { finiteChange, isFiniteNumber } from "../../../lib/financial-numbers.ts";
 /**
  * Finance Competition MVP V0.4 — geometry-preserving PDF table parser.
  *
@@ -430,9 +431,6 @@ function approxEqual(
   );
 }
 
-function calculateChange(current: number, comparison: number): number {
-  return (current - comparison) / Math.abs(comparison);
-}
 
 function validate(
   metrics: Partial<Record<MetricKey, MetricValue>>,
@@ -445,7 +443,7 @@ function validate(
   ];
 
   for (const key of required) {
-    if (metrics[key]?.current === undefined) {
+    if (!isFiniteNumber(metrics[key]?.current)) {
       issues.push({
         code: "REQUIRED_FIELD_MISSING",
         severity: "FAIL",
@@ -459,16 +457,18 @@ function validate(
     MetricKey,
     MetricValue,
   ][]) {
-    if (
-      metric.current === undefined ||
-      metric.comparison === undefined ||
-      metric.disclosedChange === undefined
-    ) {
+    if (metric.current === undefined || metric.comparison === undefined || metric.disclosedChange === undefined) {
+      if (key !== "non_recurring_total") issues.push({code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, page: metric.page, message: `${key}: missing change input; promotion is blocked.`});
       continue;
     }
 
-    const recalculated = calculateChange(metric.current, metric.comparison);
+    const recalculated = finiteChange(metric.current, metric.comparison);
     // 0.5 percentage point tolerance, represented as a decimal here.
+    if (recalculated === null || !isFiniteNumber(metric.disclosedChange)) {
+      issues.push({ code: "YOY_RECONCILIATION_FAIL", severity: "FAIL", field: key, page: metric.page,
+        message: `${key}: change cannot be calculated from a zero, missing or non-finite basis; promotion is blocked.` });
+      continue;
+    }
     if (Math.abs(recalculated - metric.disclosedChange) > 0.005) {
       issues.push({
         code: "YOY_RECONCILIATION_FAIL",

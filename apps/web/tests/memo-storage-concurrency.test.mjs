@@ -27,7 +27,7 @@ function versionFixture() {
     candidates: extractCandidates(result).map(item => ({ ...item, reviewStatus: "accepted" })) });
 }
 async function runFixture(label) {
-  return createMemoRun(versionFixture(), config, { fetcher: async () => Response.json({ id: `response_${label}`, model: "test-transport-not-live", status: "completed",
+  return createMemoRun(versionFixture(), config, { fetcher: async () => Response.json({ id: `response_${label}`, model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
     output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(wire) }] }] }) });
 }
 

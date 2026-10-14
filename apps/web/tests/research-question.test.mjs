@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
-import { makeResearchContract, validateQuestionPlan, resolveQuestionEvidence, validateQuestionExplanation, questionMarkdown, QUESTION_INTENTS } from "../lib/research-question.ts";
+import { makeResearchContract, validateQuestionPlan, resolveQuestionEvidence, validateQuestionExplanation as validateV10Explanation, questionMarkdown, QUESTION_INTENTS } from "../lib/research-question.ts";
 import { appendQuestionRun, appendQuestionReview, readQuestionLedger, validateQuestionRun, QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
 import { canonicalJson, sha256Text } from "../lib/research-memo.ts";
 import { storageKeys, createRollbackSnapshot } from "../lib/research-versions.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, schemaAnswerOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req } from "./question-test-helpers.mjs";
 
-function harness(plan = planOutput(), answer = answerOutput()) {
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
+
+function harness(plan = planOutput(), answer) {
   const calls = [];
-  const handler = createQuestionHandler(() => config, { fetcher: async (url, init) => { const body = JSON.parse(init.body); calls.push({ url, body }); return providerResponse(body.text.format.name.endsWith("plan") ? plan : answer); } });
+  const handler = createQuestionHandler(() => config, { fetcher: async (url, init) => { const body = JSON.parse(init.body); calls.push({ url, body }); return providerResponse(body.text.format.name.endsWith("plan") ? plan : (answer ?? schemaAnswerOutput(body))); } });
   const draft = async (question = mainQuestion) => (await handler.POST(req({ phase: "plan", question }))).json();
   const execute = async (d, snapshot = questionTestSnapshot(), extra = {}) => handler.POST(req({ phase: "execute", draft: d, snapshot, confirmed: true, ...extra }));
   return { calls, handler, draft, execute };
@@ -60,7 +64,9 @@ test("missing material is distinct from a failed snapshot and makes no explanati
 test("scope rejects other companies, unsupported periods/metrics/nodes and annual-quarter comparison", async () => {
   for (const patch of [{ company: "其他公司" }, { period: "2027Q1" }, { period: "2026H1" }, { metricKeys: ["revenue"] }, { referenceIds: ["C-01"] }, { comparisonPeriod: "2025FY" }, { intent: "OUT_OF_SCOPE" }, { metricKeys: [], referenceIds: [] }]) {
     const h = harness(planOutput(patch)); const d = await h.draft();
-    assert.equal(d.run.status, "OUT_OF_SCOPE"); assert.equal(d.ticket, null); assert.equal(h.calls.length, 1);
+    const invalidIdentifiers = patch.metricKeys?.includes("revenue") || patch.referenceIds?.includes("C-01");
+    assert.equal(d.run.status, invalidIdentifiers ? "BLOCKED" : "OUT_OF_SCOPE"); assert.equal(d.ticket, null); assert.equal(h.calls.length, 1);
+    if (invalidIdentifiers) assert.deepEqual(d.run.reasons, ["CONTRACT_SCHEMA_INVALID"]);
   }
 });
 
@@ -96,7 +102,7 @@ test("answer validation rejects invented values/references and missing counter o
     const a = answerOutput(); mutate(a); assert.throws(() => validateQuestionExplanation(a, resolved.evidence.context));
     const bad = harness(planOutput(), a); const { run } = await (await bad.execute(await bad.draft())).json();
     assert.equal(run.status, "BLOCKED"); assert.equal(run.answer, null); assert.equal(bad.calls.length, 2);
-    assert.equal(run.calls[0].rawOutput, JSON.stringify(a)); await validateQuestionRun(run);
+    assert.equal(run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(a))); await validateQuestionRun(run);
   }
   const partial = harness(planOutput(), answerOutput({ sufficiency: "partial" }));
   assert.equal((await (await partial.execute(await partial.draft())).json()).run.status, "PARTIAL");

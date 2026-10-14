@@ -1,0 +1,261 @@
+{
+  "caseId": "Q-LIVE-01",
+  "phase": "plan",
+  "record": {
+    "httpStatus": 200,
+    "run": {
+      "schemaVersion": "research-question.v1",
+      "runId": "fa631a4e-0f90-4b3a-b62f-0988780b409a",
+      "requestId": "de99a064-0cd0-4727-adee-025baae3b097",
+      "phase": "plan",
+      "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+      "status": "CONTRACT_DRAFTED",
+      "createdAt": "2026-10-11T03:24:54.200Z",
+      "contract": {
+        "schemaVersion": "research-question.v1",
+        "requestId": "de99a064-0cd0-4727-adee-025baae3b097",
+        "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+        "createdAt": "2026-10-11T03:24:54.200Z",
+        "capabilityVersion": "anker-c04.v1",
+        "intent": "CHANGE_EXPLAIN",
+        "company": "安克创新",
+        "ticker": "300866.SZ",
+        "period": "2026Q1",
+        "comparablePeriod": "2025Q1",
+        "requiredSourceIds": [
+          "S-05"
+        ],
+        "requiredMetrics": [
+          "attributable_np",
+          "adjusted_np",
+          "non_recurring_total"
+        ],
+        "requestedReferences": [
+          "EV-S-05-C04-ATTR",
+          "EV-S-05-C04-ADJ",
+          "EV-S-05-C04-NR"
+        ],
+        "requestedOutputs": [
+          "verified_facts",
+          "deterministic_calculations",
+          "inferences",
+          "counter_evidence",
+          "graph_diff",
+          "uncertainties",
+          "source_citations",
+          "run_log"
+        ],
+        "allowedTools": [
+          "source_registry",
+          "snapshot_validator",
+          "frozen_chain",
+          "evidence_resolver"
+        ],
+        "forbiddenActions": [
+          "modify_financial_rules",
+          "write_decision",
+          "invent_values",
+          "external_search"
+        ],
+        "status": "CONTRACT_DRAFTED",
+        "reasons": [
+          "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的利润结构差异，并指出需进一步核验的原因；同比对比期为2025Q1。"
+        ]
+      },
+      "calls": [
+        {
+          "phase": "plan",
+          "provider": "deepseek",
+          "requestedModel": "deepseek-v4-pro",
+          "returnedModel": "deepseek-v4-pro",
+          "promptVersion": "question-contract.v2",
+          "promptSha256": "6f7213ee573119ed2ae4236efc7114b52d026b4b397126f8bd78ce7e7775591d",
+          "requestSha256": "13e7c7eafacc8d0496e5d6de8d5d86ba49e2a9aecab56d92076bc9a4953f9841",
+          "responseSha256": "966b7421770170000cde54f7ddd8c2d49ba8f27bf374ca97c93c44654c8cf0e8",
+          "responseId": "b740758d-f44b-43cf-b9bc-a8ca3e658732",
+          "startedAt": "2026-10-11T03:24:54.201Z",
+          "finishedAt": "2026-10-11T03:25:04.119Z",
+          "durationMs": 9918,
+          "requestLimits": {
+            "maxOutputTokens": 6000,
+            "timeoutMs": 150000
+          },
+          "usage": {
+            "inputTokens": 897,
+            "outputTokens": 970,
+            "totalTokens": 1867
+          },
+          "rawOutput": "{\n  \"intent\": \"CHANGE_EXPLAIN\",\n  \"company\": \"安克创新\",\n  \"period\": \"2026Q1\",\n  \"comparisonPeriod\": \"2025Q1\",\n  \"metricKeys\": [\n    \"attributable_np\",\n    \"adjusted_np\",\n    \"non_recurring_total\"\n  ],\n  \"referenceIds\": [\n    \"EV-S-05-C04-ATTR\",\n    \"EV-S-05-C04-ADJ\",\n    \"EV-S-05-C04-NR\"\n  ],\n  \"reason\": \"解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的利润结构差异，并指出需进一步核验的原因；同比对比期为2025Q1。\"\n}",
+          "failureCode": null,
+          "inputBudget": {
+            "version": "question-live-budget.v1",
+            "wireBytes": 3265,
+            "estimatedInputTokens": 7361,
+            "reservedOutputTokens": 6000,
+            "estimatedCostUsdMicros": 33477
+          }
+        }
+      ],
+      "events": [
+        {
+          "sequence": 1,
+          "event": "query_received",
+          "at": "2026-10-11T03:24:54.200Z",
+          "details": {
+            "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+            "capability": {
+              "version": "anker-c04.v1",
+              "company": "安克创新",
+              "ticker": "300866.SZ",
+              "aliases": [
+                "安克创新",
+                "300866.SZ",
+                "300866",
+                "Anker Innovations"
+              ],
+              "sourceIds": [
+                "S-05"
+              ],
+              "metricKeys": [
+                "attributable_np",
+                "adjusted_np",
+                "non_recurring_total"
+              ],
+              "nodeIds": [
+                "C-04",
+                "A-03",
+                "K-07",
+                "F-02",
+                "Valuation-B5",
+                "Decision"
+              ]
+            },
+            "sourceRegistry": [
+              {
+                "sourceId": "S-05",
+                "period": "2026Q1",
+                "url": "https://static.cninfo.com.cn/finalpage/2026-04-30/1225260221.PDF"
+              }
+            ]
+          },
+          "detailsSha256": "d35e2871c624ad35a11db8b6a3667de3d1af84d461c20f983cfdafe5c7d0caa1"
+        },
+        {
+          "sequence": 2,
+          "event": "model_requested",
+          "at": "2026-10-11T03:24:54.201Z",
+          "details": {
+            "phase": "plan",
+            "promptVersion": "question-contract.v2",
+            "requestSha256": "13e7c7eafacc8d0496e5d6de8d5d86ba49e2a9aecab56d92076bc9a4953f9841",
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            }
+          },
+          "detailsSha256": "21e3ec4f4971a45c95a6e73163ab9bac2ac909c800093d00bb70d644f2442cb3"
+        },
+        {
+          "sequence": 3,
+          "event": "model_returned",
+          "at": "2026-10-11T03:25:04.119Z",
+          "details": {
+            "phase": "plan",
+            "provider": "deepseek",
+            "requestedModel": "deepseek-v4-pro",
+            "returnedModel": "deepseek-v4-pro",
+            "promptVersion": "question-contract.v2",
+            "promptSha256": "6f7213ee573119ed2ae4236efc7114b52d026b4b397126f8bd78ce7e7775591d",
+            "requestSha256": "13e7c7eafacc8d0496e5d6de8d5d86ba49e2a9aecab56d92076bc9a4953f9841",
+            "responseSha256": "966b7421770170000cde54f7ddd8c2d49ba8f27bf374ca97c93c44654c8cf0e8",
+            "responseId": "b740758d-f44b-43cf-b9bc-a8ca3e658732",
+            "startedAt": "2026-10-11T03:24:54.201Z",
+            "finishedAt": "2026-10-11T03:25:04.119Z",
+            "durationMs": 9918,
+            "requestLimits": {
+              "maxOutputTokens": 6000,
+              "timeoutMs": 150000
+            },
+            "usage": {
+              "inputTokens": 897,
+              "outputTokens": 970,
+              "totalTokens": 1867
+            },
+            "failureCode": null,
+            "inputBudget": {
+              "version": "question-live-budget.v1",
+              "wireBytes": 3265,
+              "estimatedInputTokens": 7361,
+              "reservedOutputTokens": 6000,
+              "estimatedCostUsdMicros": 33477
+            }
+          },
+          "detailsSha256": "0eb0123ef2fc4ca4594f06d6cf27e726995e03f80d544f25111265fb98c23c61"
+        },
+        {
+          "sequence": 4,
+          "event": "scope_gate_result",
+          "at": "2026-10-11T03:25:04.120Z",
+          "details": {
+            "schemaVersion": "research-question.v1",
+            "requestId": "de99a064-0cd0-4727-adee-025baae3b097",
+            "queryRaw": "请解释安克创新2026年第一季度归母净利润同比下降、扣非归母净利润同比上升这一现象；哪些原因仍需要进一步核验？",
+            "createdAt": "2026-10-11T03:24:54.200Z",
+            "capabilityVersion": "anker-c04.v1",
+            "intent": "CHANGE_EXPLAIN",
+            "company": "安克创新",
+            "ticker": "300866.SZ",
+            "period": "2026Q1",
+            "comparablePeriod": "2025Q1",
+            "requiredSourceIds": [
+              "S-05"
+            ],
+            "requiredMetrics": [
+              "attributable_np",
+              "adjusted_np",
+              "non_recurring_total"
+            ],
+            "requestedReferences": [
+              "EV-S-05-C04-ATTR",
+              "EV-S-05-C04-ADJ",
+              "EV-S-05-C04-NR"
+            ],
+            "requestedOutputs": [
+              "verified_facts",
+              "deterministic_calculations",
+              "inferences",
+              "counter_evidence",
+              "graph_diff",
+              "uncertainties",
+              "source_citations",
+              "run_log"
+            ],
+            "allowedTools": [
+              "source_registry",
+              "snapshot_validator",
+              "frozen_chain",
+              "evidence_resolver"
+            ],
+            "forbiddenActions": [
+              "modify_financial_rules",
+              "write_decision",
+              "invent_values",
+              "external_search"
+            ],
+            "status": "CONTRACT_DRAFTED",
+            "reasons": [
+              "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的利润结构差异，并指出需进一步核验的原因；同比对比期为2025Q1。"
+            ]
+          },
+          "detailsSha256": "cad59d4fe1aaf785f780db782e053b663dd270991566d2af171adb401700eca5"
+        }
+      ],
+      "answer": null,
+      "answerSha256": null,
+      "reasons": [
+        "解释2026Q1归母净利润同比下降、扣非归母净利润同比上升的利润结构差异，并指出需进一步核验的原因；同比对比期为2025Q1。"
+      ]
+    },
+    "code": null
+  }
+}

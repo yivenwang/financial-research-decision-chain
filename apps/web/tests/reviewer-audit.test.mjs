@@ -7,14 +7,18 @@ import { promisify } from "node:util";
 import { join } from "node:path";
 import { createQuestionHandler } from "../lib/research-question.server.ts";
 import { createMemoHandler } from "../lib/research-memo.server.ts";
-import { makeResearchContract, questionMarkdown, questionExplanationSchema, validateQuestionExplanation, resolveQuestionEvidence } from "../lib/research-question.ts";
+import { makeResearchContract, questionMarkdown, questionExplanationSchema, validateQuestionExplanation as validateV10Explanation, resolveQuestionEvidence } from "../lib/research-question.ts";
 import { writeStoredVersions, appendVersion, storageKeys, createRollbackSnapshot, withVersionWriteLock, readStoredVersions, nextVersionId } from "../lib/research-versions.ts";
 import { formatMoneyMn, questionReason } from "../lib/question-presentation.ts";
 import { PDF_LIMITS, validatePdfFile, validatePdfHeader, validatePdfResources } from "../lib/pdf-import.ts";
 import { extractCandidates, parseResearchReport } from "../lib/research-engine.ts";
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
-import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, questionRequest as req, questionTestCookie } from "./question-test-helpers.mjs";
+import { questionTestConfig as config, mainQuestion, planOutput, answerOutput, questionTestSnapshot, providerResponse, syntheticQuestionWire, questionRequest as req, questionTestCookie } from "./question-test-helpers.mjs";
+
+// Preserve historical free-prose semantics; current v11 has its own closed-contract regressions.
+const validateQuestionExplanation=(value,context,version="question-explanation.v10",contract)=>validateV10Explanation(value,context,version,contract);
+
 
 async function harness(t, answer = answerOutput()) {
   const directory = await mkdtemp(join(tmpdir(), "beacon-audit-test-"));
@@ -99,8 +103,8 @@ test("production must configure an absolute persistent directory before spending
 test("model-invalid output remains blocked and the raw first failure is replayed without repair", async t => {
   const output = answerOutput(); output.inference.text = "已证明经营改善";
   const h = await harness(t, output); const a = await (await h.first.POST(req(h.body))).json();
-  assert.equal(a.run.status, "BLOCKED"); assert.equal(a.run.answer, null); assert.deepEqual(a.run.reasons, ["INFERENCE_NOT_MARKED"]);
-  assert.equal(a.run.calls[0].rawOutput, JSON.stringify(output));
+  assert.equal(a.run.status, "BLOCKED"); assert.equal(a.run.answer, null); assert.deepEqual(a.run.reasons, ["ANSWER_CONTRACT_MISMATCH"]);
+  assert.equal(a.run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(output)));
   assert.deepEqual(await (await h.handler().POST(req(h.body))).json(), a); assert.equal(h.calls.length, 2);
 });
 

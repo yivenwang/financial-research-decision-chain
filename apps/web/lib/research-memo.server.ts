@@ -2,6 +2,8 @@ import { readBoundedJson } from "./request-body.ts";
 export { readBoundedJson } from "./request-body.ts";
 import { authorizedReviewer } from "./reviewer-access.ts";
 import { claimModelSlot } from "./research-operation.server.ts";
+import { DuplicateJsonKeyError, parseMemoJson } from "./model-json.ts";
+export { parseMemoJson } from "./model-json.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
@@ -30,31 +32,6 @@ export function configured(config: MemoConfig) {
   return Boolean(definition && config.apiKey.trim() && config.accessToken.length >= 16 && definition.accepts(config.model) && (!config.appOrigin || serializedOrigin(config.appOrigin)));
 }
 
-class DuplicateJsonKeyError extends SyntaxError {}
-export function parseMemoJson(raw: string): unknown {
-  // Validate JSON syntax first, then inspect keys before using JSON.parse's result.
-  // Otherwise duplicate keys silently discard earlier model content.
-  const parsed: unknown = JSON.parse(raw);
-  const stack: ({ keys: Set<string>; expectsKey: boolean } | null)[] = [];
-  for (const match of raw.matchAll(/"(?:\\.|[^"\\])*"|[{}\[\],]/g)) {
-    const token = match[0];
-    if (token === "{") stack.push({ keys: new Set(), expectsKey: true });
-    else if (token === "[") stack.push(null);
-    else if (token === "}" || token === "]") stack.pop();
-    else {
-      const frame = stack.at(-1);
-      if (token === ",") { if (frame) frame.expectsKey = true; }
-      else if (frame?.expectsKey) {
-        const key: string = JSON.parse(token);
-        if (frame.keys.has(key)) throw new DuplicateJsonKeyError("Duplicate JSON field");
-        frame.keys.add(key);
-        frame.expectsKey = false;
-      }
-    }
-  }
-  return parsed;
-}
-
 function diagnosticEnum<T extends string>(value: unknown, allowed: readonly T[]): T | "unknown" | null {
   if (value == null) return null;
   return typeof value === "string" && allowed.includes(value as T) ? value as T : "unknown";
@@ -81,10 +58,11 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
   if (!definition || !definition.accepts(config.model)) throw new Error("MODEL_CONFIG_INVALID");
   const requestLimits = { maxOutputTokens: definition.maxOutputTokens, timeoutMs: dependencies.timeoutMs ?? definition.timeoutMs };
   // DeepSeek supports text.format; its stateless API ignores the store parameter.
-  const body = { model: config.model, ...(config.provider === "openai" ? { store: false } : {}), reasoning: { effort: "low" }, max_output_tokens: requestLimits.maxOutputTokens,
+  const body = { model: config.model, reasoning: { effort: "low" }, max_output_tokens: requestLimits.maxOutputTokens,
     input: [{ role: "system", content: MEMO_INSTRUCTIONS }, { role: "user", content: canonicalJson(context) }],
     text: { format: { type: "json_schema", name: "research_update_memo", strict: true, schema: memoSchema(context) } },
   };
+  if (config.provider === "openai") Object.assign(body, { store: false });
   const requestBody = JSON.stringify(body);
   const run: MemoRun = { schemaVersion: "research-memo-run.v1", runId: crypto.randomUUID(), status: "failed", context, memo: null,
     audit: {
@@ -95,8 +73,14 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     const providerSignal = AbortSignal.timeout(requestLimits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: providerSignal, redirect: "error" });
     run.audit.requestId = response.headers.get("x-request-id")?.slice(0,200) ?? null;
-    if (!response.ok) { run.audit.failureCode = `PROVIDER_HTTP_${response.status}`; return run; }
+    run.audit.providerHttpStatus = response.status;
+    if (!response.ok) {
+      void response.body?.cancel().catch(() => {});
+      run.audit.failureCode = `PROVIDER_HTTP_${response.status}`;
+      return run;
+    }
     const data = await readBoundedJson(response, 256 * 1024, { signal: providerSignal, timeoutMs: Math.max(1, requestLimits.timeoutMs - (Date.now() - started)) }) as Record<string, unknown>;
+    if (!data || typeof data !== "object" || Array.isArray(data)) { run.audit.failureCode = "PROVIDER_RESPONSE_INVALID"; return run; }
     run.audit.responseSha256 = await sha256Text(canonicalJson(data));
     run.audit.responseId = typeof data.id === "string" ? data.id.slice(0,200) : null;
     run.audit.returnedModel = typeof data.model === "string" ? data.model.slice(0,100) : null;
@@ -105,7 +89,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     run.audit.incompleteReason = incomplete == null ? null : typeof incomplete === "object" && !Array.isArray(incomplete)
       ? diagnosticEnum((incomplete as Record<string, unknown>).reason, ["max_output_tokens", "content_filter"] as const) : "unknown";
     const usage = data.usage as Record<string, unknown> | undefined;
-    if (usage && [usage.input_tokens, usage.output_tokens, usage.total_tokens].every((value) => typeof value === "number" && Number.isInteger(value) && value >= 0)) {
+    if (usage && [usage.input_tokens, usage.output_tokens, usage.total_tokens].every((value) => typeof value === "number" && Number.isSafeInteger(value) && value >= 0)) {
       run.audit.usage = { inputTokens: usage.input_tokens as number, outputTokens: usage.output_tokens as number, totalTokens: usage.total_tokens as number };
     }
     const reasoning = (usage?.output_tokens_details as Record<string, unknown> | undefined)?.reasoning_tokens;
@@ -122,6 +106,10 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     if (refused) { run.status = "blocked"; run.audit.failureCode = "MODEL_REFUSAL"; return run; }
     if (parts.length !== 1 || parts[0].length > 24000) { run.audit.failureCode = "MODEL_OUTPUT_INVALID"; return run; }
     run.audit.rawOutput = parts[0];
+    if (run.audit.returnedModel !== config.model && !run.audit.returnedModel.startsWith(config.model + "-")) { run.audit.failureCode = "PROVIDER_MODEL_MISMATCH"; return run; }
+    if (!run.audit.usage || run.audit.usage.outputTokens <= 0 || run.audit.usage.outputTokens > requestLimits.maxOutputTokens ||
+      !Number.isSafeInteger(run.audit.usage.inputTokens + run.audit.usage.outputTokens) ||
+      run.audit.usage.totalTokens !== run.audit.usage.inputTokens + run.audit.usage.outputTokens) { run.audit.failureCode = "PROVIDER_USAGE_INVALID"; return run; }
     let parsed: unknown;
     try { parsed = parseMemoJson(parts[0]); } catch (error) {
       run.status = "blocked";
@@ -135,7 +123,9 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     run.status = "completed";
     return run;
   } catch (error) {
-    run.audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" : "PROVIDER_UNAVAILABLE";
+    const bodyCode = error instanceof Error && "code" in error ? error.code : null;
+    run.audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" :
+      ["BODY_INVALID_JSON", "BODY_EMPTY", "BODY_TOO_LARGE"].includes(bodyCode as string) ? "PROVIDER_RESPONSE_INVALID" : "PROVIDER_UNAVAILABLE";
     return run;
   } finally {
     run.audit.finishedAt = new Date().toISOString();

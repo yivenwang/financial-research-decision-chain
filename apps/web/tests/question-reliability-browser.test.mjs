@@ -1,0 +1,155 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createRequire } from "node:module";
+import { spawn } from "node:child_process";
+import { mkdir, readFile, writeFile, mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve, join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { setTimeout as delay } from "node:timers/promises";
+import { createQuestionHandler } from "../lib/research-question.server.ts";
+import { QUESTION_STORAGE_KEY } from "../lib/research-question-storage.ts";
+import { storageKeys } from "../lib/research-versions.ts";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
+import { questionTestConfig, mainQuestion, planOutput, answerOutput, providerResponse, syntheticQuestionWire } from "./question-test-helpers.mjs";
+
+assert.notEqual(process.env.LIVE_MODEL_E2E, "1", "Reliability acceptance is offline only");
+const require = createRequire(import.meta.url);
+const { chromium } = await import(pathToFileURL(resolve(process.env.PLAYWRIGHT_PACKAGE_PATH, "index.mjs")).href);
+const artifacts = new URL("../artifacts-web/question-reliability/", import.meta.url);
+const legacy = JSON.parse(await readFile(new URL("./fixtures/question-live-38047109824/request-02.json", import.meta.url), "utf8")).record.run;
+const secondFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38062132788/request-02.json", import.meta.url), "utf8")).record.run;
+const professionalFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38108168529/request-02.json", import.meta.url), "utf8")).record.run;
+const paragraphFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38138604171/request-02.json", import.meta.url), "utf8")).record.run;
+
+const plannerFailure = JSON.parse(await readFile(new URL("./fixtures/question-live-38129833565/request-01.json", import.meta.url), "utf8")).record.run;
+// Current-contract negative example, independent of immutable historical bytes.
+const causalExample = answerOutput({ directAnswer: { text: "归母与扣非同比分化来自本期负向调整。", citations: ["EV-S-05-C04-ATTR", "EV-S-05-C04-ADJ", "EV-S-05-C04-NR"] } });
+
+test("old output remains historical; new bad plan/causal answer block, export and recover at desktop/tablet/phone (NOT-LIVE)", { timeout: 180000 }, async t => {
+  const origin = "http://127.0.0.1:4332";
+  const server = spawn(process.execPath, [require.resolve("next/dist/bin/next"), "start", "-p", "4332", "-H", "127.0.0.1"], {
+    cwd: new URL("..", import.meta.url), stdio: ["ignore", "pipe", "pipe"],
+    env: { ...process.env, DEEPSEEK_API_KEY: "", OPENAI_API_KEY: "", NEXT_TELEMETRY_DISABLED: "1", RESEARCH_DEMO_TOKEN: questionTestConfig.accessToken, RESEARCH_APP_ORIGIN: origin },
+  });
+  let logs = "", browser; const exited = new Promise(r => server.once("close", r));
+  server.stdout.on("data", d => logs += d); server.stderr.on("data", d => logs += d);
+  t.after(async () => { await browser?.close(); server.kill("SIGTERM"); await Promise.race([exited, delay(3000)]); if (server.exitCode === null && server.signalCode === null) { server.kill("SIGKILL"); await exited; } });
+  for (let i = 0; i < 80; i++) { assert.equal(server.exitCode, null, logs); try { if ((await fetch(origin)).ok) break; } catch {} await delay(250); }
+  browser = await chromium.launch(); await mkdir(artifacts, { recursive: true });
+  const checks = [], externalRequests = [], errors = []; let syntheticCalls = 0;
+  for (const width of [1440, 768, 390]) {
+    const context = await browser.newContext({ viewport: { width, height: 950 }, reducedMotion: "reduce" });
+    await context.addCookies([{ name: REVIEW_ACCESS_COOKIE, value: await reviewSessionValue(questionTestConfig.accessToken), url: origin, httpOnly: true, secure: false, sameSite: "Strict" }]);
+    await context.route("**/*", async route => { if (new URL(route.request().url()).origin === origin) await route.continue(); else { externalRequests.push(route.request().url()); await route.abort(); } });
+    let mode = "bad-plan";
+    const handler = createQuestionHandler(() => ({ ...questionTestConfig, appOrigin: origin }), { runDirectory: await mkdtemp(join(tmpdir(), "beacon-reliability-mock-")), fetcher: async (_url, init) => {
+      syntheticCalls++; const body = JSON.parse(init.body);
+      if (!body.text.format.name.endsWith("plan") && mode === "professional-failure")
+        return providerResponse({}, { output: [{ type: "message", content: [{ type: "output_text", text: professionalFailure.calls[0].rawOutput }] }] });
+      return providerResponse(body.text.format.name.endsWith("plan") ? planOutput(mode === "bad-plan" ? { referenceIds: ["S-05"] } : {}) : mode === "bad-answer" ? causalExample : mode === "second-failure" ? JSON.parse(secondFailure.calls[0].rawOutput) : answerOutput());
+    } });
+    await context.route("**/api/research-question**", async route => {
+      const request = route.request();
+      const input = new Request(request.url(), { method: request.method(), headers: request.headers(), ...(request.method() === "POST" ? { body: request.postData() } : {}) });
+      const response = request.method() === "POST" ? await handler.POST(input) : await handler.GET(input);
+      await route.fulfill({ status: response.status, contentType: "application/json", body: await response.text() });
+    });
+    const page = await context.newPage(); page.on("pageerror", e => errors.push(e.message));
+    await page.goto(origin + "/questions");
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: plannerFailure });
+    await page.reload(); await page.getByTestId("historical-validation-notice").waitFor();
+    assert.ok((await page.getByTestId("question-contract").innerText()).includes("任务：证据核验"));
+    // Historical misclassification stays visible for human task confirmation; no execution on load.
+    const [plannerExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await plannerExport.saveAs(new URL(`live-planner-original-${width}.json`, artifacts).pathname);
+    const plannerRecord = JSON.parse(await readFile(new URL(`live-planner-original-${width}.json`, artifacts), "utf8"));
+    assert.deepEqual(plannerRecord.run, plannerFailure);
+    assert.equal(plannerRecord.run.calls[0].rawOutput, plannerFailure.calls[0].rawOutput);
+    assert.equal(syntheticCalls, (width === 1440 ? 0 : width === 768 ? 9 : 18));
+    assert.equal(await page.getByRole("button", { name: "确认并执行", exact: true }).count(), 0);
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    await page.screenshot({ path: new URL(`live-planner-original-${width}.png`, artifacts).pathname, fullPage: true });
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: professionalFailure });
+    await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    await page.getByTestId("historical-validation-notice").waitFor();
+    assert.deepEqual(await page.evaluate(k => JSON.parse(localStorage.getItem(k)).runs[0], QUESTION_STORAGE_KEY), professionalFailure);
+    await page.evaluate(({ key, run }) => localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] })), { key: QUESTION_STORAGE_KEY, run: paragraphFailure });
+    await page.reload(); await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    await page.getByTestId("historical-validation-notice").waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    const [paragraphExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await paragraphExport.saveAs(new URL(`live-paragraph-blocked-${width}.json`, artifacts).pathname);
+    assert.deepEqual(JSON.parse(await readFile(new URL(`live-paragraph-blocked-${width}.json`, artifacts), "utf8")).run, paragraphFailure);
+    assert.equal(syntheticCalls, (width === 1440 ? 0 : width === 768 ? 9 : 18));
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    await page.screenshot({ path: new URL(`live-paragraph-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    await page.evaluate(({ keys, key, run }) => {
+      localStorage.setItem(keys.versions, JSON.stringify([run.answer.evidence.snapshot])); localStorage.setItem(keys.active, run.answer.evidence.snapshot.versionId);
+      localStorage.setItem(key, JSON.stringify({ runs: [run], reviews: [] }));
+    }, { keys: storageKeys("research"), key: QUESTION_STORAGE_KEY, run: legacy });
+    await page.reload(); await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
+    await page.getByTestId("historical-validation-notice").waitFor();
+    assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
+    await page.getByLabel("研究问题", { exact: true }).fill(mainQuestion);
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).focus(); await page.keyboard.press("Enter");
+    await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "确认并执行", exact: true }).count(), 0);
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    await page.screenshot({ path: new URL(`plan-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出阻断说明", exact: true }).click()]);
+    await download.saveAs(new URL(`plan-blocked-${width}.md`, artifacts).pathname);
+    assert.match(await readFile(new URL(`plan-blocked-${width}.md`, artifacts), "utf8"), /BLOCKED/);
+    mode = "bad-answer";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByText("模型输出超出本次受控陈述，草稿已阻断；原始记录已保留，不能作为可接受的研究答案。", { exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    const [jsonDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await jsonDownload.saveAs(new URL(`causal-blocked-${width}.json`, artifacts).pathname);
+    const exported = JSON.parse(await readFile(new URL(`causal-blocked-${width}.json`, artifacts), "utf8"));
+    assert.equal(exported.run.answer, null); assert.equal(exported.run.calls[0].rawOutput, JSON.stringify(syntheticQuestionWire(causalExample)));
+    assert.deepEqual(exported.run.reasons, ["ANSWER_CONTRACT_MISMATCH"]);
+    mode = "second-failure";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).focus(); await page.keyboard.press("Enter");
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    await page.screenshot({ path: new URL(`live-counter-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    const [counterExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await counterExport.saveAs(new URL(`live-counter-blocked-${width}.json`, artifacts).pathname);
+    const counterRecord = JSON.parse(await readFile(new URL(`live-counter-blocked-${width}.json`, artifacts), "utf8"));
+    assert.equal(counterRecord.run.answer, null); assert.equal(counterRecord.run.answerSha256, null);
+    assert.equal(counterRecord.run.calls[0].rawOutput, secondFailure.calls[0].rawOutput);
+    assert.deepEqual(counterRecord.run.reasons, ["ANSWER_CONTRACT_MISMATCH"]);
+    mode = "professional-failure";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByRole("heading", { name: "已阻断", exact: true }).waitFor();
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).count(), 0);
+    await page.screenshot({ path: new URL(`live-professional-blocked-${width}.png`, artifacts).pathname, fullPage: true });
+    const [professionalExport] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录", exact: true }).click()]);
+    await professionalExport.saveAs(new URL(`live-professional-blocked-${width}.json`, artifacts).pathname);
+    const professionalRecord = JSON.parse(await readFile(new URL(`live-professional-blocked-${width}.json`, artifacts), "utf8"));
+    assert.equal(professionalRecord.run.answer, null); assert.equal(professionalRecord.run.answerSha256, null);
+    assert.equal(professionalRecord.run.calls[0].rawOutput, professionalFailure.calls[0].rawOutput);
+    assert.deepEqual(professionalRecord.run.reasons, ["ANSWER_CONTRACT_MISMATCH"]);
+    mode = "safe-answer";
+    await page.getByRole("button", { name: "生成研究任务", exact: true }).click();
+    await page.getByRole("button", { name: "确认并执行", exact: true }).click();
+    await page.getByRole("heading", { name: "研究草稿待审核", exact: true }).waitFor();
+    await page.screenshot({ path: new URL(`safe-pending-${width}.png`, artifacts).pathname, fullPage: true });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+    const ledger = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), QUESTION_STORAGE_KEY);
+    assert.deepEqual(ledger.runs.find(r => r.runId === legacy.runId), legacy);
+    assert.equal(ledger.reviews.length, 0); assert.equal(ledger.runs.at(-1).answer.verification.professional, "pending");
+    const beforeHistory = syntheticCalls;
+    await page.locator("button[aria-current]").locator("..").getByRole("button").last().click();
+    await page.getByRole("heading", { name: "部分回答待审核", exact: true }).waitFor();
+    assert.equal(syntheticCalls, beforeHistory); assert.ok((await page.getByTestId("review-context").innerText()).includes(legacy.runId));
+    checks.push({ width, legacyBytesPreserved: true, historicalV3FailurePreserved: true, historicalV4FailurePreserved: true, historicalPlannerMismatchPreserved: true, badSourceIdBlocked: true, causalClaimBlocked: true, actualSecondLiveFailureBlocked: true, actualProfessionalLiveFailureBlocked: true, originalRawExported: true, professionalGatePending: true, keyboardEnter: true, noHorizontalOverflow: true });
+    await context.close();
+  }
+  assert.deepEqual(errors, []); assert.deepEqual(externalRequests, []); assert.equal(syntheticCalls, 27);
+  await writeFile(new URL("acceptance.json", artifacts), JSON.stringify({ transport: "synthetic-NOT-LIVE", realModelCalls: 0, syntheticCalls, legacyRunId: legacy.runId, checks, errors, externalRequests }, null, 2));
+});
