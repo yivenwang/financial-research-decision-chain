@@ -10,6 +10,7 @@ import { QUESTION_POINTS, questionCitationChoices, expandQuestionCitationChoices
 export const QUESTION_SCHEMA_VERSION = "research-question.v1";
 export const QUESTION_PLAN_PROMPT_VERSION = "question-contract.v4";
 export const QUESTION_ANSWER_PROMPT_VERSION = "question-explanation.v9";
+export const QUESTION_TEXT_PATTERN = "^[^0-9０-９%％<>]*$";
 export const QUESTION_INTENTS = ["CHANGE_EXPLAIN", "EVIDENCE_AUDIT", "DECISION_IMPACT"] as const;
 export type QuestionIntent = typeof QUESTION_INTENTS[number];
 export type QuestionStatus = "CONTRACT_DRAFTED" | "MATERIALS_REQUIRED" | "OUT_OF_SCOPE" | "BLOCKED" | "ANSWER_READY" | "PARTIAL";
@@ -224,7 +225,7 @@ export function questionExplanationInput(contract: ResearchContract, evidence: Q
 export function questionExplanationSchema(context: MemoContext, contract?: ResearchContract) {
   const points = Object.fromEntries(QUESTION_POINTS.map(key => [key, { type: "object", additionalProperties: false,
     properties: { citations: { type: "array", minItems: 1, maxItems: 8, items: { type: "string", enum: questionCitationChoices(context, key) } },
-      text: { type: "string", minLength: 1, maxLength: 160, pattern: "^[^0-9０-９%％<>]*$" } }, required: ["citations", "text"] }]));
+      text: { type: "string", minLength: 1, maxLength: 160, pattern: QUESTION_TEXT_PATTERN } }, required: ["citations", "text"] }]));
   return { type: "object", additionalProperties: false, properties: { sufficiency: { type: "string", enum: questionAnswerConstraints(context, contract).sufficiency }, ...points },
     required: ["sufficiency", ...QUESTION_POINTS] };
 }
@@ -248,6 +249,7 @@ export function validateQuestionExplanation(value: unknown, context: MemoContext
   const used = new Set<string>();
   for (const key of ["directAnswer", "inference", "counterEvidence", "uncertainty"]) {
     const p = value[key];
+    if (promptVersion === QUESTION_ANSWER_PROMPT_VERSION && typeof (p as MemoPoint)?.text === "string" && !new RegExp(QUESTION_TEXT_PATTERN).test((p as MemoPoint).text)) throw new Error("ANSWER_CITATION_OR_TEXT_INVALID");
     if (!exact(p, ["text", "citations"]) || typeof p.text !== "string" || !p.text.trim() || Array.from(p.text).length > 160 || /[0-9０-９%％]|https?:|javascript:|<\/?[a-z]/i.test(p.text) || !Array.isArray(p.citations) || !p.citations.length || p.citations.length > 8 || p.citations.some(id => typeof id !== "string" || !refs.has(id))) throw new Error("ANSWER_CITATION_OR_TEXT_INVALID");
     for (const id of p.citations) used.add(id);
     if (key === "inference" && !/可能|假设|待|推论|条件/.test(p.text) && !/(?:如果|假如|倘若|若).{1,120}(?:则|才|仍|须|需要)/.test(p.text)) throw new Error("INFERENCE_NOT_MARKED");

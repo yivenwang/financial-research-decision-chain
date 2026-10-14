@@ -144,8 +144,10 @@ test('current financial negative examples remain blocked without repairing text 
     const answer=answerOutput();answer.directAnswer={text,citations:['Valuation-B5','EV-S-05-C04-NR']};
     assert.doesNotThrow(()=>validateQuestionExplanation(answer,context));
   }
-  for(const text of ['A-03已完成','金额１２３％','S-05与C-04']) {
+  for(const text of ['A-03已完成','金额１２３％','S-05与C-04','利润<扣非','利润>扣非']) {
     assert.equal(new RegExp(schema.properties.directAnswer.properties.text.pattern).test(text),false);
+    const answer=answerOutput();answer.directAnswer.text=text;
+    assert.throws(()=>validateQuestionExplanation(answer,context),/ANSWER_CITATION_OR_TEXT_INVALID/);
   }
   assert.match(questionPromptInstructions('question-explanation.v9'),/公司解释须有输入依据/);
   const credential=opinion();credential.limitations.push('nested {"ＡＰＩ＿ＫＥＹ":"synthetic-value"}');
