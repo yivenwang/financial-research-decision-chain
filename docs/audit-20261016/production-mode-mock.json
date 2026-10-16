@@ -1,0 +1,11 @@
+{
+  "environment": "NODE_ENV=production with actual default ledger selection, injected Mock fetch only",
+  "absentLedgerHttpStatus": 503,
+  "absentLedgerProviderCalls": 0,
+  "memo503AttemptConsumed": true,
+  "questionPlanStatus": 200,
+  "persistentAttempts": 2,
+  "unknownUsage": 1,
+  "providerCalls": 2,
+  "realModelCalls": 0
+}

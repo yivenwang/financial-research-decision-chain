@@ -51,7 +51,7 @@
 
 - **原缺陷 P0-01**：默认未设 acceptance budget 时，同一签名访客顺序 8 次 Memo（即使 503）及 8 次 Question 都各到达一次 Mock provider。原有全局变量仅限制单进程同时一条调用；Nginx 当前可读配置没有 limit_req/limit_conn 声明；Question 的 1000 收据容量不覆盖 Memo 或统一费用预算。
 - **修复**：两个端点统一 fetch 前 wire UTF-8 bytes + 4096 ≤ 32768；共享私有持久 ledger，生命周期最多 **240** 次 provider 尝试，**24/访客滚动小时、30/全局滚动分钟、跨进程同时 1 次**。先 fsync 预留再发送；失败、429、5xx、超时、未知计费不退款。Cookie 重新签发、跨日、重启均不恢复总额度；没有 HTTP/env 生产绕过开关。
-- **验证**：真实执行 240 次本地持久预留后，重启实例/换 owner 的第 241 次拒绝；六个进程原子竞争仅一条预留。损坏、非私有权限、未初始化、落盘失败均 fail closed。Memo POST 仅接受验证签名访客，配置 GET 保留原兼容方式；没有增加评委登录步骤。
+- **验证**：另在 `NODE_ENV=production` 对两个真实 handler 使用默认目录选择（无注入 budgetStore）和 Mock fetch，确认缺 ledger 为503且提供方调用0，初始化后两个端点共享同一计数；见 [production-mode-mock.json](docs/audit-20261016/production-mode-mock.json)。真实执行 240 次本地持久预留后，重启实例/换 owner 的第 241 次拒绝；六个进程原子竞争仅一条预留。损坏、非私有权限、未初始化、落盘失败均 fail closed。Memo POST 仅接受验证签名访客，配置 GET 保留原兼容方式；没有增加评委登录步骤。
 - **服务器输入边界**：实际流式请求体 Memo 128 KiB、Question 512 KiB、读取超时、1000 字问题；下游回包 256 KiB。PDF 不上传服务器，其 25 MiB/500 页/25 万文本项/400 万字符/45 秒限制保护本机解析，不能冒称服务器上传限流。
 - **证据**：security-baseline、[model-budget.test.mjs](apps/web/tests/model-budget.test.mjs) 11 项、request-security、[生产保护说明](docs/PRODUCTION_MODEL_BUDGET.md)。
 - **剩余风险**：未部署，线上原缺陷仍在。新签名会话可绕过“每访客”额度，因此全局生命周期限制是必要总保护；攻击者仍可能耗尽有限公共额度导致付费能力暂停。没有宣称抵御网络层 DDoS。
@@ -153,7 +153,7 @@
 距离可公开提交还需要：
 
 1. 审查并批准本 PR，然后按现有流程合并/发布；本轮未执行。发布前由服务 UID 在持久 `RESEARCH_RUN_DIRECTORY.model-budget` 运行一次 init，保留原收据/claims 和新 ledger，不在 rollback 中回退累计额度。未初始化时付费调用会安全503，不能漏掉此步骤。
-2. 发布后重核精确 SHA、clean构建回执、open会话、静态资源与费用 guard；不能把本地通过写成已上线通过。保留原 release 可回滚，预算 ledger 始终沿用。
+2. 发布后重核精确 SHA、clean构建回执、open会话、静态资源与费用 guard；不能把本地通过写成已上线通过。保留原 release 和最新 ledger，但旧版代码不读取新 ledger，回滚旧公开版本会恢复 P0。安全回退须在另行批准的发布操作中暂停收费生成、保留本地确定性研究，直到恢复含保护的版本；本轮未改生产配置。
 3. 当前 v11 的真实模型内容验收需要负责人对最终精确 SHA 和一次明确有界预算另行授权；最多六请求、首失败即停、无自动重试，逐条审核真实输出。若不能完成，只能把未验证AI生成能力如实标为未验收，并经负责人确认使用已审核历史/确定性研究演示，不能宣称完整AI现场 READY。
 4. 在评审使用期前复核短期证书续期结果；现有证书仅证明当前可信及覆盖锁定日，不能代替未来续期证明。
 

@@ -31,6 +31,8 @@ Run `init` once before the first production start. It refuses a nonempty or prev
 
 Back up the budget directory together with current operation receipts using the existing trusted operator backup process. Retain the newest ledger through deployment and rollback. **Never delete, recreate or restore an older budget ledger to recover quota.** A simultaneous filesystem rollback is not independently detectable by an application on that same filesystem; provider billing remains an external record.
 
+A release older than this guard does not consult the ledger. Retaining its files alone cannot make that older code safe: any approved rollback to the previous open release must also keep paid generation unavailable until guarded code is restored. Local PDF processing, deterministic research and historical records can remain available. This document does not authorize changing production configuration.
+
 After a process crash leaves an unresolved attempt or writer lock, paid calls intentionally remain blocked. An operator must stop relevant workers, preserve the original directory, reconcile the pending attempt against provider billing and determine a separately reviewed recovery action. Do not automatically expire the claim or interpret absent usage as free. No destructive recovery action is part of this change.
 
 At exhaustion, ordinary read-only research, local PDF parsing, evidence, valuation/decision display and historical records remain available. Paid generation returns a clear resource-protection failure. Increasing/resetting the finite allowance is an explicit operator decision beyond this audit change.
