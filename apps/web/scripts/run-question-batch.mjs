@@ -8,6 +8,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { tmpdir } from "node:os";
 import { operationStore } from "../lib/research-operation.server.ts";
+import { modelBudgetStore } from "../lib/model-budget.server.ts";
 import { QUESTION_BUDGET_VERSION, QUESTION_BUDGET_ACK, QUESTION_BATCH_BUDGET, budgetSummary, costEstimateUsdMicros } from "../lib/question-batch-budget.ts";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
@@ -171,6 +172,7 @@ async function main() {
   const token = randomBytes(24).toString("hex");
   const runDirectory = await mkdtemp(join(tmpdir(), "beacon-question-live-"));
   await operationStore(runDirectory).initialize();
+  await modelBudgetStore(`${runDirectory}.model-budget`).initialize();
   const sessionSecret = randomBytes(32).toString("hex");
   // Only the explicitly dispatched, isolated localhost acceptance server.
   // Production access window and keys are never modified.

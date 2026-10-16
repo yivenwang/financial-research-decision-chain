@@ -8,12 +8,15 @@ import { parseResearchReport, extractCandidates, createResearchSnapshot } from "
 import { verifiedSampleItems } from "../lib/sample-s05.ts";
 import { getSourceRecord } from "../lib/source-records.ts";
 import { appendVersion, createRollbackSnapshot, readStoredVersions, storageKeys } from "../lib/research-versions.ts";
+import { REVIEW_ACCESS_COOKIE, reviewSessionValue } from "../lib/reviewer-access.ts";
 
 // Synthetic HTTP tests have their own open window; production deadline is unchanged.
 process.env.REVIEW_ACCESS_DEADLINE = "2099-01-01T00:00:00Z";
+process.env.REVIEW_SESSION_SECRET = "memo-unit-test-SYNTHETIC-SESSION-SECRET-ONLY";
 
 // Transport stubs are only test dependencies, never a production fallback.
 const config = { provider: "deepseek", apiKey: "unit-test-key-not-a-real-key", accessToken: "unit-test-access-code-long", model: "deepseek-v4-pro" };
+const testCookie = `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(config.accessToken)}`;
 function snapshot() {
   const source = getSourceRecord("S-05");
   const result = parseResearchReport(verifiedSampleItems, source);
@@ -31,7 +34,7 @@ const wire = (output) => ({ ...output, supporting: output.supporting[0], counter
 function provider(output = memo(), patch = {}) {
   return Response.json({ id: "resp_unit_transport_stub", model: "deepseek-v4-pro", status: "completed", usage: { input_tokens: 100, output_tokens: 200, total_tokens: 300 }, output: [{ type: "message", content: [{ type: "output_text", text: JSON.stringify(wire(output)) }] }], ...patch }, { headers: { "x-request-id": "req_unit_transport_stub" } });
 }
-const request = (body, headers = {}) => new Request("http://localhost/api/research-memo", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", authorization: `Bearer ${config.accessToken}`, ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
+const request = (body, headers = {}) => new Request("http://localhost/api/research-memo", { method: "POST", headers: { origin: "http://localhost", "content-type": "application/json", ...(Object.hasOwn(headers, 'authorization') ? {} : { cookie: testCookie }), ...headers }, body: typeof body === "string" ? body : JSON.stringify(body) });
 
 test("runtime provider configuration selects its own key and exposes only status, provider and model", async () => {
   const env = { DEEPSEEK_API_KEY: "deepseek-test-key", OPENAI_API_KEY: "openai-test-key", RESEARCH_DEMO_TOKEN: config.accessToken };
@@ -406,7 +409,7 @@ test("origin validation supports Next host normalization and explicit proxy orig
   const fetcher = async () => { calls++; return provider(); };
   const handler = createMemoHandler(() => config, { fetcher });
   const normalized = (headers = {}) => new Request("http://localhost:4322/api/research-memo", {
-    method: "POST", headers: { origin: "http://127.0.0.1:4322", host: "127.0.0.1:4322", authorization: `Bearer ${config.accessToken}`, "content-type": "application/json", ...headers }, body: JSON.stringify(snapshot()),
+    method: "POST", headers: { origin: "http://127.0.0.1:4322", host: "127.0.0.1:4322", cookie: testCookie, "content-type": "application/json", ...headers }, body: JSON.stringify(snapshot()),
   });
   assert.equal((await handler.POST(normalized())).status, 200);
   for (const origin of ["https://external.invalid", "http://127.0.0.1:9999", "null", "http://127.0.0.1:4322/path"]) {

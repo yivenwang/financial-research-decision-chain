@@ -1,0 +1,103 @@
+{
+  "auditDate": "2026-10-16",
+  "timezone": "Asia/Shanghai",
+  "baseline": "80786b5df92d4eada1fe238e96c04ccc6e88e52e",
+  "sourceCommit": "7de6f76a3d4d1c4009ea3b7f5d0b6af908e18c6f",
+  "localRuntime": "Node 26.0.0 / Next 16.3.8 / React 19.2.6 / Chromium (Playwright 1.62.1)",
+  "providerRequests": 0,
+  "tests": {
+    "unit-final": {
+      "tests": 259,
+      "pass": 259,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser-core-fixed": {
+      "tests": 6,
+      "pass": 6,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser-question-fixed": {
+      "tests": 1,
+      "pass": 1,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser-reliability-fixed": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0
+    },
+    "browser-additional-fixed": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    },
+    "runtime-fixed": {
+      "tests": 2,
+      "pass": 2,
+      "fail": 0,
+      "skipped": 0
+    },
+    "pdf-final-local": {
+      "tests": 3,
+      "pass": 3,
+      "fail": 0,
+      "skipped": 0
+    }
+  },
+  "submissionBrowser": {
+    "tests": 3,
+    "pass": 3,
+    "fail": 0
+  },
+  "lint": {
+    "errors": 0,
+    "existingWarnings": 4
+  },
+  "typescript": "PASS",
+  "build": "PASS; clean final report commit 4f0e7dd184eae543a0e36b04f69267b65c39ded9 receipt captured; following commits change documentation/evidence only",
+  "v5FilesUnchanged": 76,
+  "dependencyProduction": {
+    "info": 0,
+    "low": 0,
+    "moderate": 0,
+    "high": 0,
+    "critical": 0,
+    "total": 0
+  },
+  "dependencyAll": {
+    "info": 0,
+    "low": 1,
+    "moderate": 5,
+    "high": 20,
+    "critical": 0,
+    "total": 26
+  },
+  "initialExecutionFailures": [
+    "Sandbox EPERM listening on loopback: reran authorized; pass",
+    "Sandbox PDF acquisition failed: reran fixed-hash existing local PDFs; pass",
+    "First S06 unit-guard candidate scanned unrelated unit table: scope corrected and regression added",
+    "Old-build same-profile pending regression timed out; capture did not measure POST count, so no count inferred"
+  ],
+  "excluded": "S-07 raw/truth/first outputs and broad holdout tests not accessed or executed",
+  "cleanBuildReceipt": {
+    "commitSha": "4f0e7dd184eae543a0e36b04f69267b65c39ded9",
+    "workingTreeClean": true,
+    "recordedAt": "2026-10-16T05:53:38.038Z"
+  },
+  "codeCI": {
+    "run": 38855347136,
+    "status": "success",
+    "url": "https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38855347136"
+  },
+  "allowedParserCI": {
+    "run": 38855347161,
+    "status": "success",
+    "url": "https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38855347161"
+  },
+  "productionDefaultLedgerSelectionMock": "PASS: both handlers use production default persistent ledger with no injected budgetStore; absent ledger makes zero provider calls"
+}

@@ -1,13 +1,14 @@
 import { readBoundedJson } from "./request-body.ts";
 export { readBoundedJson } from "./request-body.ts";
-import { authorizedReviewer } from "./reviewer-access.ts";
+import { authorizedReviewer, reviewSessionOwner } from "./reviewer-access.ts";
+import { modelBudgetFailureStatus, reserveModelBudget, type ModelBudgetStore } from "./model-budget.server.ts";
 import { claimModelSlot } from "./research-operation.server.ts";
 import { DuplicateJsonKeyError, parseMemoJson } from "./model-json.ts";
 export { parseMemoJson } from "./model-json.ts";
 import { buildMemoContext, canonicalJson, memoSchema, MEMO_INSTRUCTIONS, MEMO_PROMPT_VERSION, sha256Text, validateMemoOutput, type MemoProvider, type MemoRun } from "./research-memo.ts";
 
 export type MemoConfig = { provider: MemoProvider; apiKey: string; model: string; accessToken: string; appOrigin?: string };
-type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number };
+type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string; budgetStore?: ModelBudgetStore; budgetOwner?: string };
 export const MAX_MEMO_REQUEST_BYTES = 128 * 1024;
 const PROVIDERS: Record<MemoProvider, { endpoint: string; defaultModel: string; maxOutputTokens: number; timeoutMs: number; accepts: (model: string) => boolean }> = {
   deepseek: { endpoint: "https://api.deepseek.com/responses", defaultModel: "deepseek-v4-pro", maxOutputTokens: 6000, timeoutMs: 150000, accepts: (model) => ["deepseek-v4-pro", "deepseek-v4-flash"].includes(model) },
@@ -69,7 +70,9 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
       provider: config.provider, requestLimits, providerStatus: null, incompleteReason: null, reasoningTokens: null,
       api: "responses", promptVersion: MEMO_PROMPT_VERSION, promptSha256: await sha256Text(MEMO_INSTRUCTIONS), requestSha256: await sha256Text(requestBody), responseSha256: null, requestedModel: config.model, returnedModel: null, responseId: null, requestId: null, startedAt, finishedAt: startedAt, durationMs: 0, usage: null, rawOutput: null, failureCode: null, validation: [] },
   };
+  let budget: Awaited<ReturnType<typeof reserveModelBudget>> | undefined;
   try {
+    budget = await reserveModelBudget(requestBody, { ownerSha256: dependencies.budgetOwner ?? "", provider: config.provider, model: config.model, maxOutputTokens: requestLimits.maxOutputTokens }, dependencies);
     const providerSignal = AbortSignal.timeout(requestLimits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(definition.endpoint, { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${config.apiKey}` }, body: requestBody, signal: providerSignal, redirect: "error" });
     run.audit.requestId = response.headers.get("x-request-id")?.slice(0,200) ?? null;
@@ -107,7 +110,7 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     if (parts.length !== 1 || parts[0].length > 24000) { run.audit.failureCode = "MODEL_OUTPUT_INVALID"; return run; }
     run.audit.rawOutput = parts[0];
     if (run.audit.returnedModel !== config.model && !run.audit.returnedModel.startsWith(config.model + "-")) { run.audit.failureCode = "PROVIDER_MODEL_MISMATCH"; return run; }
-    if (!run.audit.usage || run.audit.usage.outputTokens <= 0 || run.audit.usage.outputTokens > requestLimits.maxOutputTokens ||
+    if (!run.audit.usage || run.audit.usage.inputTokens > budget.inputBudget.estimatedInputTokens || run.audit.usage.outputTokens <= 0 || run.audit.usage.outputTokens > requestLimits.maxOutputTokens ||
       !Number.isSafeInteger(run.audit.usage.inputTokens + run.audit.usage.outputTokens) ||
       run.audit.usage.totalTokens !== run.audit.usage.inputTokens + run.audit.usage.outputTokens) { run.audit.failureCode = "PROVIDER_USAGE_INVALID"; return run; }
     let parsed: unknown;
@@ -124,10 +127,14 @@ export async function createMemoRun(version: unknown, config: MemoConfig, depend
     return run;
   } catch (error) {
     const bodyCode = error instanceof Error && "code" in error ? error.code : null;
-    run.audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" :
+    run.audit.failureCode = error instanceof Error && /^MODEL_BUDGET_[A-Z_]+$/.test(error.message) ? error.message : error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" :
       ["BODY_INVALID_JSON", "BODY_EMPTY", "BODY_TOO_LARGE"].includes(bodyCode as string) ? "PROVIDER_RESPONSE_INVALID" : "PROVIDER_UNAVAILABLE";
     return run;
   } finally {
+    if (budget) {
+      try { await budget.finish(run.audit.usage, run.audit.failureCode); }
+      catch { run.status = "failed"; run.memo = null; run.audit.failureCode = "MODEL_BUDGET_RECOVERY_REQUIRED"; }
+    }
     run.audit.finishedAt = new Date().toISOString();
     run.audit.durationMs = Date.now() - started;
   }
@@ -160,7 +167,8 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
     POST: async (request: Request) => {
       const config = getConfig();
       if (!configured(config)) return json({ error: "模型服务尚未配置。", code: "MODEL_NOT_CONFIGURED" }, 503);
-      if (!await authorized(request, config.accessToken)) return json({ error: "审验会话无效，请重新输入访问码。", code: "UNAUTHORIZED" }, 401);
+      const owner = await reviewSessionOwner(request, config.accessToken);
+      if (!owner) return json({ error: "访客会话无效，请刷新页面恢复会话。", code: "UNAUTHORIZED" }, 401);
       if (!sameOrigin(request, config.appOrigin)) return json({ error: "请求来源不匹配。", code: "ORIGIN_MISMATCH" }, 403);
       if (!request.headers.get("content-type")?.startsWith("application/json")) return json({ error: "请求格式错误。", code: "CONTENT_TYPE" }, 415);
       const release = claimModelSlot();
@@ -169,10 +177,11 @@ export function createMemoHandler(getConfig = memoConfig, dependencies: Dependen
         let input: unknown;
         try { input = await readBoundedJson(request, MAX_MEMO_REQUEST_BYTES, { timeoutMs: dependencies.bodyTimeoutMs }); } catch { return json({ error: "请求内容无效或超出大小限制。", code: "INVALID_BODY" }, 400); }
         let run: MemoRun;
-        try { run = await createMemoRun(input, config, dependencies); } catch { return json({ error: "该版本的来源、证据或冻结计算不一致，请重新导入并审核。", code: "SNAPSHOT_INVALID" }, 422); }
+        try { run = await createMemoRun(input, config, { ...dependencies, budgetOwner: owner }); } catch { return json({ error: "该版本的来源、证据或冻结计算不一致，请重新导入并审核。", code: "SNAPSHOT_INVALID" }, 422); }
         // Do not log request bodies, names, access codes, keys, or raw model text.
         console.info(JSON.stringify({ event: "research-memo", runId: run.runId, provider: run.audit.provider, responseId: run.audit.responseId, status: run.status, failureCode: run.audit.failureCode, validation: run.audit.validation, requestLimits: run.audit.requestLimits, providerStatus: run.audit.providerStatus, incompleteReason: run.audit.incompleteReason, reasoningTokens: run.audit.reasoningTokens }));
-        return json({ run, ...(run.status === "completed" ? {} : { error: failureMessage(run) }) }, run.status === "completed" ? 200 : run.status === "blocked" ? 422 : 502);
+        const budgetStatus = modelBudgetFailureStatus(run.audit.failureCode);
+        return json({ run, ...(run.status === "completed" ? {} : { error: budgetStatus ? "模型资源保护已阻止本次请求；请稍后重试或联系维护者核查额度。" : failureMessage(run) }) }, budgetStatus ?? (run.status === "completed" ? 200 : run.status === "blocked" ? 422 : 502));
       } finally { release(); }
     },
   };

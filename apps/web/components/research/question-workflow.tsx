@@ -11,6 +11,7 @@ import { validateQuestionRun, appendQuestionRun, appendQuestionReview, readQuest
 import { readStoredVersions, readActiveVersionId, VERSION_UPDATED_EVENT, type ResearchVersion } from "@/lib/research-versions";
 import { questionReason } from "@/lib/question-presentation";
 import { researchBrowserIssue, runResearchBrowserOperation } from "@/lib/research-browser";
+import { QUESTION_PENDING_KEY as PENDING_KEY, claimPendingQuestion, clearPendingQuestion, type PendingQuestion as Pending } from "@/lib/research-question-pending";
 
 import { useRouter } from "next/navigation";
 import { useConfirmAction } from './use-confirm-action';
@@ -18,9 +19,7 @@ import { useUnsavedGuard } from './use-unsaved-guard';
 import { MATERIAL_HANDOFF_KEY, MATERIAL_RETURN_TO, readMaterialQuestion } from '@/lib/material-handoff';
 import { questionExportLabel } from '@/lib/question-presentation';
 
-const PENDING_KEY = "beacon-question-pending-v1";
 const DRAFT_KEY = "beacon-question-draft-v1";
-type Pending = { phase: "plan" | "execute"; id: string; body?: unknown };
 
 const examples = ["安克创新2026Q1归母净利润下降，但扣非归母净利润上升，这是否意味着核心经营恶化？", "归母净利润同比下降的来源在哪里？", "这次更新影响了哪些Claim和Assumption？"];
 const statusLabel = { CONTRACT_DRAFTED: "待确认研究任务", MATERIALS_REQUIRED: "需要补充材料", OUT_OF_SCOPE: "超出当前范围", BLOCKED: "已阻断", ANSWER_READY: "研究草稿待审核", PARTIAL: "部分回答待审核" };
@@ -90,7 +89,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
     if (phase === "execute" && data.run.status !== "MATERIALS_REQUIRED") { localStorage.removeItem(DRAFT_KEY); setDraft(null); }
     try { await appendQuestionRun(data.run); reload(); }
     catch { setError("结果已返回，但本机保存失败。请立即导出完整记录；无需再次调用模型。"); }
-    localStorage.removeItem(PENDING_KEY); setPending(null);
+    await clearPendingQuestion({ phase, id: data.run.requestId }); setPending(null);
   }
   async function recover(waiting: Pending) {
     recoveryAbort.current?.abort();
@@ -120,12 +119,12 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       await receive(data, waiting.phase);
     } catch (e) { if(!controller.signal.aborted) {setPendingState("unknown");setError(plainError(e));} } finally { if(!controller.signal.aborted)setBusy(null); }
   }
-  function endWaiting() {
+  async function endWaiting() {
     if (!pending) return;
     const records = JSON.parse(localStorage.getItem("beacon-question-unresolved-v1") ?? "[]");
     localStorage.setItem("beacon-question-unresolved-v1", JSON.stringify([...records, { phase: pending.phase, id: pending.id, endedAt: new Date().toISOString() }]));
     recoveryAbort.current?.abort(); setBusy(null);
-    localStorage.removeItem(PENDING_KEY); setPending(null); setDraft(null); localStorage.removeItem(DRAFT_KEY);
+    await clearPendingQuestion(pending); setPending(null); setDraft(null); localStorage.removeItem(DRAFT_KEY);
     setError("原任务标识已保留，服务器记录不会删除。新任务可能再次产生调用费用；请先核查原任务。");
   }
   async function request(phase: "plan" | "execute") {
@@ -139,13 +138,13 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
       const versions = readStoredVersions("research");
       const current = versions.find(v => v.versionId === readActiveVersionId(versions, "research")) ?? null;
       const waiting: Pending = { phase, id: phase === "execute" ? draft!.run.requestId : crypto.randomUUID(), body: phase === "plan" ? { phase, question } : { phase, draft, confirmed: true, snapshot: current } };
-      localStorage.setItem(PENDING_KEY, JSON.stringify(waiting)); setPending(waiting);
+      await claimPendingQuestion(waiting); setPending(waiting);
       const response = await runResearchBrowserOperation(() => fetch("/api/research-question", { method: "POST", headers: { "content-type": "application/json", "Idempotency-Key": waiting.id },
         body: JSON.stringify(waiting.body), signal: AbortSignal.any([controller.signal, AbortSignal.timeout(175000)]) }));
       if(controller.signal.aborted) return;
       if (response.status === 202) { await recover(waiting); return; }
       const data = await response.json();
-      if ([400, 401, 403, 422, 429].includes(response.status)) { localStorage.removeItem(PENDING_KEY); setPending(null); }
+      if ([400, 401, 403, 422, 429].includes(response.status)) { await clearPendingQuestion(waiting); setPending(null); }
       if (!response.ok || !data.run) { setPendingState("blocked"); setError(data.error ?? "研究请求未完成。"); return; }
       await receive(data, phase);
     } catch (e) { if(!controller.signal.aborted) {setPendingState("unknown");setError(plainError(e));} }
@@ -197,7 +196,7 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
         {!busy && <Button onClick={() => recover(pending)}>检查任务状态</Button>}
         <details><summary className="cursor-pointer">其他处理方式与费用说明</summary><div className="mt-3 flex flex-wrap gap-3">
           {!!pending.body && pendingState === 'unknown' && !busy && <Button variant="outline" onClick={() => confirmation.ask('重发同一请求？','仅复用原任务标识与原输入，服务器将核对幂等记录。若原请求从未送达，可能执行本次调用；结果不确定不代表未计费。优先检查状态，不会创建新任务标识。',()=>{void retryPending(pending);},'确认重发同一请求','返回检查状态')}>重发同一请求（幂等）</Button>}
-          <Button variant="outline" onClick={() => confirmation.ask('结束等待？','原任务标识与运行阶段会保留在本机，服务器任务与历史不会删除或取消。页面停止等待，未返回的结果和执行草稿不再自动恢复到页面。新任务可能再次计费；请先核查原任务。',()=>{try{endWaiting();}catch(e){setError(plainError(e));}},'保留标识并结束等待','继续等待')}>结束等待</Button>
+          <Button variant="outline" onClick={() => confirmation.ask('结束等待？','原任务标识与运行阶段会保留在本机，服务器任务与历史不会删除或取消。页面停止等待，未返回的结果和执行草稿不再自动恢复到页面。新任务可能再次计费；请先核查原任务。',()=>{void endWaiting().catch(e=>setError(plainError(e)));},'保留标识并结束等待','继续等待')}>结束等待</Button>
         </div></details>
       </div>}
       {busy && <p role="status" className="text-cyan-200">{busy === "plan" ? "正在理解问题并检查范围…" : busy === "execute" ? "正在核验材料、复算并生成解释…" : "正在保存审核记录…"}</p>}

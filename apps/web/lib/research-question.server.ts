@@ -4,6 +4,7 @@ import { reviewSessionOwner } from "./reviewer-access.ts";
 import { checkQuestionInputBudget, QUESTION_BUDGET_VERSION } from "./question-batch-budget.ts";
 import { canonicalJson, sha256Text } from "./research-memo.ts";
 import { operationStore, validOperationId, claimModelSlot, type OperationRecord, type StoreOptions } from "./research-operation.server.ts";
+import { modelBudgetFailureStatus, reserveModelBudget, type ModelBudgetStore } from "./model-budget.server.ts";
 import { questionAnswerState } from "./question-explanation-contract.ts";
 import {
   QUESTION_SCHEMA_VERSION, QUESTION_CAPABILITY, QUESTION_PLAN_INSTRUCTIONS, QUESTION_PLAN_PROMPT_VERSION,
@@ -12,7 +13,7 @@ import {
   validateQuestionOutput, addQuestionEvent, type QuestionRun, type QuestionModelAudit, type SignedQuestionDraft,
 } from "./research-question.ts";
 
-type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string; storeOptions?: StoreOptions };
+type Dependencies = { fetcher?: typeof fetch; timeoutMs?: number; bodyTimeoutMs?: number; runDirectory?: string; storeOptions?: StoreOptions; budgetStore?: ModelBudgetStore };
 export const MAX_QUESTION_REQUEST_BYTES = 512 * 1024;
 function json(value: unknown, status = 200) { return Response.json(value, { status, headers: { "Cache-Control": "no-store" } }); }
 function sign(run: QuestionRun, config: MemoConfig, owner: string) {
@@ -31,7 +32,7 @@ function newRun(question: string, phase: QuestionRun["phase"], requestId = crypt
     status: "BLOCKED", createdAt: new Date().toISOString(), contract: null, calls: [], events: [], answer: null, answerSha256: null, reasons: [] };
 }
 
-async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], input: unknown, schema: unknown, config: MemoConfig, dependencies: Dependencies): Promise<unknown> {
+async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], input: unknown, schema: unknown, config: MemoConfig, dependencies: Dependencies, owner: string): Promise<unknown> {
   const prompt = phase === "plan" ? QUESTION_PLAN_INSTRUCTIONS : QUESTION_ANSWER_INSTRUCTIONS;
   const deepseek = config.provider === "deepseek";
   const started = Date.now();
@@ -48,12 +49,14 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     requestLimits: limits, usage: null, rawOutput: null, failureCode: null };
   run.calls.push(audit);
   await addQuestionEvent(run, "model_requested", { phase, promptVersion: audit.promptVersion, requestSha256: audit.requestSha256, requestLimits: limits });
+  let budget: Awaited<ReturnType<typeof reserveModelBudget>> | undefined;
   try {
     const budgetMode = process.env.QUESTION_ACCEPTANCE_BUDGET_MODE;
     if (budgetMode) {
       if (budgetMode !== QUESTION_BUDGET_VERSION) throw new Error("QUESTION_BUDGET_CONFIGURATION_INVALID");
       audit.inputBudget = checkQuestionInputBudget(body); // Exact outgoing wire, before provider fetch.
     }
+    budget = await reserveModelBudget(body, { ownerSha256: owner, provider: config.provider, model: config.model, maxOutputTokens: limits.maxOutputTokens }, dependencies);
     const providerSignal = AbortSignal.timeout(limits.timeoutMs);
     const response = await (dependencies.fetcher ?? fetch)(deepseek ? "https://api.deepseek.com/responses" : "https://api.openai.com/v1/responses", {
       method: "POST", headers: { "content-type": "application/json", authorization: `Bearer ${config.apiKey}` }, body,
@@ -77,7 +80,7 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     if (output.refused) throw new Error("MODEL_REFUSAL");
     if (!audit.responseId || !audit.returnedModel || audit.rawOutput === null) throw new Error("PROVIDER_RESPONSE_INVALID");
     if (audit.returnedModel !== config.model && !audit.returnedModel.startsWith(config.model + "-")) throw new Error("PROVIDER_MODEL_MISMATCH");
-    if (!audit.usage || audit.usage.outputTokens <= 0 || audit.usage.outputTokens > limits.maxOutputTokens ||
+    if (!audit.usage || audit.usage.inputTokens > budget.inputBudget.estimatedInputTokens || audit.usage.outputTokens <= 0 || audit.usage.outputTokens > limits.maxOutputTokens ||
       audit.usage.totalTokens !== audit.usage.inputTokens + audit.usage.outputTokens ||
       audit.inputBudget && audit.usage.inputTokens > audit.inputBudget.estimatedInputTokens) throw new Error("PROVIDER_USAGE_INVALID");
     try { return parseMemoJson(audit.rawOutput); } catch { throw new Error("MODEL_JSON_INVALID"); }
@@ -86,11 +89,17 @@ async function modelCall(run: QuestionRun, phase: QuestionModelAudit["phase"], i
     const bodyCode = error instanceof Error && "code" in error ? error.code : null;
     audit.failureCode = error instanceof Error && /Timeout|Abort/.test(error.name) ? "PROVIDER_TIMEOUT" :
       ["BODY_INVALID_JSON", "BODY_EMPTY", "BODY_TOO_LARGE"].includes(bodyCode as string) ? "PROVIDER_RESPONSE_INVALID" :
-      /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|PROVIDER_MODEL_MISMATCH|PROVIDER_USAGE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
+      /^(PROVIDER_HTTP_\d{3}|PROVIDER_INCOMPLETE|MODEL_REFUSAL|PROVIDER_RESPONSE_INVALID|PROVIDER_MODEL_MISMATCH|PROVIDER_USAGE_INVALID|MODEL_JSON_INVALID|QUESTION_INPUT_BUDGET_EXCEEDED|QUESTION_BUDGET_CONFIGURATION_INVALID|MODEL_BUDGET_[A-Z_]+)$/.test(message) ? message : "PROVIDER_UNAVAILABLE";
     throw new Error(audit.failureCode);
   } finally {
+    let settlementFailed = false;
+    if (budget) {
+      try { await budget.finish(audit.usage, audit.failureCode); }
+      catch { audit.failureCode = "MODEL_BUDGET_RECOVERY_REQUIRED"; settlementFailed = true; }
+    }
     audit.finishedAt = new Date().toISOString(); audit.durationMs = Date.now() - started;
     await addQuestionEvent(run, "model_returned", Object.assign({}, audit, { rawOutput: undefined }));
+    if (settlementFailed) throw new Error(audit.failureCode!);
   }
 }
 
@@ -134,7 +143,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
         await addQuestionEvent(run, "query_received", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY, sourceRegistry: questionSources().map(({ sourceId, period, url }) => ({ sourceId, period, url })) });
         try {
           const output = await modelCall(run, "plan", { queryRaw: run.queryRaw, capability: QUESTION_CAPABILITY,
-            referenceCatalog: questionReferenceIds(), sources: questionSources().map(({ sourceId, period }) => ({ sourceId, period })) }, questionPlanSchema, config, dependencies);
+            referenceCatalog: questionReferenceIds(), sources: questionSources().map(({ sourceId, period }) => ({ sourceId, period })) }, questionPlanSchema, config, dependencies, owner);
           const plan = validateQuestionPlan(output);
           run.contract = makeResearchContract(run.queryRaw, plan, run.requestId, run.createdAt);
           run.status = run.contract.status; run.reasons = [...run.contract.reasons];
@@ -144,7 +153,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
           run.reasons = [code];
           await addQuestionEvent(run, "contract_failed", { code });
         }
-        return json({ run, ticket: run.status === "CONTRACT_DRAFTED" ? sign(run, config, owner) : null });
+        const budgetStatus = modelBudgetFailureStatus(run.calls[0]?.failureCode);
+        return json({ run, ticket: run.status === "CONTRACT_DRAFTED" ? sign(run, config, owner) : null, ...(budgetStatus ? { error: "模型资源保护已阻止本次请求；请稍后重试或联系维护者核查额度。" } : {}) }, budgetStatus ?? 200);
       }
       if (input.phase !== "execute" || Object.keys(input).sort().join(",") !== "confirmed,draft,phase,snapshot" || input.confirmed !== true) return json({ code: "CONFIRMATION_REQUIRED", error: "请先确认研究任务。" }, 400);
       const draft = input.draft as SignedQuestionDraft;
@@ -166,7 +176,7 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
       await addQuestionEvent(run, "tools_completed", { tools: run.contract!.allowedTools, facts: evidence.facts, calculations: evidence.calculations, graphDiff: evidence.graphDiff });
       await addQuestionEvent(run, "verification_result", { evidence: "PASS", professional: "pending", formalRecommendation: null });
       try {
-        const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context, run.contract!), config, dependencies);
+        const output = await modelCall(run, "explain", questionExplanationInput(run.contract!, evidence), questionExplanationSchema(evidence.context, run.contract!), config, dependencies, owner);
         const explanation = validateQuestionOutput(output, evidence.context, QUESTION_ANSWER_PROMPT_VERSION, run.contract!);
         const state = questionAnswerState(explanation.sufficiency);
         run.answer = { answerStatus: state.answerStatus, explanation, evidence,
@@ -178,7 +188,8 @@ export function createQuestionHandler(getConfig = memoConfig, dependencies: Depe
         run.status = "BLOCKED"; run.reasons = [error instanceof Error ? error.message : "EXPLANATION_FAILED"];
         await addQuestionEvent(run, "explanation_failed", { reasons: run.reasons, evidenceSha256: await sha256Text(canonicalJson(evidence)) });
       }
-      return json({ run });
+      const budgetStatus = modelBudgetFailureStatus(run.calls[0]?.failureCode);
+      return json({ run, ...(budgetStatus ? { error: "模型资源保护已阻止本次请求；请稍后重试或联系维护者核查额度。" } : {}) }, budgetStatus ?? 200);
     },
   };
   return { GET: core.GET, POST: async (request: Request) => {

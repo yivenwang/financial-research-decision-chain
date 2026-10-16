@@ -1,0 +1,74 @@
+{
+  "directives": [
+    {
+      "file": "/etc/nginx/sites-enabled/default",
+      "directive": "listen 80 default_server;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/default",
+      "directive": "listen [::]:80 default_server;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/default",
+      "directive": "server_name _;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "listen 80;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "listen [::]:80;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "server_name 192.144.168.226;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "client_max_body_size 100M;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "listen 443 ssl;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "listen [::]:443 ssl;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "server_name 192.144.168.226;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "ssl_certificate /etc/letsencrypt/live/192.144.168.226/fullchain.pem;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "client_max_body_size 100M;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "proxy_pass http://127.0.0.1:3000;"
+    },
+    {
+      "file": "/etc/nginx/sites-enabled/beacon",
+      "directive": "proxy_read_timeout 300s;"
+    }
+  ],
+  "unreadable": [],
+  "tls": {
+    "validated": true,
+    "version": "TLSv1.3",
+    "notBefore": "Oct 16 04:14:14 2026 GMT",
+    "notAfter": "Oct 22 20:14:13 2026 GMT"
+  },
+  "initialTLS": {
+    "validated": true,
+    "version": "TLSv1.3",
+    "notBefore": "Oct 12 02:38:35 2026 GMT",
+    "notAfter": "Oct 18 18:38:34 2026 GMT"
+  },
+  "observation": "Final read-only TLS handshake observed a newer served certificate; no renewal/reload command executed by this audit."
+}

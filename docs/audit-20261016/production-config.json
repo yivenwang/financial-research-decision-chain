@@ -1,0 +1,30 @@
+{
+  "pmCwd": "/home/vect/yiven/releases/beacon-no-watermark-80786b5/apps/web",
+  "envMode": "0o600",
+  "config": {
+    "MODEL_PROVIDER": "deepseek",
+    "DEEPSEEK_API_KEY_present": true,
+    "DEEPSEEK_MODEL": "deepseek-v4-pro",
+    "OPENAI_API_KEY_present": false,
+    "RESEARCH_DEMO_TOKEN_present": true,
+    "RESEARCH_APP_ORIGIN": "https://192.144.168.226",
+    "REVIEW_SESSION_SECRET_present": true,
+    "REVIEW_ACCESS_MODE": "open",
+    "REVIEW_ACCESS_DEADLINE": "2026-10-31T23:59:59+08:00",
+    "RESEARCH_RUN_DIRECTORY": "/home/vect/.beacon-private/runs"
+  },
+  "buildReceipt": {
+    "commitSha": "80786b5df92d4eada1fe238e96c04ccc6e88e52e",
+    "workingTreeClean": true,
+    "recordedAt": "2026-10-14T10:46:01.876Z"
+  },
+  "runDirectory": {
+    "mode": "0o700",
+    "claimsExists": true
+  },
+  "providerBudgetLedgerExists": false,
+  "nginxSelected": [],
+  "renewalTimers": [
+    "Fri 2026-10-16 13:05:00 CST     24min Fri 2026-10-16 11:31:01 CST  1h 9min ago snap.certbot.renew.timer       snap.certbot.renew.service"
+  ]
+}

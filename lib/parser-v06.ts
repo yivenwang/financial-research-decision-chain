@@ -11,7 +11,7 @@ import {
   type ParseIssueV05,
   type ParseResultV05,
 } from './parser-v05.ts';
-import { alignedPrimaryCells, detectPrimarySegments, numericItems, parseLayoutNumber, primaryRowLabel } from './parser-primary-layout.ts';
+import { alignedPrimaryCells, detectPrimarySegments, numericItems, parseLayoutNumber, primaryRowLabel, type PrimarySegment, type ReportRow } from './parser-primary-layout.ts';
 
 export type ParseResultV06 = ParseResultV05;
 export type ParseIssueV06 = ParseIssueV05;
@@ -41,6 +41,92 @@ function matchField(label: string): MetricKey | undefined {
 
 function toMn(value: number): number {
   return value / 1_000_000;
+}
+
+const sectionHeading = /^(?:[一二三四五六七八九十]+[、．.]|[（(][一二三四五六七八九十]+[）)])/;
+
+// The existing conversion is only yuan -> CNY million. Reject explicit
+// incompatible declarations rather than guessing a new conversion or FX rate.
+function incompatibleDeclaration(text: string): boolean {
+  const normalized = clean(text);
+  const declarations = normalized.matchAll(/(?:^|[（(，,；;])(?:金额)?单位[:：]([^（）()，,；;]*?)(?=(?:币种|审计类型)[:：]|$|[）)，,；;])/g);
+  for (const match of declarations) if (!/^(?:人民币)?元$/.test(match[1])) return true;
+  const currencies = normalized.matchAll(/币种[:：](.*?)(?=(?:单位|审计类型)[:：]|$|[）)，,；;])/g);
+  for (const match of currencies) if (!/^(?:人民币|CNY|RMB)$/i.test(match[1])) return true;
+  return false;
+}
+
+function incompatibleRowUnit(label: string, perShare = false): boolean {
+  const allowed = perShare ? /^(?:人民币)?元[/／]股$/ : /^(?:人民币)?元$/;
+  // An explicit unknown row suffix is ambiguous; a bare existing row keeps its
+  // registered yuan context. Percent/percentage-point handling stays separate.
+  const normalized = clean(label);
+  return /万元|亿元|千元|美元|港元|欧元|日元|英镑|USD|HKD|EUR|JPY|GBP/i.test(normalized) ||
+    [...normalized.matchAll(/[（(]([^（）()]*)[）)]/g)].some(match => !allowed.test(match[1]));
+}
+
+function unitBlocker(issues: ParseIssueV06[], row: ReportRow, field?: MetricKey): void {
+  issues.push({ code: 'AMBIGUOUS_COLUMNS', severity: 'FAIL', field, page: row.page,
+    message: '金额单位或币种不受支持或存在冲突；当前只支持人民币元，未换算或生成可接受证据。' });
+}
+
+function validatePrimaryUnits(rows: ReportRow[], segment: PrimarySegment, issues: ParseIssueV06[]): void {
+  // A common unit above the first primary header also applies to a later asset
+  // header and next-page continuation, but never crosses a section boundary.
+  const prefix = rows.filter(row => row.page === segment.header.page && row.y > segment.header.top)
+    .sort((a, b) => a.y - b.y);
+  for (const row of prefix) {
+    if (incompatibleDeclaration(row.text)) unitBlocker(issues, row);
+    if (sectionHeading.test(clean(row.text))) break;
+  }
+  for (const row of segment.rows) if (incompatibleDeclaration(row.text)) unitBlocker(issues, row);
+  if (segment.continuation) {
+    const firstY = Math.max(...segment.rows.map(row => row.y));
+    for (const row of rows.filter(row => row.page === segment.page && row.y > firstY)) {
+      if (incompatibleDeclaration(row.text)) unitBlocker(issues, row);
+    }
+  }
+}
+
+function nonRecurringWithValidation(rows: ReportRow[], source: SourceMeta, issues: ParseIssueV06[]): MetricValue | undefined {
+  let heading: ReportRow | undefined;
+  let first: MetricValue | undefined;
+  let previousPage: number | undefined;
+  let pendingUnitRows: ReportRow[] = [];
+  for (const row of rows) {
+    const text = clean(row.text);
+    if (previousPage !== undefined && row.page > previousPage + 1) { heading = undefined; pendingUnitRows = []; }
+    previousPage = row.page;
+    if (/非经常性损益项目(?:及|和)金额/.test(text)) {
+      heading = row;
+      pendingUnitRows = incompatibleDeclaration(text) ? [row] : [];
+      continue;
+    }
+    if (!heading) continue;
+    const newTable = /本报告期/.test(text) && /上年同期|上年度末/.test(text) && /增减|同比/.test(text);
+    if (sectionHeading.test(text) || newTable || /期末余额|期初余额|管理层讨论与分析|股东信息|主要会计数据和财务指标发生变动/.test(text)) {
+      heading = undefined;
+      pendingUnitRows = [];
+      continue;
+    }
+    if (incompatibleDeclaration(text)) pendingUnitRows.push(row);
+    // Reuse the frozen numeric extraction, while V06 owns section boundaries
+    // and ambiguity checks. Historical parser entry points remain untouched.
+    const candidate = parseNonRecurringTotal([heading, row], source);
+    if (!candidate) continue;
+    for (const unitRow of pendingUnitRows) unitBlocker(issues, unitRow, 'non_recurring_total');
+    pendingUnitRows = [];
+    const label = row.items.filter(item => parseLayoutNumber(item.str) === undefined).map(item => item.str).join('');
+    if (incompatibleRowUnit(label) || row.items.some(item => parseLayoutNumber(item.str) !== undefined && /[%％]|个百分点/.test(item.str))) {
+      unitBlocker(issues, row, 'non_recurring_total');
+    }
+    if (!first) first = candidate;
+    else if (candidate.current !== first.current) {
+      issues.push({ code: 'AMBIGUOUS_COLUMNS', severity: 'FAIL', field: 'non_recurring_total', page: row.page,
+        message: '非经常性损益合计存在冲突；保留首条原始值，阻断证据提升。' });
+    }
+  }
+  return first;
 }
 
 
@@ -125,13 +211,17 @@ export function parseFinancialReportV06(items: PdfTextItem[], source: SourceMeta
   if (!layout.segments.length) issues.push({ code: 'TABLE_HEADER_NOT_FOUND', severity: 'FAIL',
     message: 'Primary financial table header was not found with usable geometry.' });
   for (const segment of layout.segments) {
+    let unitsChecked = false;
     for (const row of segment.rows) {
       if (!numericItems(row, segment.header).length) continue;
       const label = primaryRowLabel(row, segment.rows, segment.header);
       const key = matchField(label);
       if (!key) continue;
+      if (!unitsChecked) { validatePrimaryUnits(rows, segment, issues); unitsChecked = true; }
       const cells = alignedPrimaryCells(row, segment.header);
       const unit = key === 'roe' ? 'ratio' : /eps$/.test(key) ? 'CNY_share' : 'CNY_mn';
+      if (unit !== 'ratio' && (incompatibleRowUnit(label, unit === 'CNY_share') || cells &&
+          [cells[0], cells[segment.header.comparisonIndex]].some(cell => /[%％]|个百分点/.test(cell.str)))) unitBlocker(issues, row, key);
       const rowPercent = /[%％]/.test(label);
       const current = cells && parseLayoutNumber(cells[0].str, rowPercent);
       const comparison = cells && parseLayoutNumber(cells[segment.header.comparisonIndex].str, rowPercent);
@@ -153,7 +243,7 @@ export function parseFinancialReportV06(items: PdfTextItem[], source: SourceMeta
       metrics[key] = candidate;
     }
   }
-  const nonRecurring = parseNonRecurringTotal(rows, source);
+  const nonRecurring = nonRecurringWithValidation(rows, source, issues);
   if (nonRecurring) metrics.non_recurring_total = nonRecurring;
   for (const key of ['attributable_np', 'adjusted_np', 'non_recurring_total'] as MetricKey[]) {
     if (!isFiniteNumber(metrics[key]?.current)) issues.push({ code: 'REQUIRED_FIELD_MISSING', severity: 'FAIL', field: key,

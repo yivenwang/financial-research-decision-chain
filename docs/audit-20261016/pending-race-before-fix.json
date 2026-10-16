@@ -1,0 +1,11 @@
+{
+  "environment": "isolated local Next production build before pending-pointer fix",
+  "test": "same-profile tabs cannot overwrite an in-flight question recovery pointer",
+  "result": "FAIL",
+  "durationMs": 5930.723375,
+  "realModelCalls": 0,
+  "observedFailure": "Expected competing-tab guard message did not become visible within 5000 ms",
+  "toolSession": 89942,
+  "limitation": "The initial regression did not persist POST count or pending-pointer bytes before timing out. Do not infer exact request count from this artifact.",
+  "failure": "locator.waitFor: Timeout 5000ms exceeded. Waiting for getByText(其他标签页仍有待确认任务。请刷新并检查原任务状态，再开始新任务。, exact: true) to be visible"
+}
