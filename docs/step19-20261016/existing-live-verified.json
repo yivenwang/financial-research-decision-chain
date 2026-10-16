@@ -1,0 +1,70 @@
+{
+  "run": "38525841233",
+  "commit": "051cce862dda1c5893fa65de99786e2f6a2c096b",
+  "originalManifestContentReview": "pending",
+  "realModelCallsThisVerification": 0,
+  "records": [
+    {
+      "file": "request-01.json",
+      "sha256": "2c41a233725954245d30917d0b880e0812ddfb2452dd55ddf909cd69f5643dac",
+      "status": "CONTRACT_DRAFTED",
+      "phase": "plan",
+      "promptVersion": "question-contract.v4",
+      "input": 1135,
+      "output": 1007,
+      "originalOutputPreserved": true
+    },
+    {
+      "file": "request-02.json",
+      "sha256": "132edf1f7958d5807c4173cfa5f641cbf5714bc6bc1ec33db39404f93ed7141b",
+      "status": "PARTIAL",
+      "phase": "execute",
+      "promptVersion": "question-explanation.v11",
+      "input": 3190,
+      "output": 1780,
+      "originalOutputPreserved": true
+    },
+    {
+      "file": "request-03.json",
+      "sha256": "ce4455053e8cf7959f7d710be05d126a81906117bf05b5b7ac9a9bffb4b654d0",
+      "status": "CONTRACT_DRAFTED",
+      "phase": "plan",
+      "promptVersion": "question-contract.v4",
+      "input": 1139,
+      "output": 726,
+      "originalOutputPreserved": true
+    },
+    {
+      "file": "request-04.json",
+      "sha256": "3552865cb76e160153b980db96f4982de5924b90b9ea2790c8ba27046ef1b94d",
+      "status": "ANSWER_READY",
+      "phase": "execute",
+      "promptVersion": "question-explanation.v11",
+      "input": 3153,
+      "output": 1792,
+      "originalOutputPreserved": true
+    },
+    {
+      "file": "request-05.json",
+      "sha256": "47cc84814dd0d1350bcb19482f7f16775bc7d38a2c418b83ad452ee948c25a55",
+      "status": "CONTRACT_DRAFTED",
+      "phase": "plan",
+      "promptVersion": "question-contract.v4",
+      "input": 1132,
+      "output": 1529,
+      "originalOutputPreserved": true
+    },
+    {
+      "file": "request-06.json",
+      "sha256": "d5e3bc96a6a0036a78788356c4828710b6c94ec4da2a2ff8ab13bccf810a92a7",
+      "status": "PARTIAL",
+      "phase": "execute",
+      "promptVersion": "question-explanation.v11",
+      "input": 3143,
+      "output": 946,
+      "originalOutputPreserved": true
+    }
+  ],
+  "knownInput": 12892,
+  "knownOutput": 7780
+}

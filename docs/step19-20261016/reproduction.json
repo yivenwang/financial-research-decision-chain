@@ -1,0 +1,23 @@
+{
+  "environment": "isolated local production build, Chromium, Mock provider",
+  "guideStep": 19,
+  "guidePdfPage": 20,
+  "baseline": {
+    "sourceCommit": "10ba492f33684a621b0af56df55bc180502daf52",
+    "acceptedStateVisible": true,
+    "reviewerCleared": true,
+    "noteCleared": true,
+    "acceptButtonDisabledAfterClear": true,
+    "failure": "completion guidance absent; locator timeout after preceding acceptance/form assertions passed",
+    "functionalReviewSaved": true
+  },
+  "afterFix": {
+    "browserTest": "PASS",
+    "acceptedReviewSurvivesRefresh": true,
+    "exportAndVersionNavigation": "PASS",
+    "noQuestionRequestAddedByVersionNavigation": true,
+    "interactionTests": 2,
+    "interactionFailures": 0
+  },
+  "newRealProviderRequests": 0
+}

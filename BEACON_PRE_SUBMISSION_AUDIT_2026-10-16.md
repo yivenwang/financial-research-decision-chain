@@ -1,5 +1,7 @@
 # Beacon｜研灯 V1.0 提交前技术审计
 
+> 后续补核更正：v11已存在真实六请求批次及AI内容审查，首轮报告漏核该证据。原时点报告保留；准确边界、第19步诊断及获批发布交接见 [2026-10-16后续核验](docs/STEP19_DIAGNOSIS_AND_RELEASE_2026-10-16.md)。当前发布结果以该PR最终交付及release回执为准，不能继续用下文旧部署时点判定当前系统。
+
 审计日期：2026-10-16（北京时间）。仓库：`yivenwang/financial-research-decision-chain`。
 
 ## 1. 最终状态：NOT READY（当前公开部署）
