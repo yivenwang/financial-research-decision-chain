@@ -4,8 +4,9 @@
 
 ## 1. 最终状态：CONDITIONAL（已发布）
 
-PR #39 与 #40 已合并；线上和 `main` 均为
-`5bf66cc1e51c9c8e6515be9b047d7ba9dfa50ea8`。此前两个确认的 P0 均已修复并上线：
+PR #39 与 #40 已合并；线上运行的产品代码为
+`5bf66cc1e51c9c8e6515be9b047d7ba9dfa50ea8`。当前 `main` 为文档合并后的
+`fd7019295895168705723c0594e74b56e2ec98e3`，不含新的产品代码差异。此前两个确认的 P0 均已修复并上线：
 
 - 公开 Question/Memo 接口现在共同使用私有持久预算账本：240 次总尝试、24 次/访客滚动小时、30 次/全局滚动分钟、跨进程单在途；账本损坏或不存在时拒绝模型请求。
 - V06 导入现在拒绝不支持或冲突的金额单位、币种、金额百分比和非经常性损益冲突合计，不能静默提升成金额证据。
@@ -37,7 +38,7 @@ PR #39 与 #40 已合并；线上和 `main` 均为
 | --- | --- |
 | P0 修复分支 / commit / PR | `codex/pre-submission-audit-20261016` / `7de6f76a3d4d1c4009ea3b7f5d0b6af908e18c6f` / [PR #39](https://github.com/yivenwang/financial-research-decision-chain/pull/39)（已合并） |
 | 第19步提示修复分支 / commit / PR | `codex/review-completion-guidance` / `bdf4d7dccbceb6fd38836ff9bfe483c14c4a9a2c` / [PR #40](https://github.com/yivenwang/financial-research-decision-chain/pull/40)（已合并） |
-| 当前审计/生产 SHA | `5bf66cc1e51c9c8e6515be9b047d7ba9dfa50ea8`，一致 |
+| 当前生产 / main SHA | 生产产品代码 `5bf66cc1e51c9c8e6515be9b047d7ba9dfa50ea8`；`main` 为仅含审计文档的 `fd7019295895168705723c0594e74b56e2ec98e3` |
 | 最终普通 CI | [38887739023](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38887739023) success；PR #40 Web CI [38883077007](https://github.com/yivenwang/financial-research-decision-chain/actions/runs/38883077007) success |
 | 部署差异 | 无待部署的本轮代码修复；仍未做真实付费验收、故障恢复演练或多公司产品扩展。 |
 
