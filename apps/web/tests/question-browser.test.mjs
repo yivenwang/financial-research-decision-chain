@@ -82,6 +82,12 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await page.getByLabel("问题审核意见", { exact: true }).fill("仅验收交互和绑定，不是用户内容认可或专业意见。");
     await page.getByRole("button", { name: "接受研究草稿", exact: true }).click();
     await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
+    assert.equal(await page.getByLabel("问题审核人", { exact: true }).inputValue(), "");
+    assert.equal(await page.getByLabel("问题审核意见", { exact: true }).inputValue(), "");
+    assert.equal(await page.getByRole("button", { name: "接受研究草稿", exact: true }).isDisabled(), true, "Cleared form starts a separate appended review; the completed review is already saved");
+    await page.getByTestId("question-review-next-step").waitFor();
+    assert.match(await page.getByTestId("question-review-next-step").innerText(), /本次草稿审核已完成。/);
+    assert.equal(await page.getByTestId("question-review-next-step").getByRole("link", { name: "查看版本记录与备忘录" }).getAttribute("href"), "/versions");
     await mkdir(artifacts, { recursive: true });
     const [jsonDownload] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "导出完整记录" }).click()]);
     await jsonDownload.saveAs(new URL("question-answer-NOT-LIVE.json", artifacts).pathname);
@@ -97,6 +103,13 @@ test("question UI uses a real S-05 parsed snapshot, confirms, exports, reviews, 
     await page.screenshot({ path: new URL("question-mobile-NOT-LIVE.png", artifacts).pathname, fullPage: true });
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
     await page.reload(); await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
+    assert.match(await page.getByTestId("question-review-next-step").innerText(), /本次草稿审核已完成。/);
+    const callsBeforeVersions = calls.length;
+    await page.getByTestId("question-review-next-step").getByRole("link", { name: "查看版本记录与备忘录" }).click();
+    await page.waitForURL("**/versions");
+    await page.goto(origin + "/questions");
+    await page.getByText("人工已接受研究草稿", { exact: true }).waitFor();
+    assert.equal(calls.length, callsBeforeVersions, "Moving to the independent Memo workflow does not regenerate or repeat the accepted Question");
     for (const [question, intent] of [["归母净利润下降的来源在哪里？", "EVIDENCE_AUDIT"], ["本期更新影响了哪些节点？", "DECISION_IMPACT"]]) {
       await page.getByLabel("研究问题", { exact: true }).fill(question);
       await page.getByRole("button", { name: "生成研究任务", exact: true }).click();

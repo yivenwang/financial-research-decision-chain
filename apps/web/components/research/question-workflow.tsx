@@ -233,7 +233,10 @@ export function QuestionWorkflow({ initialQuestion = examples[0] }: { initialQue
           <p>{lastReview ? lastReview.status === "accepted" ? "人工已接受研究草稿" : "研究草稿已退回" : "研究草稿尚待人工审核"}</p>
           {lastReview && <p className="text-sm text-slate-400">最近审核：{lastReview.reviewer} · {formatDate(lastReview.reviewedAt)}{lastReview.note ? ` · ${lastReview.note}` : ""}</p>}
           <p className="text-sm text-slate-400">{answer.recommendedHumanAction} 再次审核会追加记录，原退回或接受意见仍保留。</p><details><summary>历次人工审核</summary>{ledger.reviews.filter(r => r.runId === shown.runId).map(r => <p key={r.id}>{r.status === "accepted" ? "接受草稿" : "退回草稿"} · {r.reviewer} · {formatDate(r.reviewedAt)} · {r.note}</p>)}</details>
-          <p className="text-sm">下一步：核对上述事实、引用与边界，再提交当前 Run 的审核。专业判断请到 <a href="/help#professional-review" className="underline">专业复核准备</a>。</p>
+          <p className="text-sm" data-testid="question-review-next-step">{lastReview
+            ? <>{lastReview.status === "accepted" ? "本次草稿审核已完成。可以导出已审核研究草稿，或" : "退回意见已保存。可以导出退回记录，或"}<a href="/versions" className="underline">查看版本记录与备忘录</a>。Question 审核不会自动生成 Memo；Memo 原稿与人工修订需在版本记录中单独操作。</>
+            : <>下一步：核对上述事实、引用与边界，填写审核人后提交当前 Run 的审核。</>}专业判断请到 <a href="/help#professional-review" className="underline">专业复核准备</a>。</p>
+          {lastReview && <p className="text-sm text-slate-400">下面的空表单用于追加新的审核意见。审核人已清空，重新填写后才可再次提交；已有审核记录仍保留。</p>}
           <Input aria-label="问题审核人" placeholder="审核人（自行填写）" value={reviewer} onChange={e => setReviewer(e.target.value)} maxLength={100} />
           <Textarea aria-label="问题审核意见" placeholder="审核意见" value={note} onChange={e => setNote(e.target.value)} maxLength={1000} />
           <div className="flex flex-wrap gap-2"><Button disabled={!!busy || !reviewer.trim()} onClick={() => review("accepted")}>接受研究草稿</Button><Button variant="outline" disabled={!!busy || !reviewer.trim()} onClick={() => review("rejected")}>退回研究草稿</Button></div>
