@@ -114,7 +114,7 @@ test("question and memo HTTP endpoints share the model slot", async t => {
   const slow = createQuestionHandler(() => config, { runDirectory: h.directory, fetcher: async () => { entered(); await waiting; return providerResponse(answerOutput()); } });
   const a = slow.POST(req(h.body)); await started;
   const memo = createMemoHandler(() => config, { fetcher: async () => assert.fail("Concurrent memo must not reach provider") });
-  assert.equal((await memo.POST(new Request("http://localhost/api/research-memo", { method: "POST", headers: { authorization: `Bearer ${config.accessToken}`, origin: "http://localhost", "content-type": "application/json" }, body: JSON.stringify(questionTestSnapshot()) }))).status, 429);
+  assert.equal((await memo.POST(new Request("http://localhost/api/research-memo", { method: "POST", headers: { cookie: questionTestCookie, origin: "http://localhost", "content-type": "application/json" }, body: JSON.stringify(questionTestSnapshot()) }))).status, 429);
   release(); await a;
 });
 

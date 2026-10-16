@@ -72,6 +72,8 @@ jobs:
         run: node --experimental-strip-types --test tests/ui-suite-browser.test.mjs
       - name: Finance safety and task closure on desktop, tablet and phone (NOT-LIVE)
         run: npm run test:rc-browser
+      - name: Open guest isolation and 2/5/10 visitor workloads (NOT-LIVE)
+        run: npm run test:submission-browser
       - name: Preserve browser regression evidence
         if: always()
         uses: actions/upload-artifact@v4

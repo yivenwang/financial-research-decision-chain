@@ -53,7 +53,7 @@ test("slow bodies release both handler locks without any provider request", asyn
   for (const createHandler of [createMemoHandler, createQuestionHandler]) {
     let calls = 0;
     const handler = createHandler(() => config, { bodyTimeoutMs: 20, fetcher: async () => { calls++; assert.fail("No model call expected"); } });
-    const headers = { origin: "http://localhost", "content-type": "application/json", ...(createHandler === createQuestionHandler ? { cookie: `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(config.accessToken)}` } : { authorization: `Bearer ${config.accessToken}` }) };
+    const headers = { origin: "http://localhost", "content-type": "application/json", cookie: `${REVIEW_ACCESS_COOKIE}=${await reviewSessionValue(config.accessToken)}` };
     const slow = new Request("http://localhost/api/research-question", { method: "POST", headers, body: new ReadableStream({}), duplex: "half" });
     assert.equal((await handler.POST(slow)).status, 400);
     const next = await handler.POST(new Request("http://localhost/api/research-question", { method: "POST", headers, body: "{}" }));
