@@ -61,7 +61,14 @@
   "tls": {
     "validated": true,
     "version": "TLSv1.3",
+    "notBefore": "Oct 16 04:14:14 2026 GMT",
+    "notAfter": "Oct 22 20:14:13 2026 GMT"
+  },
+  "initialTLS": {
+    "validated": true,
+    "version": "TLSv1.3",
     "notBefore": "Oct 12 02:38:35 2026 GMT",
     "notAfter": "Oct 18 18:38:34 2026 GMT"
-  }
+  },
+  "observation": "Final read-only TLS handshake observed a newer served certificate; no renewal/reload command executed by this audit."
 }

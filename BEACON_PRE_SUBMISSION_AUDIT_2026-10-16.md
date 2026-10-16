@@ -120,9 +120,9 @@
 
 - **本地**：Node 26.0.0（项目要求 ≥22.13）、Next 16.3.8/React 19.2.6；259 项完整单元/集成通过，3 原 PDF通过，TypeScript、lint（0 error/4 既有 warning）、生产构建、76 个 V5 源文件迁移校验及 runtime smoke 通过。最终干净 SHA 构建回执见交付记录；本地成功不等于生产升级成功。
 - **生产只读**：PM2 `beacon` 单 fork online；运行目录 `beacon-no-watermark-80786b5`、Git SHA 和 `.next/beacon-build-receipt.json` 同为 `80786b5`、回执 clean=true；只多一份部署时 internal-smoke.log，未见源码修改。Nginx active，upstream `127.0.0.1:3000`、proxy_read_timeout 300s、client_max_body_size 100M。环境文件 0600；required key/签名值仅检查 presence 布尔，不输出内容；收据目录 0700，claims 索引存在。本轮预算 ledger 不存在，符合尚未部署的事实。
-- **HTTPS**：可信 TLS1.3，HTTP 308 → HTTPS，七页面/静态 worker正常。只读时证书有效至 **2026-10-19 02:38:34 北京时间**，覆盖 10/18 锁定日但剩余时间短；certbot renewal timer 存在，成功续期周期尚无本轮执行证明。
+- **HTTPS**：可信 TLS1.3，HTTP 308 → HTTPS，七页面/静态 worker正常。初次只读证书有效至 2026-10-19 02:38:34 北京时间；交付前复核已观察对外可信证书更新（新 notBefore 为 10/16 12:14:14 北京时间），有效至 **2026-10-23 04:14:13 北京时间**。certbot renewal timer 存在；本轮没有主动运行续期或重载，只读握手确认实际已服务新证书，不保证未来每次续期。
 - **证据**：[production-config.json](docs/audit-20261016/production-config.json)、[production-tls-nginx.json](docs/audit-20261016/production-tls-nginx.json)、production-browser、verification-summary、CI。
-- **剩余风险**：没有重启/kill 生产进程、恢复数据库、部署代码、运行续期/重载或验证灾备；这些不能标 PASS。当前 PM2 有历史 restart 计数，但不当成故障恢复验收。新预算目录需发布前一次初始化并保持跨 release/rollback 不回退；崩溃未知调用需核账，自动失效会破坏费用边界，因此未实现。
+- **剩余风险**：没有重启/kill 生产进程、恢复数据库、部署代码、主动运行续期/重载或验证灾备；未执行的故障/灾备演练不能标 PASS。当前 PM2 有历史 restart 计数，但不当成故障恢复验收。新预算目录需发布前一次初始化并保持跨 release/rollback 不回退；崩溃未知调用需核账，自动失效会破坏费用边界，因此未实现。
 
 ## 4. 修复清单与回归
 
@@ -155,7 +155,7 @@
 1. 审查并批准本 PR，然后按现有流程合并/发布；本轮未执行。发布前由服务 UID 在持久 `RESEARCH_RUN_DIRECTORY.model-budget` 运行一次 init，保留原收据/claims 和新 ledger，不在 rollback 中回退累计额度。未初始化时付费调用会安全503，不能漏掉此步骤。
 2. 发布后重核精确 SHA、clean构建回执、open会话、静态资源与费用 guard；不能把本地通过写成已上线通过。保留原 release 和最新 ledger，但旧版代码不读取新 ledger，回滚旧公开版本会恢复 P0。安全回退须在另行批准的发布操作中暂停收费生成、保留本地确定性研究，直到恢复含保护的版本；本轮未改生产配置。
 3. 当前 v11 的真实模型内容验收需要负责人对最终精确 SHA 和一次明确有界预算另行授权；最多六请求、首失败即停、无自动重试，逐条审核真实输出。若不能完成，只能把未验证AI生成能力如实标为未验收，并经负责人确认使用已审核历史/确定性研究演示，不能宣称完整AI现场 READY。
-4. 在评审使用期前复核短期证书续期结果；现有证书仅证明当前可信及覆盖锁定日，不能代替未来续期证明。
+4. 本轮最终只读握手已观察可信证书更新并覆盖至10/23清晨；提交前仍核对实际评审使用期与当前证书有效期，持续保留自动续期与监控。未来续期不因本次更新而自动视为通过。
 
 发布、额度初始化/变更、真实付费验收、生产故障演练均没有在本报告中偷偷执行。不能用关闭访问控制、放开输入校验或预填专业通过作为降级方案。
 
