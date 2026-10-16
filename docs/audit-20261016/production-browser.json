@@ -1,0 +1,74 @@
+{
+  "environment": "production-read-only-no-provider-POST",
+  "routes": [
+    {
+      "path": "/",
+      "status": 200,
+      "finalPath": "/",
+      "durationMs": 653,
+      "headingCount": 5
+    },
+    {
+      "path": "/workspace",
+      "status": 200,
+      "finalPath": "/workspace",
+      "durationMs": 1407,
+      "headingCount": 3
+    },
+    {
+      "path": "/questions",
+      "status": 200,
+      "finalPath": "/questions",
+      "durationMs": 655,
+      "headingCount": 2
+    },
+    {
+      "path": "/changes",
+      "status": 200,
+      "finalPath": "/changes",
+      "durationMs": 854,
+      "headingCount": 2
+    },
+    {
+      "path": "/evidence",
+      "status": 200,
+      "finalPath": "/evidence",
+      "durationMs": 910,
+      "headingCount": 3
+    },
+    {
+      "path": "/versions",
+      "status": 200,
+      "finalPath": "/versions",
+      "durationMs": 1225,
+      "headingCount": 2
+    },
+    {
+      "path": "/help",
+      "status": 200,
+      "finalPath": "/help",
+      "durationMs": 611,
+      "headingCount": 5
+    }
+  ],
+  "access": {
+    "configured": true,
+    "mode": "open",
+    "session": true,
+    "deadline": "2026-10-31T15:59:59.000Z",
+    "expired": false
+  },
+  "session": {
+    "present": true,
+    "httpOnly": true,
+    "secure": true,
+    "sameSite": "Strict"
+  },
+  "pdfWorker": {
+    "status": 200,
+    "contentType": "application/javascript; charset=UTF-8"
+  },
+  "localhostLinks": [],
+  "pageErrors": [],
+  "postPaths": []
+}

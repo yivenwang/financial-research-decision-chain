@@ -1,0 +1,48 @@
+{
+  "environment": "isolated local node Mock provider; no real model calls",
+  "baseline": "80786b5df92d4eada1fe238e96c04ccc6e88e52e",
+  "foreignReadStatus": 404,
+  "foreignExecutionStatus": 422,
+  "taskStates": [
+    "CONTRACT_DRAFTED",
+    "OUT_OF_SCOPE",
+    "ANSWER_READY"
+  ],
+  "contextIsolation": {
+    "capturedRequestBodies": 3,
+    "roles": [
+      "system",
+      "user"
+    ],
+    "aDoesNotIncludeB": true,
+    "bDoesNotIncludeA": true,
+    "uploadedTextInstructionExcluded": true,
+    "providerToolsAbsent": true
+  },
+  "abuse": {
+    "memoSequentialProviderAttempts": 8,
+    "memoStatuses": [
+      502,
+      502,
+      502,
+      502,
+      502,
+      502,
+      502,
+      502
+    ],
+    "questionSequentialProviderAttempts": 8,
+    "questionStatuses": [
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200,
+      200
+    ],
+    "acceptanceBudgetMode": "unset; default production behavior"
+  },
+  "realModelCalls": 0
+}

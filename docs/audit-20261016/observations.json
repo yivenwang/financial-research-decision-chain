@@ -1,0 +1,989 @@
+{
+  "environment": "isolated local Next production server / Chromium / open guest mode / provider keys blank",
+  "realModelCalls": 0,
+  "admission": [
+    {
+      "label": "A-S05",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "a2d8548afea1bb92e3d332766cf9357b20160a19509c9ea107cebe535b4a7bff",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "B-S06",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "d13b80ebf5fb9c26ff397029139b4bf9baf0bbd09cda5b493cc4476533f60364",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C2-0",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "444e4732a65f4eeba7ba9929190e2d747bf5774a6badd16f0ad91fb03eeb6c38",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C2-1",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "1052cda90faea06fd59ba9db8d6f116da576d53b109836f6bda46f889ab754b2",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C5-0",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "759d4b24e828eed21f9fa2920a5adfe7d72d2871e2ecdb35932af53d1d45a1f9",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C5-3",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "1b6da06fecec0cda5202b4d01191c99f2fef8da1ed5f3dc1013c7adc82c37b9f",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C5-2",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "e7a1be440a638d1da58c62b951cba5308bf0267c51b7abc06cfec5404d34fc80",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C5-4",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "01552058c9f0816222848547eb6834785a09c7a14b524d65d26cdac277c74982",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C5-1",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "9e3629fdc4141d9c98ece4658b498e9f5ac84067b7edf862ce1314bc62ed58d6",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-6",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "1a0b5d312563c8e507845dd629e54c4bfec305553fe79216f4ada5df2ed2677d",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-7",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "e735b5bc1b4029045928a07913babcf95c97a8bf0bfa5e083335262c83442b58",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-4",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "f5ff72ed362be7b447220a51d35771b0edb1041d8a630f3ed86b683073b1fd14",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-8",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "2016019ca7b2300c5db19706ac9aa2fbb64f2d1c17998116ba095bbd1c71aaf7",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-5",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "4776b6ac5b456909c4f2e06534b0a0b63e2970f896f79aa93c07cc6d702af480",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-1",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "75d8f179cbaba38bdbd5c715747d26d613a284e4f011b13f67065a7d4dcd165a",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-0",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "f43859de69789e9e832665e5a1914e11e78e3ddaa1d6d34a8a9239d3ed203014",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-3",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "ca290691aea796d9d137f9a27c95b9532640b2a346d1bcf082c09305ff4546da",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-9",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "0579fb88414674a3414f890e67b4c7bcbb63287cdc5cc041f657dea0fff4aeb8",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "C10-2",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "aef14d891af8bb53b14aa90526a3b60e75e26490b58cfc0c79a53e9fdb94d163",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    },
+    {
+      "label": "pending-race",
+      "directHomeStatus": 200,
+      "loginRequired": false,
+      "signedCookieSha256": "657d4c8280381430812444b27ac54df733fd3d95d35576207f6d376f46ccdde9",
+      "httpOnly": true,
+      "sameSite": "Strict"
+    }
+  ],
+  "isolation": {
+    "realPdfUploads": 2,
+    "uploadFileName": "same-name-report.pdf",
+    "distinctPdfSha256": [
+      "88d2ab7c603a94b7e0943ef07e219235ee59b9048e1dfa8e38bd6ebac99b6d03",
+      "ff81b9e7c2e8eb04bd450fce3c084b28f5b4be4c1e2638250160b7bb813ebac1"
+    ],
+    "privateSnapshotReviewers": [
+      "Submission synthetic evidence reviewer A-S05",
+      "Submission synthetic evidence reviewer B-S06"
+    ],
+    "cookieUnique": true,
+    "oppositeLedgerAbsent": true,
+    "refreshRetainsOwn": true,
+    "reopenedPageRetainsOwn": true,
+    "interruptedUnsavedWorkPreservesSavedLedger": true,
+    "sameProfileTabsShareLocalStorage": true,
+    "sameProfileNewTabHasSeparateSessionStorage": true
+  },
+  "concurrency": [
+    {
+      "visitors": 2,
+      "elapsedMs": 1032,
+      "navigationCount": 14,
+      "navigationP50Ms": 64,
+      "navigationP95Ms": 122,
+      "navigationMaxMs": 122,
+      "serverRssKiBBefore": 156512,
+      "serverRssKiBAfter": 191920,
+      "workloads": [
+        {
+          "visitor": "C2-0",
+          "elapsedMs": 909,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 68
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 56
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 114
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 68
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 46
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 63
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 54
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C2-1",
+          "elapsedMs": 907,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 65
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 53
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 122
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 68
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 47
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 64
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 53
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        }
+      ]
+    },
+    {
+      "visitors": 5,
+      "elapsedMs": 2253,
+      "navigationCount": 35,
+      "navigationP50Ms": 178,
+      "navigationP95Ms": 279,
+      "navigationMaxMs": 285,
+      "serverRssKiBBefore": 191968,
+      "serverRssKiBAfter": 226672,
+      "workloads": [
+        {
+          "visitor": "C5-0",
+          "elapsedMs": 1844,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 132
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 100
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 195
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 182
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 180
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 165
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 163
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C5-1",
+          "elapsedMs": 1983,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 178
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 140
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 285
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 190
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 141
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 210
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 147
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C5-2",
+          "elapsedMs": 1998,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 182
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 210
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 260
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 178
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 147
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 181
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 124
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C5-3",
+          "elapsedMs": 1870,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 179
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 85
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 259
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 183
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 129
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 147
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 163
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C5-4",
+          "elapsedMs": 1906,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 183
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 135
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 279
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 182
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 154
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 196
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 143
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        }
+      ]
+    },
+    {
+      "visitors": 10,
+      "elapsedMs": 4886,
+      "navigationCount": 70,
+      "navigationP50Ms": 387,
+      "navigationP95Ms": 747,
+      "navigationMaxMs": 776,
+      "serverRssKiBBefore": 226672,
+      "serverRssKiBAfter": 225200,
+      "workloads": [
+        {
+          "visitor": "C10-0",
+          "elapsedMs": 4130,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 387
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 221
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 393
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 434
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 435
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 346
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 403
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-1",
+          "elapsedMs": 3786,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 385
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 123
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 181
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 365
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 776
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 343
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 239
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-2",
+          "elapsedMs": 3688,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 385
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 207
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 403
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 434
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 440
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 342
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 389
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-3",
+          "elapsedMs": 4327,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 395
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 284
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 746
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 442
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 307
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 249
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 283
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-4",
+          "elapsedMs": 4137,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 387
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 251
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 369
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 428
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 435
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 346
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 403
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-5",
+          "elapsedMs": 4360,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 391
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 292
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 742
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 443
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 325
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 437
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 397
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-6",
+          "elapsedMs": 4150,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 387
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 252
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 362
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 428
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 440
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 343
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 406
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-7",
+          "elapsedMs": 4303,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 389
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 287
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 748
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 443
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 307
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 271
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 260
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-8",
+          "elapsedMs": 4156,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 388
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 288
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 747
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 445
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 304
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 251
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 281
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        },
+        {
+          "visitor": "C10-9",
+          "elapsedMs": 4329,
+          "navigation": [
+            {
+              "path": "/",
+              "httpStatus": 200,
+              "elapsedMs": 387
+            },
+            {
+              "path": "/workspace",
+              "httpStatus": 200,
+              "elapsedMs": 289
+            },
+            {
+              "path": "/questions",
+              "httpStatus": 200,
+              "elapsedMs": 747
+            },
+            {
+              "path": "/changes",
+              "httpStatus": 200,
+              "elapsedMs": 416
+            },
+            {
+              "path": "/evidence",
+              "httpStatus": 200,
+              "elapsedMs": 320
+            },
+            {
+              "path": "/versions",
+              "httpStatus": 200,
+              "elapsedMs": 254
+            },
+            {
+              "path": "/help",
+              "httpStatus": 200,
+              "elapsedMs": 232
+            }
+          ],
+          "versionCount": 1,
+          "independentReviewedLedger": true,
+          "providerStatusHttp": 200
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "The product formally supports Anker only; S-05 and S-06 are distinct periods, not distinct companies. No claim of a two-company complete research workflow.",
+    "Concurrency uses a public verified sample, local deterministic parsing/engine, storage and status GETs, not provider load or production load.",
+    "Same-origin tabs in one browser profile intentionally share the local research ledger and guest cookie; they are not independent user identities.",
+    "This file supplements existing provider, operation authorization and full mocked research E2E suites."
+  ],
+  "sameProfilePendingRace": {
+    "postCount": 1,
+    "originalPendingPreserved": true,
+    "secondTabBlocked": true,
+    "refreshRecoversOriginalByGet": true,
+    "transport": "browser route synthetic only",
+    "realModelCalls": 0
+  },
+  "pageErrors": [],
+  "consoleErrors": [],
+  "externalRequests": [],
+  "badHttp": []
+}
