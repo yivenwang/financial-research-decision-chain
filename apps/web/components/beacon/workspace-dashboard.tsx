@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, ArrowRight, ArrowUpRight, CheckCircle2, FileSearch, GitCompareArrows, History, MessageCircleQuestion, ShieldAlert, Telescope } from "lucide-react";
+import { AlertTriangle, ArrowRight, ArrowUpRight, CheckCircle2, FileSearch, Fingerprint, GitCompareArrows, History, MessageCircleQuestion, ShieldAlert, Telescope } from "lucide-react";
 import { getSourceRecord } from "@/lib/source-records";
 import { dashboardPresentation, metricTone } from "@/lib/dashboard-presentation";
 import type { StoredEvidence } from "@/lib/research-versions";
@@ -69,6 +69,17 @@ export function WorkspaceDashboard() {
             <div className={styles.changeList}>
               {[attributable, adjusted, nonRecurring].filter(Boolean).map(item => <div key={item!.id} className={styles.changeRow}><span className={item!.direction === "反证" ? styles.signalNegative : item!.direction === "支持" ? styles.signalPositive : undefined}>{item!.direction}</span><div><strong>{item!.label}</strong><small>{item!.location} · {item!.reviewStatus === "accepted" ? "人工已核对" : "待核对"}</small></div><b>{item!.changePct == null ? item!.valueMn.toFixed(2) + " mn" : percent(item!)}</b></div>)}
             </div>
+          </section>
+
+          <section className={styles.panel} aria-label="数字追溯路径">
+            <div className={styles.panelTitle}><div><p className={styles.microLabel}>TRACEABILITY PATH</p><h2>结论从哪里来，沿着哪里走</h2></div><span><Fingerprint size={12} aria-hidden="true" /> 内容留痕</span></div>
+            <ol className={styles.path}>
+              <li><span className={styles.pathNumber}>01</span><div><h3>来源 Source</h3><p>{source?.name ?? version.source?.name ?? "未登记材料"} · {version.source?.period ?? "期间未注明"}</p><p>{version.source?.sha256 ? <>SHA-256 · <code>{version.source.sha256.slice(0, 16)}…</code></> : "本版本未记录文件摘要"}</p></div></li>
+              <li><span className={styles.pathNumber}>02</span><div><h3>证据 Evidence</h3><p>{version.evidence.length ? version.evidence.map(item => `${item.label} ${item.valueMn.toFixed(2)}mn`).slice(0, 3).join(" · ") : "尚无已核对证据"}</p></div></li>
+              <li><span className={styles.pathNumber}>03</span><div><h3>计算 Formula · F-02</h3>{version.formula ? <p>{version.formula.attributable.toFixed(2)} − ({version.formula.nonRecurring >= 0 ? version.formula.nonRecurring.toFixed(2) : "−" + Math.abs(version.formula.nonRecurring).toFixed(2)}) = {version.formula.calculated.toFixed(2)} · 差额 <code>{version.formula.difference.toFixed(6)}</code> · {version.formula.consistent ? "闭合" : "未闭合"}</p> : <p>本版本未执行 F-02 复算。</p>}</div></li>
+              <li><span className={styles.pathNumber}>04</span><div><h3>人审 Review</h3><p>{version.humanReview ? `${version.humanReview.reviewer} · ${new Date(version.humanReview.confirmedAt).toLocaleString("zh-CN", { hour12: false })}` : "证据审核尚未提交"}</p><p>解析 <code>{version.parser?.version ?? "未记录"}</code> · 链 <code>{version.chainVersion ?? "未记录"}</code></p></div></li>
+            </ol>
+            <p className={styles.subtle}>数字的出处、计算与人工决定逐层留痕；版本记录与 SHA-256 仅作内容留痕，不代替官方原件鉴证与专业结论。</p>
           </section>
 
           <section className={styles.panel}>
