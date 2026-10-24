@@ -96,3 +96,53 @@ test('the original counter conditions a verified fact on a proxy; scope repair n
   answer.inference.text='扣非同比上升是事实；若分类和持续性经复核，则可能改善核心经营，该判断仍以会计假设为条件。';
   assert.doesNotThrow(()=>validateQuestionExplanation(answer,context,undefined,run.contract),'a separately stated economic hypothesis retains its own condition');
 });
+
+// Synthetic pairs exercise historical v10 semantics directly. Current v11
+// rejects free prose at the controlled contract before these semantic checks.
+function assertSemanticExamples(point, examples) {
+  const contextBefore=canonicalJson(context);
+  for(const [text,code] of examples) {
+    const answer=answerOutput({sufficiency:'partial'});
+    answer[point]={text,citations:context.references.map(ref=>ref.id)};
+    const before=canonicalJson(answer);
+    const validate=()=>validateQuestionExplanation(answer,context,'question-explanation.v10',run.contract);
+    if(code) assert.throws(validate,{message:code},text);
+    else assert.doesNotThrow(validate,text);
+    assert.equal(canonicalJson(answer),before);
+  }
+  assert.equal(canonicalJson(context),contextBefore);
+}
+
+test('semantic assets: a comma retains the premise while sentence and contrast boundaries end it',()=>{
+  const premise='在调整分类和持续性经核验的前提下';
+  assertSemanticExamples('inference',[
+    [premise+'，扣非可视为核心经营代理，仍须复核适用范围。'],
+    [premise+',扣非可视为核心经营代理,仍须复核适用范围。'],
+    ...['。','；','！','？','\n','，但是','，然而','，不过','，可是','，但','，却'].map(boundary=>[
+      premise+'，可能需要研究'+boundary+'扣非代表核心经营。','ASSUMPTION_PROMOTED',
+    ]),
+  ]);
+});
+
+test('semantic assets: a bounded annualization statement passes while a forecast or target promotion fails',()=>{
+  assertSemanticExamples('directAnswer',[
+    ['机械年化不是盈利预测，估值仍待复核。'],
+    ['机械年化不等于全年预测，估值仍待复核。'],
+    ['机械年化不得作为目标价，估值仍待复核。'],
+    ['机械年化就是盈利预测。','MECHANICAL_ANNUALIZATION_PROMOTED'],
+    ['机械年化即为全年预测。','MECHANICAL_ANNUALIZATION_PROMOTED'],
+    ['机械年化可作为目标价。','MECHANICAL_ANNUALIZATION_PROMOTED'],
+    ['不能忽略风险，但机械年化就是盈利预测。','MECHANICAL_ANNUALIZATION_PROMOTED'],
+  ]);
+});
+
+test('semantic assets: missing input and disclosed growth do not establish full-report absence or core economics',()=>{
+  assertSemanticExamples('directAnswer',[
+    ['本次结构化输入未提供非经常性损益比较值，不能断言报告未披露。'],
+    ['本次受控输入缺少明细，不能推定报告没有解释。'],
+    ['报告披露扣非同比增长，核心经营解释仍是假设。'],
+    ['本次输入缺少明细，但报告没有解释。','DISCLOSURE_SCOPE_OVERCLAIM'],
+    ['本次输入缺少比较材料，但报告未披露比较信息。','DISCLOSURE_SCOPE_OVERCLAIM'],
+    ['报告披露扣非同比增长，已证实核心经营改善。','ASSUMPTION_PROMOTED'],
+  ]);
+});
